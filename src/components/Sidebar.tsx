@@ -90,7 +90,7 @@ export const AppSidebar = memo(function AppSidebar() {
                   >
                     <Link to={item.url}>
                       <item.icon />
-                      <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300">{item.title}</span>
+                      <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -100,7 +100,7 @@ export const AppSidebar = memo(function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={toggleResources} className="group/resources">
                   <Folder />
-                  <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300">资源</span>
+                  <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">资源</span>
                   <span className="ml-auto flex-shrink-0">
                     {isResourcesOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </span>
@@ -113,7 +113,7 @@ export const AppSidebar = memo(function AppSidebar() {
                         isActive={isActive("/resources/all")}
                       >
                         <Link to="/resources/all">
-                          <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300">全部</span>
+                          <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">全部</span>
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
@@ -123,7 +123,7 @@ export const AppSidebar = memo(function AppSidebar() {
                         isActive={isActive("/resources/downloading")}
                       >
                         <Link to="/resources/downloading">
-                          <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300">下载中</span>
+                          <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">下载中</span>
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
@@ -133,7 +133,7 @@ export const AppSidebar = memo(function AppSidebar() {
                         isActive={isActive("/resources/downloaded")}
                       >
                         <Link to="/resources/downloaded">
-                          <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300">已下载</span>
+                          <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">已下载</span>
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
@@ -149,7 +149,7 @@ export const AppSidebar = memo(function AppSidebar() {
                 >
                   <Link to="/settings">
                     <Settings />
-                    <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300">设置</span>
+                    <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">设置</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
