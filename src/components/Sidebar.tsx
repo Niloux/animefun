@@ -37,9 +37,15 @@ type MenuItem = {
   url?: string;
   icon?: React.ElementType;
   children?: MenuItem[];
+  preload?: () => void; // 添加预加载函数类型
 };
 
-export const AppSidebar = function AppSidebar() {
+interface AppSidebarProps {
+  // 预加载函数映射表：路径 -> 预加载函数
+  preloadMap?: Record<string, () => void>;
+}
+
+export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
   // 使用Set存储展开的菜单标题，支持多菜单展开
@@ -47,6 +53,13 @@ export const AppSidebar = function AppSidebar() {
 
   // 检查路径是否激活
   const isActive = (path: string) => location.pathname === path;
+
+  // 预加载处理函数
+  const handlePreload = (path?: string) => {
+    if (path && preloadMap && preloadMap[path]) {
+      preloadMap[path]();
+    }
+  };
 
   // 切换菜单展开状态
   const toggleMenu = (title: string) => {
@@ -157,6 +170,7 @@ export const AppSidebar = function AppSidebar() {
                               <SidebarMenuSubButton
                                 asChild
                                 isActive={isActive(child.url!)}
+                                onMouseEnter={() => handlePreload(child.url)}
                               >
                                 <Link to={child.url!}>
                                   <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
@@ -175,7 +189,11 @@ export const AppSidebar = function AppSidebar() {
                 // 普通菜单项
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url!)}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url!)}
+                      onMouseEnter={() => handlePreload(item.url)}
+                    >
                       <Link to={item.url!}>
                         {item.icon && <item.icon />}
                         <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">

@@ -1,15 +1,50 @@
 import { Component, ReactNode } from "react";
+import { Loader2Icon } from "lucide-react";
 
-interface State { hasError: boolean; }
+interface State { hasError: boolean; error: Error | null; }
 
 export default class ErrorBoundary extends Component<{children: ReactNode}, State> {
-  state = { hasError: false };
+  state: State = { hasError: false, error: null };
 
-  static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(error: Error) { console.error('Uncaught:', error); }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Uncaught error:', error);
+    // 可以在这里添加错误上报逻辑
+  }
+
+  handleReload = () => {
+    this.setState({ hasError: false, error: null });
+    // 强制刷新当前路由组件
+    window.location.reload();
+  };
 
   render() {
-    if (this.state.hasError) return <h2>程序出错了，刷新试试</h2>;
+    if (this.state.hasError) {
+      const isLazyLoadError = this.state.error && this.state.error.message.includes('failed to fetch chunk');
+
+      return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-6">
+          <h2 className="text-2xl font-bold text-destructive">
+            {isLazyLoadError ? '资源加载失败' : '程序出错了'}
+          </h2>
+          <p className="text-muted-foreground text-center">
+            {isLazyLoadError
+              ? '网络可能出现了问题，请尝试刷新页面'
+              : '抱歉，程序发生了意外错误，请尝试刷新页面'}
+          </p>
+          <button
+            onClick={this.handleReload}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+          >
+            <Loader2Icon className="w-4 h-4" />
+            刷新页面
+          </button>
+        </div>
+      );
+    }
     return this.props.children;
   }
 }
