@@ -30,7 +30,7 @@ export const AnimeGrid = ({ items }: AnimeGridProps) => {
             )}
           </div>
           <div className="p-4 flex flex-col grow justify-between">
-            <h3 className="text-sm font-semibold line-clamp-2">
+            <h3 className="text-sm font-semibold line-clamp-1">
               {anime.name_cn || anime.name}
             </h3>
             {anime.air_date && (
