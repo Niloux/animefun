@@ -29,6 +29,7 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "./ui/sidebar";
+import { ROUTES } from "../constants/routes";
 
 // 定义菜单结构类型
 type MenuItem = {
@@ -64,31 +65,31 @@ export const AppSidebar = function AppSidebar() {
   const menuItems: MenuItem[] = [
     {
       title: "首页",
-      url: "/home",
+      url: ROUTES.HOME,
       icon: Home,
     },
     {
       title: "搜索",
-      url: "/search",
+      url: ROUTES.SEARCH,
       icon: Search,
     },
     {
       title: "订阅",
-      url: "/subscribe",
+      url: ROUTES.SUBSCRIBE,
       icon: BookOpen,
     },
     {
       title: "资源",
       icon: Folder,
       children: [
-        { title: "全部", url: "/resources/all" },
-        { title: "下载中", url: "/resources/downloading" },
-        { title: "已下载", url: "/resources/downloaded" },
+        { title: "全部", url: ROUTES.RESOURCES.ALL },
+        { title: "下载中", url: ROUTES.RESOURCES.DOWNLOADING },
+        { title: "已下载", url: ROUTES.RESOURCES.DOWNLOADED },
       ],
     },
     {
       title: "设置",
-      url: "/settings",
+      url: ROUTES.SETTINGS,
       icon: Settings,
     },
   ];

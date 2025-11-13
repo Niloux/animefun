@@ -1,18 +1,11 @@
 import { Anime } from "../types/bangumi";
+import { getRatingColorClass } from "../lib/utils";
 
 interface AnimeGridProps {
   items: Anime[];
 }
 
 export const AnimeGrid = ({ items }: AnimeGridProps) => {
-  // 根据评分获取不同颜色
-  const getRatingColor = (score: number) => {
-    if (score < 5) return "bg-destructive"; // 红色 - 低分
-    if (score < 7) return "bg-chart-3"; // 黄色 - 中等
-    if (score < 9) return "bg-chart-2"; // 绿色 - 高分
-    return "bg-primary"; // 蓝色 - 顶级评分
-  };
-
   return (
     // 番剧卡片网格
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
@@ -30,7 +23,7 @@ export const AnimeGrid = ({ items }: AnimeGridProps) => {
             />
             {anime.rating && anime.rating.score !== 0 && (
               <div
-                className={`absolute top-3 right-3 ${getRatingColor(anime.rating.score)} text-white rounded-full px-2 py-0.5 text-xs font-medium shadow-md`}
+                className={`absolute top-3 right-3 ${getRatingColorClass(anime.rating.score)} text-white rounded-full px-2 py-0.5 text-xs font-medium shadow-md`}
               >
                 {anime.rating.score.toFixed(1)}
               </div>
