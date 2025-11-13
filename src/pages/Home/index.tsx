@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Calendar } from "lucide-react";
 import { useCalendar } from "../../hooks/use-calendar";
 import { PageHeader } from "../../components/PageHeader";
@@ -13,10 +13,16 @@ const HomePage = () => {
   // 使用自定义 Hook 加载日历数据
   const { data: calendarData, loading } = useCalendar();
 
-  // 获取当前选中天的数据
-  const selectedDayData = calendarData.find(
-    (day) => day.weekday.id === selectedDay,
-  );
+  // 优化数据查找：将数组转换为 ID 映射表，使用 useMemo 缓存结果
+  const calendarDataMap = useMemo(() => {
+    return calendarData.reduce((map, day) => {
+      map[day.weekday.id] = day;
+      return map;
+    }, {} as Record<number, typeof calendarData[number]>);
+  }, [calendarData]);
+
+  // 获取当前选中天的数据 - 现在是 O(1) 时间复杂度
+  const selectedDayData = calendarDataMap[selectedDay];
 
   // 计算今天的 id
   const todayId = getWeekdayId();
@@ -33,7 +39,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="p-">
+    <div className="p-4">
       {/* 使用 PageHeader 组件 */}
       <PageHeader
         title="番剧日历"

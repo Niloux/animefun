@@ -1,3 +1,4 @@
+import React from "react";
 import { Anime } from "../types/bangumi";
 import { getRatingColorClass } from "../lib/utils";
 
@@ -5,10 +6,12 @@ interface AnimeGridProps {
   items: Anime[];
 }
 
-export const AnimeGrid = ({ items }: AnimeGridProps) => {
+export const AnimeGrid = React.memo(({ items }: AnimeGridProps) => {
   return (
     // 番剧卡片网格
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+    <div
+      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 transition-opacity duration-300 opacity-100"
+    >
       {items.map((anime) => (
         <div
           key={anime.id}
@@ -43,4 +46,6 @@ export const AnimeGrid = ({ items }: AnimeGridProps) => {
       ))}
     </div>
   );
-};
+});
+
+AnimeGrid.displayName = "AnimeGrid";
