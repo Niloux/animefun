@@ -25,8 +25,16 @@ pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
 
 pub async fn search_subject(keywords: &str, subject_type: Option<u8>, limit: Option<u32>, offset: Option<u32>) -> Result<SearchResponse, AppError> {
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::ACCEPT_ENCODING,
+        reqwest::header::HeaderValue::from_static("gzip, deflate"),
+    );
     let client = reqwest::Client::builder()
         .user_agent("animefun/0.1")
+        .default_headers(headers)
+        .gzip(true)
+        .deflate(true)
         .build()?;
     let mut req = client.post(&url);
     if let Some(l) = limit {
