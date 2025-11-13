@@ -1,6 +1,16 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Search, BookOpen, Folder, Settings, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Home,
+  Search,
+  BookOpen,
+  Folder,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import ikuyoAvatar from "../assets/ikuyo-avatar.png";
 import {
   Sidebar,
@@ -39,7 +49,7 @@ export const AppSidebar = function AppSidebar() {
 
   // 切换菜单展开状态
   const toggleMenu = (title: string) => {
-    setOpenMenus(prev => {
+    setOpenMenus((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(title)) {
         newSet.delete(title);
@@ -88,7 +98,10 @@ export const AppSidebar = function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="group-data-[state=collapsed]:size-10">
+            <SidebarMenuButton
+              size="lg"
+              className="group-data-[state=collapsed]:size-10"
+            >
               <img
                 src={ikuyoAvatar}
                 alt="ikuyo-avatar"
@@ -96,8 +109,12 @@ export const AppSidebar = function AppSidebar() {
               />
               <div className="text-left overflow-hidden whitespace-nowrap">
                 {/* <span className="text-xl font-semibold">For Fun</span> */}
-                <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">喜多郁代</div>
-                <div className="text-xs text-gray-400 opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">きた,いくよ</div>
+                <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
+                  喜多郁代
+                </div>
+                <div className="text-xs text-gray-400 opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
+                  きた,いくよ
+                </div>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -106,7 +123,9 @@ export const AppSidebar = function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">导航</SidebarGroupLabel>
+          <SidebarGroupLabel className="opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
+            导航
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
@@ -114,11 +133,20 @@ export const AppSidebar = function AppSidebar() {
                 if (item.children) {
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton onClick={() => toggleMenu(item.title)} className="group/resources">
+                      <SidebarMenuButton
+                        onClick={() => toggleMenu(item.title)}
+                        className="group/resources"
+                      >
                         {item.icon && <item.icon />}
-                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">{item.title}</span>
+                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
+                          {item.title}
+                        </span>
                         <span className="ml-auto shrink-0">
-                          {openMenus.has(item.title) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {openMenus.has(item.title) ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
                         </span>
                       </SidebarMenuButton>
                       {openMenus.has(item.title) && (
@@ -130,7 +158,9 @@ export const AppSidebar = function AppSidebar() {
                                 isActive={isActive(child.url!)}
                               >
                                 <Link to={child.url!}>
-                                  <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">{child.title}</span>
+                                  <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
+                                    {child.title}
+                                  </span>
                                 </Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
@@ -144,13 +174,12 @@ export const AppSidebar = function AppSidebar() {
                 // 普通菜单项
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.url!)}
-                    >
+                    <SidebarMenuButton asChild isActive={isActive(item.url!)}>
                       <Link to={item.url!}>
                         {item.icon && <item.icon />}
-                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">{item.title}</span>
+                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
+                          {item.title}
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

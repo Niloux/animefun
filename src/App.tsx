@@ -28,8 +28,14 @@ function App() {
 
           {/* Resources */}
           <Route path="/resources/all" element={<ResourcesAllPage />} />
-          <Route path="/resources/downloading" element={<ResourcesDownloadingPage />} />
-          <Route path="/resources/downloaded" element={<ResourcesDownloadedPage />} />
+          <Route
+            path="/resources/downloading"
+            element={<ResourcesDownloadingPage />}
+          />
+          <Route
+            path="/resources/downloaded"
+            element={<ResourcesDownloadedPage />}
+          />
 
           {/* Settings */}
           <Route path="/settings" element={<SettingsPage />} />

@@ -5,30 +5,30 @@ fn greet(name: &str) -> String {
 }
 
 mod bangumi;
-use bangumi::{DailyBroadcast, EpisodesPage, SubjectDetail, SubjectsPage};
+use bangumi::{BangumiClient, DailyCalendar, EpisodesResult, SearchResult, SubjectDetail};
 
 #[tauri::command]
-async fn bgm_daily(token: Option<String>) -> Result<DailyBroadcast, String> {
-    let c = bangumi::BangumiClient::new(token);
-    c.daily().await
+async fn bgm_daily(token: Option<String>) -> Result<DailyCalendar, String> {
+    let c = BangumiClient::new(token);
+    c.get_calendar().await
 }
 
 #[tauri::command]
 async fn bgm_subject(id: u32, token: Option<String>) -> Result<SubjectDetail, String> {
-    let c = bangumi::BangumiClient::new(token);
-    c.subject(id).await
+    let c = BangumiClient::new(token);
+    c.get_subject(id).await
 }
 
 #[tauri::command]
 async fn bgm_search(
-    q: String,
+    keyword: String,
     r#type: Option<u8>,
     limit: Option<u32>,
     offset: Option<u32>,
     token: Option<String>,
-) -> Result<SubjectsPage, String> {
-    let c = bangumi::BangumiClient::new(token);
-    c.search(&q, r#type, limit, offset).await
+) -> Result<SearchResult, String> {
+    let c = BangumiClient::new(token);
+    c.search_subjects(&keyword, r#type, limit, offset).await
 }
 
 #[tauri::command]
@@ -37,9 +37,9 @@ async fn bgm_episodes(
     limit: Option<u32>,
     offset: Option<u32>,
     token: Option<String>,
-) -> Result<EpisodesPage, String> {
-    let c = bangumi::BangumiClient::new(token);
-    c.episodes(subject_id, limit, offset).await
+) -> Result<EpisodesResult, String> {
+    let c = BangumiClient::new(token);
+    c.get_episodes(subject_id, limit, offset).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
