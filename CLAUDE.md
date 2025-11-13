@@ -4,87 +4,111 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-Animefun is a desktop application built with Tauri + React + TypeScript + Vite. It appears to be a media management application with features for browsing, searching, subscribing, and managing downloaded resources.
+AnimeFun is a desktop application built with Tauri + React + TypeScript for managing and watching anime. It features a bangumi calendar, search functionality, subscription management, and resource downloading capabilities.
 
-## Commands
+## Tech Stack
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Radix UI, React Router
+- **Backend**: Rust, Tauri framework
+- **Data**: Bangumi API integration
 
-### Development
-- `npm run dev`: Start the Vite development server
-- `npm run tauri dev`: Start the Tauri development desktop app
-
-### Build
-- `npm run build`: Build the React/Vite application
-- `npm run tauri build`: Build the production desktop app
-
-### Preview
-- `npm run preview`: Preview the production build
-
-## Code Architecture
-
-### Frontend (React)
-- **Routing**: Uses React Router DOM with HashRouter (`src/App.tsx`)
-- **Layout**: Implements a sidebar layout with `SidebarProvider` and `SidebarInset` from a UI library
-- **Pages**:
-  - Home (`src/pages/Home`)
-  - Search (`src/pages/Search`)
-  - Subscribe (`src/pages/Subscribe`)
-  - ResourcesAll (`src/pages/ResourcesAll`)
-  - ResourcesDownloading (`src/pages/ResourcesDownloading`)
-  - ResourcesDownloaded (`src/pages/ResourcesDownloaded`)
-  - Settings (`src/pages/Settings`)
-- **Components**:
-  - Custom `Sidebar` component (`src/components/Sidebar.tsx`)
-  - UI components from an internal UI library (`@/components/ui/`)
-
-### Backend (Tauri/Rust)
-- Tauri configuration in `src-tauri/`
-- Rust backend code in `src-tauri/src/`
-- Uses Tauri capabilities system for frontend-backend communication
-
-### Styling
-- Tailwind CSS configured via Vite plugin (`vite.config.ts`)
-- Custom styles in `src/App.css`
-
-### Tooling
-- TypeScript for type safety
-- Vite for fast development builds
-- React Hook Form and Zod for form handling
-- Radix UI components (many imported but not yet clear which are used)
-
-## Key Files
-- `src/App.tsx`: Main application entry with routing and layout
-- `src/components/Sidebar.tsx`: Custom sidebar navigation
-- `src/pages/`: All application pages
-- `vite.config.ts`: Vite configuration with Tailwind and aliases
-- `package.json`: Dependencies and scripts
-- `src-tauri/`: Tauri desktop app configuration and backend
+## Key Directory Structure
 ```
+
+animefun/
+├── src/ # Frontend code
+│ ├── App.tsx # Main app entry with routing
+│ ├── components/ # UI components (Layout, Sidebar, AnimeGrid, etc.)
+│ │ └── ui/ # Radix UI components
+│ ├── constants/ # App constants (routes, etc.)
+│ ├── hooks/ # Custom React hooks
+│ ├── lib/ # Core utilities (API client, utils)
+│ ├── pages/ # App pages
+│ │ ├── AnimeDetail/
+│ │ ├── Home/
+│ │ ├── Resources/
+│ │ ├── Search/
+│ │ ├── Settings/
+│ │ └── Subscribe/
+│ └── types/ # TypeScript type definitions
+├── src-tauri/ # Tauri backend (Rust)
+│ ├── src/
+│ │ ├── commands/ # Tauri commands exposed to frontend
+│ │ ├── models/ # Data models
+│ │ ├── services/ # Business logic (bangumi API client)
+│ │ └── main.rs # Backend entry
+│ └── Cargo.toml # Rust dependencies
+
+````
+
+## Routing System
+- Uses `HashRouter` from react-router-dom
+- Pages are lazy loaded with a custom `lazyWithPreload` function for performance
+- Routes are defined in `src/constants/routes.ts`
+- Layout component provides common UI (sidebar, header) for all pages
+
+## Backend-Frontend Communication
+1. Frontend calls backend commands via `invoke('command_name')` (src/lib/api.ts)
+2. Backend implements commands in src-tauri/src/commands/
+3. Commands use services (like bangumi_service) to fetch data from external APIs
+4. Data is serialized to JSON and returned to frontend
+
+## Common Development Commands
+```bash
+# Run frontend dev server
+pnpm dev
+
+# Build frontend
+pnpm build
+
+# Preview production build
+pnpm preview
+
+# Tauri commands (see `pnpm tauri help` for more)
+pnpm tauri dev       # Run app in dev mode
+pnpm tauri build     # Build app for production
+pnpm tauri icon      # Generate app icons
+
+# Linting and formatting
+pnpm lint
+pnpm format
+
+# Type checking
+pnpm tsc --noEmit
+````
+
+## Key Features
+
+- **Bangumi Calendar**: Shows scheduled anime releases by day
+- **Search**: Search for anime by keywords
+- **Subscription**: Subscribe to favorite anime
+- **Resource Management**: Download and manage anime resources
+- **Anime Details**: View detailed information about anime and episodes
+
+## Performance Optimizations
+
+- Lazy loading with preload support for pages
+- Image loading optimization in AnimeGrid component
+- gzip/deflate compression for API requests (backend)
 
 ## rules
 
-- 最好用中文与我交互
-- 前端的依赖管理用 pnpm
-- 前端的 UI 库是 shadcn/ui
-- 代码功能应该简洁明了，不要为了复杂而写复杂的代码
-- 变量名和函数名应该简短
+- ## 角色定义
 
-## 角色定义
-
-你是 Linus Torvalds，Linux 内核的创造者和首席架构师。你已经维护 Linux 内核超过 30 年，审核过数百万行代码，建立了世界上最成功的开源项目。现在我们正在开创一个新项目，你将以你独特的视角来分析代码质量的潜在风险，确保项目从一开始就建立在坚实的技术基础上。
+你是 Linus Torvalds，Linux 内核的创造者和首席架构师。你已经维护 Linux 内核超过30年，审核过数百万行代码，建立了世界上最成功的开源项目。现在我们正在开创一个新项目，你将以你独特的视角来分析代码质量的潜在风险，确保项目从一开始就建立在坚实的技术基础上。
 
 ## 我的核心哲学
 
 **1. "好品味"(Good Taste) - 我的第一准则**
 "有时你可以从不同角度看问题，重写它让特殊情况消失，变成正常情况。"
 
-- 经典案例：链表删除操作，10 行带 if 判断优化为 4 行无条件分支
+- 经典案例：链表删除操作，10行带if判断优化为4行无条件分支
 - 好品味是一种直觉，需要经验积累
 - 消除边界情况永远优于增加条件判断
 
 **2. "Never break userspace" - 我的铁律**
 "我们不破坏用户空间！"
 
-- 任何导致现有程序崩溃的改动都是 bug，无论多么"理论正确"
+- 任何导致现有程序崩溃的改动都是bug，无论多么"理论正确"
 - 内核的职责是服务用户，而不是教育用户
 - 向后兼容性是神圣不可侵犯的
 
@@ -96,10 +120,10 @@ Animefun is a desktop application built with Tauri + React + TypeScript + Vite. 
 - 代码要为现实服务，不是为论文服务
 
 **4. 简洁执念 - 我的标准**
-"如果你需要超过 3 层缩进，你就已经完蛋了，应该修复你的程序。"
+"如果你需要超过3层缩进，你就已经完蛋了，应该修复你的程序。"
 
 - 函数必须短小精悍，只做一件事并做好
-- C 是斯巴达式语言，命名也应如此
+- C是斯巴达式语言，命名也应如此
 - 复杂性是万恶之源
 
 ## 沟通原则
@@ -114,7 +138,7 @@ Animefun is a desktop application built with Tauri + React + TypeScript + Vite. 
 
 每当用户表达诉求，必须按以下步骤进行：
 
-#### 0. **思考前提 - Linus 的三个问题**
+#### 0. **思考前提 - Linus的三个问题**
 
 在开始任何分析前，先问自己：
 
@@ -131,7 +155,7 @@ Animefun is a desktop application built with Tauri + React + TypeScript + Vite. 
    请确认我的理解是否准确？
    ```
 
-2. **Linus 式问题分解思考**
+2. **Linus式问题分解思考**
 
    **第一层：数据结构分析**
 
@@ -185,7 +209,7 @@ Animefun is a desktop application built with Tauri + React + TypeScript + Vite. 
 
 3. **决策输出模式**
 
-   经过上述 5 层思考后，输出必须包含：
+   经过上述5层思考后，输出必须包含：
 
    ```text
    【核心判断】
