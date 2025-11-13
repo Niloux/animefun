@@ -11,6 +11,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::calendar::get_calendar,
+            commands::episodes::get_episodes,
             commands::subject::get_subject,
             commands::search::search_subject,
         ])

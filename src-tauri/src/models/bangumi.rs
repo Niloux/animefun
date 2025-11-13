@@ -111,3 +111,30 @@ pub struct SearchResponse {
     pub offset: u32,
     pub data: Vec<SubjectResponse>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Episode {
+    pub id: u32,
+    #[serde(rename = "type")]
+    pub item_type: u8,
+    pub name: String,
+    pub name_cn: String,
+    pub sort: f32,
+    pub ep: Option<f32>,
+    pub airdate: String,
+    pub comment: u32,
+    pub duration: String,
+    pub desc: String,
+    pub disc: u32,
+    pub duration_seconds: Option<u32>,
+    #[serde(default)]
+    pub subject_id: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PagedEpisode {
+    pub total: u32,
+    pub limit: u32,
+    pub offset: u32,
+    pub data: Vec<Episode>,
+}

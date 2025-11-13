@@ -16,14 +16,16 @@ pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
 
 pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
     let url = format!("{}/v0/subjects/{}", BGM_API_HOST, id);
-    let response = reqwest::get(&url)
-        .await?
-        .json::<SubjectResponse>()
-        .await?;
+    let response = reqwest::get(&url).await?.json::<SubjectResponse>().await?;
     Ok(response)
 }
 
-pub async fn search_subject(keywords: &str, subject_type: Option<u8>, limit: Option<u32>, offset: Option<u32>) -> Result<SearchResponse, AppError> {
+pub async fn search_subject(
+    keywords: &str,
+    subject_type: Option<u8>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<SearchResponse, AppError> {
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
@@ -59,13 +61,51 @@ pub async fn search_subject(keywords: &str, subject_type: Option<u8>, limit: Opt
     let payload = SearchPayload {
         keyword: keywords.to_string(),
         sort: None,
-        filter: subject_type.map(|t| FilterPayload { r#type: Some(vec![t]) }),
+        filter: subject_type.map(|t| FilterPayload {
+            r#type: Some(vec![t]),
+        }),
     };
     let response = req
         .json(&payload)
         .send()
         .await?
         .json::<SearchResponse>()
+        .await?;
+    Ok(response)
+}
+
+pub async fn fetch_episodes(
+    subject_id: u32,
+    ep_type: Option<u8>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<crate::models::bangumi::PagedEpisode, AppError> {
+    let url = format!("{}/v0/episodes", BGM_API_HOST);
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::ACCEPT_ENCODING,
+        reqwest::header::HeaderValue::from_static("gzip, deflate"),
+    );
+    let client = reqwest::Client::builder()
+        .user_agent("animefun/0.1")
+        .default_headers(headers)
+        .gzip(true)
+        .deflate(true)
+        .build()?;
+    let mut req = client.get(&url).query(&[("subject_id", subject_id)]);
+    if let Some(t) = ep_type {
+        req = req.query(&[("type", t as u32)]);
+    }
+    if let Some(l) = limit {
+        req = req.query(&[("limit", l)]);
+    }
+    if let Some(o) = offset {
+        req = req.query(&[("offset", o)]);
+    }
+    let response = req
+        .send()
+        .await?
+        .json::<crate::models::bangumi::PagedEpisode>()
         .await?;
     Ok(response)
 }
@@ -83,11 +123,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_subject() {
-        let res = search_subject("Fate", Some(2), Some(10), Some(0)).await.unwrap();
+        let res = search_subject("Fate", Some(2), Some(10), Some(0))
+            .await
+            .unwrap();
         assert!(res.total > 0);
         assert!(!res.data.is_empty());
         let first = &res.data[0];
         assert!(first.id > 0);
         assert!(!first.name.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_episodes() {
+        let res = fetch_episodes(876, None, Some(100), Some(0)).await.unwrap();
+        assert!(res.limit >= 1);
+        assert!(res.data.len() as u32 <= res.limit);
     }
 }
