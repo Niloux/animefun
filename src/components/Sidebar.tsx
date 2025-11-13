@@ -31,18 +31,26 @@ import {
 } from "./ui/sidebar";
 import { ROUTES } from "../constants/routes";
 
-// 定义菜单结构类型
-type MenuItem = {
+// 定义菜单结构类型 - 区分父菜单和子菜单以提高类型安全
+type MenuItem = ParentMenuItem | ChildMenuItem;
+
+type ParentMenuItem = {
   title: string;
-  url?: string;
   icon?: React.ElementType;
-  children?: MenuItem[];
-  preload?: () => void; // 添加预加载函数类型
+  children: ChildMenuItem[];
+  preload?: () => void;
+};
+
+type ChildMenuItem = {
+  title: string;
+  url: string;
+  icon?: React.ElementType;
+  preload?: () => void;
 };
 
 interface AppSidebarProps {
   // 预加载函数映射表：路径 -> 预加载函数
-  preloadMap?: Record<string, () => void>;
+  preloadMap: Record<string, () => void>;
 }
 
 export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
@@ -54,9 +62,14 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   // 检查路径是否激活
   const isActive = (path: string) => location.pathname === path;
 
+  // 类型守卫：检查是否为父菜单（有子菜单）
+  const isParent = (menuItem: MenuItem): menuItem is ParentMenuItem => {
+    return 'children' in menuItem;
+  };
+
   // 预加载处理函数
   const handlePreload = (path?: string) => {
-    if (path && preloadMap && preloadMap[path]) {
+    if (path && preloadMap[path]) {
       preloadMap[path]();
     }
   };
@@ -144,7 +157,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
             <SidebarMenu>
               {menuItems.map((item) => {
                 // 有子菜单的父项
-                if (item.children) {
+                if (isParent(item)) {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
@@ -169,10 +182,10 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
                             <SidebarMenuSubItem key={child.title}>
                               <SidebarMenuSubButton
                                 asChild
-                                isActive={isActive(child.url!)}
+                                isActive={isActive(child.url)}
                                 onMouseEnter={() => handlePreload(child.url)}
                               >
-                                <Link to={child.url!}>
+                                <Link to={child.url}>
                                   <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
                                     {child.title}
                                   </span>
@@ -191,10 +204,10 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
-                      isActive={isActive(item.url!)}
+                      isActive={isActive(item.url)}
                       onMouseEnter={() => handlePreload(item.url)}
                     >
-                      <Link to={item.url!}>
+                      <Link to={item.url}>
                         {item.icon && <item.icon />}
                         <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
                           {item.title}

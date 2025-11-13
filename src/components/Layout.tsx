@@ -6,7 +6,7 @@ import { Toaster } from "sonner"; // 引入 Sonner Toaster 组件
 import { Loader2 } from "lucide-react"; // 引入加载动画
 
 interface LayoutProps {
-  preloadMap?: Record<string, () => void>;
+  preloadMap: Record<string, () => void>;
 }
 
 export function Layout({ preloadMap }: LayoutProps) {

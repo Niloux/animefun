@@ -4,13 +4,11 @@ import { useCalendar } from "../../hooks/use-calendar";
 import { PageHeader } from "../../components/PageHeader";
 import { WeekDayNav } from "../../components/WeekDayNav";
 import { AnimeGrid } from "../../components/AnimeGrid";
+import { getWeekdayId } from "../../lib/utils";
 
 const HomePage = () => {
   // 默认选中当天
-  const [selectedDay, setSelectedDay] = useState<number>(() => {
-    const day = new Date().getDay();
-    return day === 0 ? 7 : day;
-  });
+  const [selectedDay, setSelectedDay] = useState<number>(getWeekdayId);
 
   // 使用自定义 Hook 加载日历数据
   const { data: calendarData, loading } = useCalendar();
@@ -20,8 +18,8 @@ const HomePage = () => {
     (day) => day.weekday.id === selectedDay,
   );
 
-  // 计算今天的 id (new Date().getDay() 返回 0-6，需转换为 1-7)
-  const todayId = new Date().getDay() === 0 ? 7 : new Date().getDay();
+  // 计算今天的 id
+  const todayId = getWeekdayId();
 
   // 处理星期几点击
   const handleDayChange = (day: number) => {

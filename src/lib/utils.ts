@@ -11,3 +11,9 @@ export function getRatingColorClass(score: number): string {
   if (score < 9) return "bg-chart-2"; // 绿色 - 高分
   return "bg-primary"; // 蓝色 - 顶级评分
 }
+
+// 将星期几转换为 1-7 的格式（周日=7）
+export function getWeekdayId(date: Date = new Date()): number {
+  const day = date.getDay();
+  return day === 0 ? 7 : day;
+}
