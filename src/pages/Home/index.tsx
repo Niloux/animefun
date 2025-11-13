@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
-import { CalendarDay} from '../../types/bangumi';
+import { CalendarDay } from '../../types/bangumi';
+import { toast } from 'sonner';
 
 const HomePage = () => {
   // 默认选中当天
@@ -10,15 +11,11 @@ const HomePage = () => {
   });
   const [calendarData, setCalendarData] = useState<CalendarDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  // 添加错误状态
-  const [error, setError] = useState<string | null>(null);
 
   // 加载日历数据
   const loadData = async () => {
     try {
       setLoading(true);
-      setError(null);
-
       const response = await fetch('/calendar.json');
 
       // 检查响应状态
@@ -30,7 +27,17 @@ const HomePage = () => {
       setCalendarData(data);
     } catch (error) {
       console.error('加载数据失败:', error);
-      setError(error instanceof Error ? error.message : '加载数据失败');
+      // 使用 toast 显示错误信息
+      toast.error(
+        error instanceof Error ? error.message : '加载数据失败',
+        {
+          duration: 5000,
+          action: {
+            label: '重试',
+            onClick: () => loadData(),
+          },
+        }
+      );
     } finally {
       setLoading(false);
     }
@@ -74,21 +81,6 @@ const HomePage = () => {
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">加载中...</div>;
-  }
-
-  // 显示错误信息
-  if (error) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen gap-4">
-        <div className="text-destructive font-medium">{error}</div>
-        <button
-          onClick={loadData}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
-        >
-          重试加载
-        </button>
-      </div>
-    );
   }
 
   return (

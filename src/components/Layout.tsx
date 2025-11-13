@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset } from "./ui/sidebar";
 import AppSidebar from "./Sidebar";
+import { Toaster } from "sonner"; // 引入 Sonner Toaster 组件
 
 export function Layout() {
   return (
@@ -13,6 +14,7 @@ export function Layout() {
           </div>
         </SidebarInset>
       </div>
+      <Toaster position="bottom-right" /> {/* 添加全局 Toaster 组件 */}
     </SidebarProvider>
   );
 }
