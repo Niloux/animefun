@@ -1,44 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
-
-interface Weekday {
-  en: string;
-  cn: string;
-  ja: string;
-  id: number;
-}
-
-interface Anime {
-  id: number;
-  url: string;
-  type: number;
-  name: string;
-  name_cn: string;
-  summary: string;
-  air_date: string;
-  air_weekday: number;
-  rating: {
-    total: number;
-    count: { [key: string]: number };
-    score: number;
-  };
-  rank?: number;
-  images: {
-    large: string;
-    common: string;
-    medium: string;
-    small: string;
-    grid: string;
-  };
-  collection?: {
-    doing: number;
-  };
-}
-
-interface CalendarDay {
-  weekday: Weekday;
-  items: Anime[];
-}
+import { CalendarDay} from '../../types/bangumi';
 
 const HomePage = () => {
   // 默认选中当天
@@ -48,21 +10,34 @@ const HomePage = () => {
   });
   const [calendarData, setCalendarData] = useState<CalendarDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  // 添加错误状态
+  const [error, setError] = useState<string | null>(null);
 
   // 加载日历数据
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const response = await fetch('/calendar.json');
-        const data = await response.json();
-        setCalendarData(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('加载数据失败:', error);
-        setLoading(false);
-      }
-    };
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
+      const response = await fetch('/calendar.json');
+
+      // 检查响应状态
+      if (!response.ok) {
+        throw new Error(`加载失败: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setCalendarData(data);
+    } catch (error) {
+      console.error('加载数据失败:', error);
+      setError(error instanceof Error ? error.message : '加载数据失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件挂载时加载数据
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -99,6 +74,21 @@ const HomePage = () => {
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen">加载中...</div>;
+  }
+
+  // 显示错误信息
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen gap-4">
+        <div className="text-destructive font-medium">{error}</div>
+        <button
+          onClick={loadData}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
+        >
+          重试加载
+        </button>
+      </div>
+    );
   }
 
   return (
