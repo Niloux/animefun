@@ -161,7 +161,7 @@ const HomePage = () => {
         {/* 番剧卡片网格 */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
           {selectedDayData?.items.map((anime) => (
-            <div key={anime.id} className="bg-card rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-border/60">
+            <div key={anime.id} className="bg-card rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-border/60 flex flex-col">
               <div className="relative">
                 <img
                   src={anime.images.large}
@@ -174,10 +174,14 @@ const HomePage = () => {
                   </div>
                 )}
               </div>
-              <div className="p-4">
-                <h3 className="text-sm font-semibold line-clamp-2">{anime.name_cn || anime.name}</h3>
+              <div className="p-4 flex flex-col grow justify-between">
+                <h3 className="text-sm font-semibold line-clamp-2">
+                  {anime.name_cn || anime.name}
+                </h3>
                 {anime.air_date && (
-                  <div className="text-xs text-muted-foreground mt-2">{anime.air_date}</div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    {anime.air_date}
+                  </div>
                 )}
               </div>
             </div>
