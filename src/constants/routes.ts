@@ -8,4 +8,5 @@ export const ROUTES = {
     DOWNLOADED: '/resources/downloaded',
   },
   SETTINGS: '/settings',
+  ANIME_DETAIL: '/anime/:id',
 };

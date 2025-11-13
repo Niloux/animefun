@@ -13,6 +13,7 @@ const ResourcesAllPage = lazyWithPreload(() => import(/* viteChunkName: "page-re
 const ResourcesDownloadingPage = lazyWithPreload(() => import(/* viteChunkName: "page-resources-downloading" */ "./pages/Resources/Downloading"));
 const ResourcesDownloadedPage = lazyWithPreload(() => import(/* viteChunkName: "page-resources-downloaded" */ "./pages/Resources/Downloaded"));
 const SettingsPage = lazyWithPreload(() => import(/* viteChunkName: "page-settings" */ "./pages/Settings"));
+const AnimeDetailPage = lazyWithPreload(() => import(/* viteChunkName: "page-anime-detail" */ "./pages/AnimeDetail"));
 
 function App() {
   // 创建预加载函数映射表
@@ -48,6 +49,7 @@ function App() {
               element={<ResourcesDownloadedPage />}
             />
             <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
+            <Route path={ROUTES.ANIME_DETAIL} element={<AnimeDetailPage />} />
 
             {/* 兜底路由 */}
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
