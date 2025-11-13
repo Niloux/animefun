@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { CalendarDay } from "../types/bangumi";
+import { getCalendar } from "../lib/api"; // 从封装的 API 模块导入
 
 export function useCalendar() {
   const [data, setData] = useState<CalendarDay[]>([]);
@@ -9,17 +10,10 @@ export function useCalendar() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/calendar.json");
-
-      // 检查响应状态
-      if (!response.ok) {
-        throw new Error(`加载失败: ${response.statusText}`);
-      }
-
-      const calendarData = await response.json();
+      const calendarData = await getCalendar();
       setData(calendarData);
     } catch (error) {
-      console.error("加载数据失败:", error);
+      console.error("加载日历数据失败:", error);
       toast.error(error instanceof Error ? error.message : "加载数据失败", {
         duration: 5000,
         action: {
