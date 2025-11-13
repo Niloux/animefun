@@ -1,128 +1,12 @@
-import { useState, useEffect } from "react";
 import { ArrowLeft, Calendar, Star, Award } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Anime } from "../../types/bangumi";
-import { getAnimeDetail } from "../../lib/api";
 import EpisodesList from "../../components/EpisodesList";
+import { useAnimeDetail } from "../../hooks/use-anime-detail";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  // 确保anime初始化时infobox是数组
-  const [anime, setAnime] = useState<Anime | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchAnimeDetail = async () => {
-      try {
-        setLoading(true);
-        // 获取真实番剧详情
-        const data = await getAnimeDetail(Number(id));
-
-        // 辅助函数：提取value的实际内容
-        const extractValue = (value: unknown): string => {
-          if (value === null || value === undefined) {
-            return '';
-          }
-
-          // 字符串直接返回
-          if (typeof value === 'string') {
-            return value;
-          }
-
-          // 包含v键的对象
-          if (typeof value === 'object' && !Array.isArray(value) && 'v' in value) {
-            return extractValue(value.v);
-          }
-
-          // 数组，将多个值用顿号连接
-          if (Array.isArray(value)) {
-            return value.map(item => extractValue(item)).filter(Boolean).join('、');
-          }
-
-          // 其他类型转换为字符串
-          try {
-            return String(value);
-          } catch {
-            return '';
-          }
-        };
-
-        // 检查并处理infobox数据
-        const processedData = {
-          ...data,
-          infobox: Array.isArray(data.infobox) ? data.infobox.map(item => ({
-            ...item,
-            value: extractValue(item.value),
-          })) : [],
-        };
-
-        setAnime(processedData);
-      } catch (error) {
-        console.error('Failed to fetch anime detail:', error);
-        // 使用mock数据
-        const mockAnime: Anime = {
-          id: Number(id),
-          url: "",
-          type: 1,
-          name: "CLANNAD 〜AFTER STORY〜",
-          name_cn: "CLANNAD ～AFTER STORY～",
-          summary: '在某个小镇，主角冈崎朋也因为家庭的因素成为不良少年，一直与春原阳平为伍，在光坂高校过着潦倒的生活，但冀望终有一天能够离开所在的小镇。某一天，他在学校坡道前发现了一个止步不前的女孩，在朋也认识了这个名为"古河渚"的女孩后，他的生活开始有了重大的变化。\r\n\r\n前半为主角和女主角们之间所发生的事件，后半After story为主角和古河渚，在冈崎中学毕业之后，共同生活的日子，其中还穿插了"幻想世界"，CLANNAD就是由这三个要素所组成的故事。',
-          air_date: "2008-10-02",
-          air_weekday: 4,
-          platform: "TV",
-          rating: {
-            rank: 2,
-            total: 28852,
-            count: { "10": 15000, "9": 8000, "8": 5000 },
-            score: 9.1,
-          },
-          images: {
-            large: "https://lain.bgm.tv/pic/cover/l/67/d1/876_dCfrd.jpg",
-            common: "https://lain.bgm.tv/pic/cover/l/67/d1/876_dCfrd.jpg",
-            medium: "https://lain.bgm.tv/r/800/pic/cover/l/67/d1/876_dCfrd.jpg",
-            small: "https://lain.bgm.tv/r/400/pic/cover/l/67/d1/876_dCfrd.jpg",
-            grid: "https://lain.bgm.tv/pic/cover/g/67/d1/876_dCfrd.jpg",
-          },
-          collection: {
-            wish: 7665,
-            collect: 41912,
-            doing: 1618,
-            on_hold: 1177,
-            dropped: 354,
-          },
-          tags: [
-            { name: "Clannad", count: 1000 },
-            { name: "京阿尼", count: 800 },
-            { name: "Key", count: 700 },
-            { name: "催泪", count: 900 },
-            { name: "神作", count: 600 },
-            { name: "治愈", count: 500 },
-            { name: "人生", count: 400 },
-            { name: "日常", count: 300 },
-            { name: "爱情", count: 200 },
-            { name: "恋爱", count: 100 },
-          ],
-          infobox: [
-            { key: "话数", value: "24" },
-            { key: "放送开始", value: "2008年10月2日" },
-            { key: "放送星期", value: "星期四" },
-            { key: "播放电视台", value: "TBS" },
-            { key: "导演", value: "石原立也" },
-            { key: "原作", value: "Key/VISUAL ARTS" },
-            { key: "动画制作", value: "京都アニメーション" },
-          ],
-        };
-        setAnime(mockAnime);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnimeDetail();
-  }, [id]);
+  const { anime, loading } = useAnimeDetail(id);
 
   if (loading) {
     return (
@@ -269,7 +153,7 @@ const AnimeDetailPage = () => {
             <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">标签</h2>
               <div className="flex flex-wrap gap-2">
-                {(anime.tags?.slice(0, 15) || []).map((tag, idx) => (
+                {(anime.tags?.slice(0, 15) || []).map((tag: { name: string }, idx: number) => (
                   <span
                     key={idx}
                     className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
@@ -293,7 +177,7 @@ const AnimeDetailPage = () => {
                   制作信息
                 </h2>
                 <div className="space-y-3">
-                  {anime.infobox?.map((info, idx) => (
+                  {anime.infobox?.map((info: { key: string; value: unknown }, idx: number) => (
                     <div
                       key={idx}
                       className="flex justify-between items-start pb-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 last:pb-0"

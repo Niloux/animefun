@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazyWithPreload } from "./lib/hooks/useLazyPreload";
+import { lazyWithPreload } from "./hooks/use-lazy-preload";
 import { Layout } from "./components/Layout";
 import { ROUTES } from "./constants/routes";
 import ErrorBoundary from "./components/ErrorBoundary";
