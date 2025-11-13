@@ -167,6 +167,7 @@ const HomePage = () => {
                   src={anime.images.large}
                   alt={anime.name}
                   className="w-full h-60 object-cover"
+                  loading="lazy"
                 />
                 {anime.rating && anime.rating.score !== 0 && (
                   <div className={`absolute top-3 right-3 ${getRatingColor(anime.rating.score)} text-white rounded-full px-2 py-0.5 text-xs font-medium shadow-md`}>
