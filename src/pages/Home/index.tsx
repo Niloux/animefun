@@ -5,7 +5,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { WeekDayNav } from "../../components/WeekDayNav";
 import { AnimeGrid } from "../../components/AnimeGrid";
 import { getWeekdayId } from "../../lib/utils";
-import { Skeleton } from "../../components/ui/skeleton";
+import HomeSkeleton from "./HomeSkeleton";
 
 const HomePage = () => {
   // 默认选中当天
@@ -33,54 +33,7 @@ const HomePage = () => {
     setSelectedDay(day);
   };
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        {/* 使用实际的 PageHeader 组件 */}
-        <PageHeader
-          title="番剧日历"
-          description="Anime Calendar"
-          icon={Calendar}
-        />
-
-        {/* 使用实际的 WeekDayNav 组件 */}
-        <div className="px-8">
-          <WeekDayNav selectedDay={selectedDay} onDayChange={handleDayChange} />
-        </div>
-
-        {/* Main content skeleton */}
-        <div className="px-8">
-          <main className="w-full max-w-none">
-            {/* Title section skeleton */}
-            <div className="flex items-center mb-6">
-              <div className="flex items-center gap-3">
-                <Skeleton className="w-1 h-8 rounded-full bg-border" />
-                <Skeleton className="h-8 w-32" />
-              </div>
-              <Skeleton className="flex-1 h-px bg-border ml-3" />
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-card/80 text-card-foreground border border-border/60">
-                <Skeleton className="w-4 h-4 rounded-full" />
-                <Skeleton className="h-4 w-12" />
-              </div>
-            </div>
-
-            {/* AnimeGrid skeleton */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 transition-opacity duration-300 opacity-100">
-              {Array.from({ length: 15 }).map((_, index) => (
-                <div key={index} className="bg-card rounded-xl shadow-md overflow-hidden border border-border/60 flex flex-col">
-                  <Skeleton className="w-full h-60" />
-                  <div className="p-4 flex flex-col grow justify-between">
-                    <Skeleton className="h-4 w-3/4 mb-2" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </main>
-        </div>
-      </div>
-    );
-  }
+  // loading handled in main conditional
 
   return (
     <div className="p-4">
@@ -99,27 +52,24 @@ const HomePage = () => {
       {/* 内容区域 */}
       <div className="px-8">
         <main className="w-full max-w-none">
-          {/* 当天标题 */}
-          <div className="flex items-center mb-6">
-            <div
-              className={`flex items-center gap-3 ${selectedDay === todayId ? "text-primary" : "text-foreground"}`}
-            >
-              <div
-                className={`w-1 h-8 rounded-full ${selectedDay === todayId ? "bg-primary" : "bg-border"}`}
-              />
-              <h2 className="text-2xl font-bold">
-                {selectedDayData?.weekday.cn || "未找到数据"}
-              </h2>
-            </div>
-            <div className="flex-1 h-px bg-border ml-3"></div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-card/80 text-card-foreground border border-border/60">
-              <Calendar className="w-4 h-4" />
-              <span>{selectedDayData?.items.length || 0} 部番剧</span>
-            </div>
-          </div>
-
-          {/* 使用 AnimeGrid 组件 */}
-          <AnimeGrid items={selectedDayData?.items || []} />
+          {loading ? (
+            <HomeSkeleton />
+          ) : (
+            <>
+              <div className="flex items-center mb-6">
+                <div className={`flex items-center gap-3 ${selectedDay === todayId ? "text-primary" : "text-foreground"}`}>
+                  <div className={`w-1 h-8 rounded-full ${selectedDay === todayId ? "bg-primary" : "bg-border"}`} />
+                  <h2 className="text-2xl font-bold">{selectedDayData?.weekday.cn || "未找到数据"}</h2>
+                </div>
+                <div className="flex-1 h-px bg-border ml-3"></div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-card/80 text-card-foreground border border-border/60">
+                  <Calendar className="w-4 h-4" />
+                  <span>{selectedDayData?.items.length || 0} 部番剧</span>
+                </div>
+              </div>
+              <AnimeGrid items={selectedDayData?.items || []} />
+            </>
+          )}
         </main>
       </div>
     </div>
