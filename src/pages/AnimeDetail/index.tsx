@@ -14,7 +14,7 @@ const AnimeDetailPage = () => {
         {/* 海报和基本信息区加载 */}
         <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8">
           {/* 左侧海报 */}
-          <div className="w-44 md:w-72 shrink-0">
+          <div className="w-36 md:w-56 shrink-0">
             <div className="aspect-2/3 bg-gray-200 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 animate-pulse"></div>
           </div>
 
@@ -103,11 +103,11 @@ const AnimeDetailPage = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="p-4 md:p-8">
+      <div className="p-0">
         {/* 海报和基本信息区 */}
         <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8">
           {/* 左侧海报 */}
-          <div className="w-44 md:w-72 shrink-0">
+          <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
               <img
                 src={anime.images.large}
