@@ -1,3 +1,4 @@
+import React from "react";
 interface WeekDayNavProps {
   selectedDay: number;
   onDayChange: (day: number) => void;
@@ -14,9 +15,8 @@ const WEEK_DAYS = [
   { id: 7, name: "星期日", short: "日" },
 ];
 
-export const WeekDayNav = ({ selectedDay, onDayChange }: WeekDayNavProps) => {
+const WeekDayNavBase = ({ selectedDay, onDayChange }: WeekDayNavProps) => {
   return (
-    // 星期导航
     <div className="flex items-center gap-1 overflow-x-auto">
       {WEEK_DAYS.map((day) => (
         <button
@@ -34,3 +34,5 @@ export const WeekDayNav = ({ selectedDay, onDayChange }: WeekDayNavProps) => {
     </div>
   );
 };
+
+export const WeekDayNav = React.memo(WeekDayNavBase);

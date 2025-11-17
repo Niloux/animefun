@@ -57,6 +57,8 @@ export interface Episode {
   disc: number;
   duration_seconds?: number;
   subject_id?: number;
+  comment_str?: string;
+  duration_display?: string;
 }
 
 export interface PagedEpisode {

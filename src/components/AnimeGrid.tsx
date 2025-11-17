@@ -4,6 +4,7 @@ import { getRatingColorClass } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
 import { Badge } from "./ui/badge";
+import { Skeleton } from "./ui/skeleton";
 
 interface AnimeGridProps {
   items: Anime[];
@@ -32,30 +33,23 @@ const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number })
       tabIndex={0}
     >
       <div className="relative overflow-hidden">
-        {/* 低分辨率占位图 (使用 grid 尺寸，专为网格视图优化) */}
-        <img
-          src={anime.images.grid}
-          alt={anime.name}
-          width={160}  // 设置与主图相同的宽高比，避免布局偏移
-          height={240} // h-60 = 240px
-          className={`w-full h-60 object-cover transition-opacity duration-300 ${
-            isImageLoaded ? "opacity-0" : "opacity-100 blur-sm"
-          }`}
-        />
-        {/* 主图 (使用 large 尺寸，保证清晰度) */}
         <img
           src={anime.images.large}
           alt={anime.name}
-          width={160}  // 设置明确的宽高，避免布局偏移
+          width={160}
           height={240}
-          className={`absolute inset-0 w-full h-60 object-cover transition-opacity duration-300 ${
+          className={`w-full h-60 object-cover transition-opacity duration-300 ${
             isImageLoaded ? "opacity-100" : "opacity-0"
           }`}
-          loading={index < 8 ? "eager" : "lazy"} // 前8个卡片使用eager加载，提升初始加载体验
+          loading={index < 8 ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={index < 8 ? "high" : "auto"}
           onLoad={() => setIsImageLoaded(true)}
-          // 图片加载失败时回退到占位图状态
           onError={() => setIsImageLoaded(false)}
         />
+        {!isImageLoaded && (
+          <Skeleton className="absolute inset-0 w-full h-60" />
+        )}
         {/* 评分标签 */}
         {anime.rating && anime.rating.score !== 0 && (
           <Badge

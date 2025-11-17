@@ -21,7 +21,12 @@ export const useEpisodes = (subjectId: number | undefined) => {
       const result = await getEpisodes(subjectId, undefined, 100, 0);
       const list = (result.data || [])
         .sort((a, b) => a.disc - b.disc || a.sort - b.sort)
-        .filter(e => e.type === 0 && e.ep !== null);
+        .filter(e => e.type === 0 && e.ep !== null)
+        .map(e => ({
+          ...e,
+          comment_str: e.comment.toLocaleString(),
+          duration_display: e.duration || 'N/A',
+        }));
       setEpisodes(list);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '加载剧集失败';

@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
 import { Separator } from "../../components/ui/separator";
+import { AnimeInfoBox } from "../../components/AnimeInfoBox";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -20,6 +21,7 @@ const AnimeDetailPage = () => {
   const { anime, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<number | null>(null);
+  const heightRef = useRef<number>(0);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
 
   // 同步左右面板高度
@@ -29,7 +31,11 @@ const AnimeDetailPage = () => {
       frameRef.current = window.requestAnimationFrame(() => {
         frameRef.current = null;
         if (leftPanelRef.current) {
-          setLeftPanelHeight(leftPanelRef.current.offsetHeight);
+          const h = leftPanelRef.current.offsetHeight;
+          if (h !== heightRef.current) {
+            heightRef.current = h;
+            setLeftPanelHeight(h);
+          }
         }
       });
     };
@@ -46,7 +52,10 @@ const AnimeDetailPage = () => {
 
   useEffect(() => {
     if (anime) {
-      document.title = anime.name_cn || anime.name;
+      const nextTitle = anime.name_cn || anime.name;
+      if (document.title !== nextTitle) {
+        document.title = nextTitle;
+      }
     }
   }, [anime]);
 
@@ -96,7 +105,7 @@ const AnimeDetailPage = () => {
           <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
               <AspectRatio ratio={2/3}>
-                <img src={anime.images.large} alt={anime.name} className="w-full h-full object-cover" />
+                <img src={anime.images.large} alt={anime.name} className="w-full h-full object-cover" decoding="async" fetchPriority="high" />
               </AspectRatio>
             </div>
           </div>
@@ -212,36 +221,8 @@ const AnimeDetailPage = () => {
 
           {/* 右侧 - 制作信息 */}
           <ResizablePanel defaultSize={34} minSize={25} className="space-y-6">
-            <div
-              className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700 overflow-y-auto"
-              style={{ maxHeight: `${leftPanelHeight}px` }}
-            >
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-500" />
-                制作信息
-              </h2>
-              <div className="space-y-3">
-                {anime.infobox?.map(
-                  (info: { key: string; value: unknown }, idx: number) => (
-                    <div
-                      key={idx}
-                      className="flex justify-between items-start pb-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 last:pb-0"
-                    >
-                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
-                        {info.key}:
-                      </span>
-                      <span className="text-sm text-gray-900 dark:text-white font-semibold text-right">
-                        {/* 由于我们已经在数据处理阶段提取了字符串value，这里可以安全转换 */}
-                        {String(info.value || "")}
-                      </span>
-                    </div>
-                  )
-                ) || (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    暂无制作信息
-                  </div>
-                )}
-              </div>
+            <div style={{ maxHeight: `${leftPanelHeight}px` }}>
+              <AnimeInfoBox items={anime.infobox as { key: string; value: unknown }[] | undefined} />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

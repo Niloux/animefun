@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Clock } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
 import { useEpisodes } from '../hooks/use-episodes';
@@ -11,8 +11,14 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
   const { episodes, loading } = useEpisodes(subjectId);
 
   const LIMIT = 6;
-
   const mainEpisodes = episodes;
+  const pages = useMemo(() => {
+    const list: typeof mainEpisodes[] = [];
+    for (let i = 0; i < mainEpisodes.length; i += LIMIT) {
+      list.push(mainEpisodes.slice(i, i + LIMIT));
+    }
+    return list;
+  }, [mainEpisodes]);
 
   // 直接在映射中生成页面（无需创建中间数组）
 
@@ -34,12 +40,10 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
         <div className="p-6">
           <Carousel className="w-full">
             <CarouselContent className="-ml-4">
-              {Array.from({ length: Math.ceil(mainEpisodes.length / LIMIT) }, (_, pageIndex) => {
-                const page = mainEpisodes.slice(pageIndex * LIMIT, (pageIndex + 1) * LIMIT);
-                return (
-                  <CarouselItem key={pageIndex} className="pl-4 basis-full">
-                    <div className="grid grid-cols-3 gap-4">
-                      {page.map((episode) => (
+              {pages.map((page, pageIndex) => (
+                <CarouselItem key={pageIndex} className="pl-4 basis-full">
+                  <div className="grid grid-cols-3 gap-4">
+                    {page.map((episode) => (
                         <div
                           key={episode.id}
                           className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer p-4 flex flex-col"
@@ -66,21 +70,20 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
                             {/* 元信息 */}
                             <div className="pt-3 mt-auto border-t border-gray-100 dark:border-slate-700 flex items-center justify-between text-xs">
                               <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                                <Eye className="w-3 h-3" />
-                                <span>{episode.comment.toLocaleString()}</span>
+                                <Eye className="w-3 h-3" aria-hidden="true" />
+                                <span>{episode.comment_str || episode.comment.toLocaleString()}</span>
                               </div>
                               <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                                <Clock className="w-3 h-3" />
-                                <span>{episode.duration || 'N/A'}</span>
+                                <Clock className="w-3 h-3" aria-hidden="true" />
+                                <span>{episode.duration_display || episode.duration || 'N/A'}</span>
                               </div>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CarouselItem>
-                );
-              })}
+                    ))}
+                  </div>
+                </CarouselItem>
+              ))}
             </CarouselContent>
 
             {/* 导航按钮 */}
@@ -97,4 +100,4 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
   );
 };
 
-export default EpisodesList;
+export default React.memo(EpisodesList);
