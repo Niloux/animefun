@@ -79,7 +79,7 @@ const AnimeDetailPage = () => {
             {/* 核心信息区 */}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2 text-sm text-gray-700 dark:text-gray-300">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-500" />
+                <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span>{anime.date || anime.air_date}</span>
               </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
