@@ -114,17 +114,6 @@ const AnimeDetailPage = () => {
                 alt={anime.name}
                 className="w-full aspect-2/3 object-cover"
               />
-              {/* 评分标签 */}
-              {anime.rating && (
-                <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-linear-to-br from-yellow-400 to-yellow-500 flex items-center justify-center shadow-lg border-4 border-white">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-white">
-                      {anime.rating.score.toFixed(1)}
-                    </p>
-                    <p className="text-xs text-yellow-100 font-semibold">评分</p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
