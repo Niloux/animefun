@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { CalendarDay } from "../types/bangumi";
 import { getCalendar } from "../lib/api"; // 从封装的 API 模块导入
@@ -6,7 +6,6 @@ import { getCalendar } from "../lib/api"; // 从封装的 API 模块导入
 export function useCalendar() {
   const [data, setData] = useState<CalendarDay[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const hasLoadedRef = useRef(false); // 用于防止StrictMode下的重复请求
 
   const loadData = useCallback(async () => {
     try {
@@ -27,12 +26,8 @@ export function useCalendar() {
     }
   }, []);
 
-  // 组件挂载时加载数据 - 防止StrictMode下的重复请求
   useEffect(() => {
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true;
       loadData();
-    }
   }, [loadData]);
 
   return { data, loading, reload: loadData };

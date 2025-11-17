@@ -1,41 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Eye, Clock } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel";
-import { getEpisodes } from '../lib/api';
-import { Episode } from '../types/bangumi';
+import { useEpisodes } from '../hooks/use-episodes';
 
 interface EpisodesListProps {
   subjectId: number;
-  totalEpisodes?: number | string;
 }
 
 const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { episodes, loading } = useEpisodes(subjectId);
 
-  const LIMIT = 6; // 每页6集（3列 × 2行）
+  const LIMIT = 6;
 
-  const loadEpisodes = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await getEpisodes(subjectId, undefined, 100, 0);
-      setEpisodes(result.data || []);
-    } catch (error) {
-      console.error("加载剧集失败:", error);
-      setEpisodes([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [subjectId]);
-
-  useEffect(() => {
-    loadEpisodes();
-  }, [subjectId, loadEpisodes]);
-
-  // 一次处理完成剧集的排序和筛选（更高效）
-  const mainEpisodes = [...episodes]
-    .sort((a, b) => a.disc - b.disc || a.sort - b.sort) // 合并的排序逻辑
-    .filter((episode) => episode.type === 0 && episode.ep !== null);
+  const mainEpisodes = episodes;
 
   // 直接在映射中生成页面（无需创建中间数组）
 

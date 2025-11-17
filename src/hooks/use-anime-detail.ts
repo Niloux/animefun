@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from "sonner";
 import { getAnimeDetail } from '../lib/api';
 import { Anime } from '../types/bangumi';
@@ -7,7 +7,6 @@ export const useAnimeDetail = (id: string | undefined) => {
   const [anime, setAnime] = useState<Anime | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const hasLoadedRef = useRef(false); // 用于防止StrictMode下的重复请求
 
   // 辅助函数：提取value的实际内容
   const extractValue = useCallback((value: unknown): string => {
@@ -77,9 +76,7 @@ export const useAnimeDetail = (id: string | undefined) => {
     }
   }, [id, extractValue]);
 
-  // 组件挂载或id变化时加载数据 - 防止StrictMode下的重复请求
   useEffect(() => {
-    hasLoadedRef.current = false;
     loadData();
   }, [id, loadData]);
 

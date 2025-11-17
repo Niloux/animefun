@@ -215,10 +215,7 @@ const AnimeDetailPage = () => {
 
         {/* 剧集列表 */}
         <div className="mt-8">
-          <EpisodesList
-            subjectId={anime.id}
-            totalEpisodes={anime.eps || anime.total_episodes || 0}
-          />
+          <EpisodesList subjectId={anime.id} />
         </div>
       </div>
     </div>
