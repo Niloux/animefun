@@ -2,7 +2,12 @@ import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../../components/ui/resizable";
+import { Separator } from "../../components/ui/separator";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "../../components/ui/resizable";
 import EpisodesList from "../../components/EpisodesList";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 
@@ -31,7 +36,6 @@ const AnimeDetailPage = () => {
     return () => window.removeEventListener("resize", updateHeight);
   }, [anime]);
 
-
   if (!anime || loading) {
     return (
       <div className="p-8">
@@ -48,7 +52,6 @@ const AnimeDetailPage = () => {
     );
   }
 
-
   return (
     <div className="min-h-screen">
       <div className="p-0">
@@ -57,10 +60,7 @@ const AnimeDetailPage = () => {
           {/* 左侧海报 */}
           <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <img
-                src={anime.images.large}
-                alt={anime.name}
-              />
+              <img src={anime.images.large} alt={anime.name} />
             </div>
           </div>
 
@@ -77,24 +77,20 @@ const AnimeDetailPage = () => {
             </div>
 
             {/* 核心信息区 */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2 text-sm text-gray-700 dark:text-gray-300">
+            <div className="flex h-5 items-center space-x-4 text-sm">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span>{anime.date || anime.air_date}</span>
               </div>
-              <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
-               <div className="flex items-center gap-2">
+              <Separator orientation="vertical" />
+              <div className="flex items-center gap-2">
                 <Tv2Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {anime.platform || '未知'}
-                </span>
+                <span>{anime.platform || "未知"}</span>
               </div>
-              <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
+              <Separator orientation="vertical" />
               <div className="flex items-center gap-2">
                 <Film className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {anime.eps || anime.total_episodes || 0} 话
-                </span>
+                <span>{anime.eps || anime.total_episodes || 0} 话</span>
               </div>
             </div>
 
@@ -106,8 +102,18 @@ const AnimeDetailPage = () => {
                 size="lg"
                 className="flex-1 md:flex-none"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
                 </svg>
                 订阅番剧
               </Button>
@@ -116,19 +122,25 @@ const AnimeDetailPage = () => {
               {anime.collection && (
                 <div className="flex-1 grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">想看</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      想看
+                    </p>
                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                       {anime.collection.wish.toLocaleString()}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">在看</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      在看
+                    </p>
                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                       {anime.collection.doing.toLocaleString()}
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">已看</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      已看
+                    </p>
                     <p className="text-xl font-bold text-gray-900 dark:text-white">
                       {anime.collection.collect.toLocaleString()}
                     </p>
@@ -146,7 +158,9 @@ const AnimeDetailPage = () => {
             <div ref={leftPanelRef} className="space-y-6">
               {/* 简介 */}
               <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">剧情介绍</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  剧情介绍
+                </h2>
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
                   {anime.summary || "暂无简介"}
                 </p>
@@ -154,16 +168,20 @@ const AnimeDetailPage = () => {
 
               {/* 标签 */}
               <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">标签</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  标签
+                </h2>
                 <div className="flex flex-wrap gap-2">
-                  {(anime.tags?.slice(0, 15) || []).map((tag: { name: string }, idx: number) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
+                  {(anime.tags?.slice(0, 15) || []).map(
+                    (tag: { name: string }, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                      >
+                        {tag.name}
+                      </span>
+                    )
+                  )}
                 </div>
               </div>
             </div>
@@ -182,20 +200,22 @@ const AnimeDetailPage = () => {
                 制作信息
               </h2>
               <div className="space-y-3">
-                {anime.infobox?.map((info: { key: string; value: unknown }, idx: number) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-start pb-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 last:pb-0"
-                  >
-                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                      {info.key}:
-                    </span>
-                    <span className="text-sm text-gray-900 dark:text-white font-semibold text-right">
-                      {/* 由于我们已经在数据处理阶段提取了字符串value，这里可以安全转换 */}
-                      {String(info.value || '')}
-                    </span>
-                  </div>
-                )) || (
+                {anime.infobox?.map(
+                  (info: { key: string; value: unknown }, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex justify-between items-start pb-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 last:pb-0"
+                    >
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        {info.key}:
+                      </span>
+                      <span className="text-sm text-gray-900 dark:text-white font-semibold text-right">
+                        {/* 由于我们已经在数据处理阶段提取了字符串value，这里可以安全转换 */}
+                        {String(info.value || "")}
+                      </span>
+                    </div>
+                  )
+                ) || (
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     暂无制作信息
                   </div>
