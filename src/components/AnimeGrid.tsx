@@ -33,20 +33,30 @@ const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number })
       tabIndex={0}
     >
       <div className="relative overflow-hidden">
-        <img
-          src={anime.images.large}
-          alt={anime.name}
-          width={160}
-          height={240}
-          className={`w-full h-60 object-cover transition-opacity duration-300 ${
-            isImageLoaded ? "opacity-100" : "opacity-0"
-          }`}
-          loading={index < 8 ? "eager" : "lazy"}
-          decoding="async"
-          fetchPriority={index < 8 ? "high" : "auto"}
-          onLoad={() => setIsImageLoaded(true)}
-          onError={() => setIsImageLoaded(false)}
-        />
+        {(() => {
+          const imgSrc =
+            anime.images?.large ||
+            anime.images?.common ||
+            anime.images?.medium ||
+            anime.images?.small ||
+            "https://lain.bgm.tv/img/no_icon_subject.png";
+          return (
+            <img
+              src={imgSrc}
+              alt={anime.name}
+              width={160}
+              height={240}
+              className={`w-full h-60 object-cover transition-opacity duration-300 ${
+                isImageLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              loading={index < 8 ? "eager" : "lazy"}
+              decoding="async"
+              fetchPriority={index < 8 ? "high" : "auto"}
+              onLoad={() => setIsImageLoaded(true)}
+              onError={() => setIsImageLoaded(false)}
+            />
+          );
+        })()}
         {!isImageLoaded && (
           <Skeleton className="absolute inset-0 w-full h-60" />
         )}

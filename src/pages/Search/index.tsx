@@ -1,107 +1,42 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { AnimeGrid } from "../../components/AnimeGrid";
-import { searchSubject } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import { Loader2, Filter, X } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
-import { Anime } from "../../types/bangumi";
 import FiltersPanel from "../../components/FiltersPanel";
 import AutoComplete from "../../components/AutoComplete";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../constants/routes";
+import { useSearch } from "../../hooks/use-search";
 
 const SearchPage = () => {
-  const [query, setQuery] = useState<string>("");
-  const [results, setResults] = useState<Anime[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const subjectType = [2];
+  const {
+    query,
+    setQuery,
+    results,
+    total,
+    isLoading,
+    error,
+    filters,
+    setFilters,
+    search,
+    applyFilters,
+    removeFilter,
+  } = useSearch({ subjectType: [2], limit: 20, offset: 0 });
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
   const navigate = useNavigate();
-
-  // Filters state
-  const [filters, setFilters] = useState<{
-    sort: string;
-    minRating: number;
-    maxRating: number;
-    genres: string[];
-  }>({
-    sort: "heat",
-    minRating: 0,
-    maxRating: 10,
-    genres: [],
-  });
 
   const handleFilterChange = (newFilters: typeof filters) => {
     setFilters(newFilters);
   };
 
   const handleApplyFilters = () => {
-    handleSearch();
+    applyFilters();
   };
 
   const handleRemoveFilter = (filterType: string, value: string | number) => {
-    if (filterType === "genre") {
-      setFilters((prev) => ({
-        ...prev,
-        genres: prev.genres.filter((g) => g !== value),
-      }));
-    } else if (filterType === "minRating") {
-      setFilters((prev) => ({ ...prev, minRating: 0 }));
-    } else if (filterType === "maxRating") {
-      setFilters((prev) => ({ ...prev, maxRating: 10 }));
-    }
-    // Re-run search with updated filters
-    handleSearch();
+    removeFilter(filterType, value);
   };
-
-  const reqRef = useRef(0);
-
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const reqId = ++reqRef.current;
-      // Convert filters to API parameters
-      const rating =
-        filters.minRating > 0 || filters.maxRating < 10
-          ? [`>=${filters.minRating}`, `<=${filters.maxRating}`]
-          : undefined;
-
-      const data = await searchSubject(
-        query.trim(),
-        subjectType,
-        filters.sort,
-        filters.genres.length > 0 ? filters.genres : undefined,
-        undefined, // airDate
-        rating,
-        undefined, // ratingCount
-        undefined, // rank
-        false,
-        20,
-        0
-      );
-      if (reqRef.current === reqId) {
-        setResults(data.data);
-        setTotal(data.total);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "搜索失败");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setTotal(0);
-      setError(null);
-    }
-  }, [query]);
 
   return (
     <div className="p-4">
@@ -111,14 +46,14 @@ const SearchPage = () => {
           <AutoComplete
             query={query}
             onQueryChange={setQuery}
-            onEnter={handleSearch}
+            onEnter={search}
             onSelect={(anime) => {
               // When a suggestion is selected, navigate to the anime detail page
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
             }}
           />
         </div>
-        <Button onClick={handleSearch} disabled={isLoading}>
+        <Button onClick={search} disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
