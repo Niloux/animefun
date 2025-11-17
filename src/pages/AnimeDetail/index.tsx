@@ -3,6 +3,8 @@ import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
+import { Spinner } from "../../components/ui/spinner";
+import { AspectRatio } from "../../components/ui/aspect-ratio";
 import { Separator } from "../../components/ui/separator";
 import {
   ResizablePanelGroup,
@@ -15,42 +17,71 @@ import { useAnimeDetail } from "../../hooks/use-anime-detail";
 const AnimeDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { anime, loading } = useAnimeDetail(id);
+  const { anime, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<number | null>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
 
   // 同步左右面板高度
   useEffect(() => {
-    const updateHeight = () => {
-      if (leftPanelRef.current) {
-        setLeftPanelHeight(leftPanelRef.current.offsetHeight);
-      }
+    const update = () => {
+      if (frameRef.current != null) return;
+      frameRef.current = window.requestAnimationFrame(() => {
+        frameRef.current = null;
+        if (leftPanelRef.current) {
+          setLeftPanelHeight(leftPanelRef.current.offsetHeight);
+        }
+      });
     };
-
-    // 初始加载时更新高度
-    updateHeight();
-
-    // 使用 ResizeObserver 监听左侧面板尺寸变化（包括面板调整、窗口resize等所有情况）
-    const observer = new ResizeObserver(updateHeight);
+    update();
+    const observer = new ResizeObserver(update);
     if (leftPanelRef.current) {
       observer.observe(leftPanelRef.current);
     }
-
-    // 组件卸载时清理监听
-    return () => observer.disconnect();
+    return () => {
+      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+      observer.disconnect();
+    };
   }, [anime]);
 
-  if (!anime || loading) {
+  useEffect(() => {
+    if (anime) {
+      document.title = anime.name_cn || anime.name;
+    }
+  }, [anime]);
+
+  if (loading) {
     return (
       <div className="p-8">
-        <div className="text-center">
-          <h2 className="text-xl font-bold mb-2">未找到该动画</h2>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            返回上一页
-          </button>
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="size-10" />
+          <div className="text-sm text-gray-600 dark:text-gray-400">加载中</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-bold">加载失败</h2>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{error}</div>
+          <div className="flex items-center justify-center gap-3">
+            <Button onClick={() => reload()}>重试</Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>返回上一页</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!anime) {
+    return (
+      <div className="p-8">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-bold">未找到该动画</h2>
+          <Button onClick={() => navigate(-1)}>返回上一页</Button>
         </div>
       </div>
     );
@@ -64,7 +95,9 @@ const AnimeDetailPage = () => {
           {/* 左侧海报 */}
           <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <img src={anime.images.large} alt={anime.name} />
+              <AspectRatio ratio={2/3}>
+                <img src={anime.images.large} alt={anime.name} className="w-full h-full object-cover" />
+              </AspectRatio>
             </div>
           </div>
 
