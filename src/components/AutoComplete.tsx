@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Anime } from "../types/bangumi";
 import { searchSubject } from "../lib/api";
+import { scoreCandidate } from "../lib/utils";
 import { Loader2 } from "lucide-react";
+
 
 interface AutoCompleteProps {
   query: string;
@@ -25,9 +27,12 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: unknown) => {
-      const path = (event as unknown as { composedPath?: () => unknown[] }).composedPath?.();
+      const path = (
+        event as unknown as { composedPath?: () => unknown[] }
+      ).composedPath?.();
       if (dropdownRef.current) {
-        const inPath = Array.isArray(path) && path.includes(dropdownRef.current);
+        const inPath =
+          Array.isArray(path) && path.includes(dropdownRef.current);
         if (!inPath) {
           setIsOpen(false);
         }
@@ -54,12 +59,29 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       const current = requestRef.current + 1;
       requestRef.current = current;
       setIsLoading(true);
-      setIsOpen(true);
 
       try {
-        const data = await searchSubject(trimmed, [2], "match", undefined, undefined, undefined, undefined, undefined, false, 10, 0);
+        const data = await searchSubject(
+          trimmed,
+          [2],
+          "match",
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          false,
+          20,
+          0
+        );
         if (current === requestRef.current) {
-          setSuggestions(data.data);
+          const q = trimmed.toLowerCase();
+          const scored = data.data
+            .map((a) => ({ a, s: scoreCandidate(q, a) }))
+            .sort((x, y) => y.s - x.s)
+            .slice(0, 5)
+            .map((x) => x.a);
+          setSuggestions(scored);
         }
       } catch {
         if (current === requestRef.current) {
@@ -80,9 +102,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-    } else if (e.key === "Escape") {
+    if (e.key === "Escape") {
       setIsOpen(false);
     } else if (e.key === "Enter") {
       setIsOpen(false);
@@ -104,12 +124,14 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
         className="w-full p-3 border border-border/60 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
       />
 
-      {isOpen && (query.trim().length >= 2) && (
+      {isOpen && query.trim().length >= 2 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/60 rounded-lg shadow-xl z-50 overflow-hidden">
           {isLoading ? (
             <div className="p-4 flex items-center justify-center">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
+              <span className="ml-2 text-sm text-muted-foreground">
+                加载中...
+              </span>
             </div>
           ) : suggestions.length > 0 ? (
             <ul>
@@ -124,7 +146,10 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
                     className="w-full p-3 hover:bg-muted transition-colors flex gap-3 text-left"
                   >
                     <img
-                      src={anime.images?.small || "https://lain.bgm.tv/img/no_icon_subject.png"}
+                      src={
+                        anime.images?.small ||
+                        "https://lain.bgm.tv/img/no_icon_subject.png"
+                      }
                       alt={anime.name}
                       width={40}
                       height={60}
