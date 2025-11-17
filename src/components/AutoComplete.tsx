@@ -7,12 +7,14 @@ interface AutoCompleteProps {
   query: string;
   onQueryChange: (query: string) => void;
   onSelect: (anime: Anime) => void;
+  onEnter?: () => void;
 }
 
 const AutoComplete: React.FC<AutoCompleteProps> = ({
   query,
   onQueryChange,
   onSelect,
+  onEnter,
 }) => {
   const [suggestions, setSuggestions] = useState<Anime[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,8 +23,9 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (event: unknown) => {
+      const target = (event as { target: unknown }).target as unknown;
+      if (dropdownRef.current && !dropdownRef.current.contains(target as never)) {
         setIsOpen(false);
       }
     };
@@ -55,20 +58,21 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     };
 
     // Debounce fetch to avoid too many API calls
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       fetchSuggestions();
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [query]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      // Could add keyboard navigation logic here
     } else if (e.key === "Escape") {
       setIsOpen(false);
+    } else if (e.key === "Enter") {
+      setIsOpen(false);
+      onEnter?.();
     }
   };
 
@@ -82,7 +86,6 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           onQueryChange(e.target.value);
           setIsOpen(true);
         }}
-        onKeyPress={(e) => e.key === "Enter" && setIsOpen(false)}
         onKeyDown={handleKeyDown}
         className="w-full p-3 border border-border/60 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
       />
@@ -97,36 +100,38 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           ) : suggestions.length > 0 ? (
             <ul>
               {suggestions.map((anime) => (
-                <li
-                  key={anime.id}
-                  onClick={() => {
-                    onSelect(anime);
-                    setIsOpen(false);
-                  }}
-                  className="p-3 cursor-pointer hover:bg-muted transition-colors flex gap-3"
-                >
-                  <img
-                    src={anime.images.small}
-                    alt={anime.name}
-                    width={40}
-                    height={60}
-                    className="object-cover rounded"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium line-clamp-1 hover:text-primary">
-                      {anime.name_cn || anime.name}
-                    </h3>
-                    {anime.name_cn && anime.name_cn !== anime.name && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">
-                        {anime.name}
-                      </p>
-                    )}
-                    {anime.rating && anime.rating.score !== 0 && (
-                      <span className="text-xs text-yellow-500 mt-1">
-                        ⭐ {anime.rating.score.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
+                <li key={anime.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(anime);
+                      setIsOpen(false);
+                    }}
+                    className="w-full p-3 hover:bg-muted transition-colors flex gap-3 text-left"
+                  >
+                    <img
+                      src={anime.images?.small || "https://lain.bgm.tv/img/no_icon_subject.png"}
+                      alt={anime.name}
+                      width={40}
+                      height={60}
+                      className="object-cover rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium line-clamp-1 hover:text-primary">
+                        {anime.name_cn || anime.name}
+                      </h3>
+                      {anime.name_cn && anime.name_cn !== anime.name && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {anime.name}
+                        </p>
+                      )}
+                      {anime.rating && anime.rating.score !== 0 && (
+                        <span className="text-xs text-yellow-500 mt-1">
+                          ⭐ {anime.rating.score.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>

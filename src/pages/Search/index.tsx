@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimeGrid } from "../../components/AnimeGrid";
 import { searchSubject } from "../../lib/api";
 import { Button } from "../../components/ui/button";
@@ -16,17 +16,21 @@ const SearchPage = () => {
   const [total, setTotal] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [subjectType] = useState<number[]>([2]); // 默认搜索动画类型
+  const subjectType = [2];
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
   const navigate = useNavigate();
 
   // Filters state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    sort: string;
+    minRating: number;
+    maxRating: number;
+    genres: string[];
+  }>({
     sort: "heat",
     minRating: 0,
     maxRating: 10,
     genres: [],
-    status: [],
   });
 
   const handleFilterChange = (newFilters: typeof filters) => {
@@ -43,11 +47,6 @@ const SearchPage = () => {
         ...prev,
         genres: prev.genres.filter((g) => g !== value),
       }));
-    } else if (filterType === "status") {
-      setFilters((prev) => ({
-        ...prev,
-        status: prev.status.filter((s) => s !== value),
-      }));
     } else if (filterType === "minRating") {
       setFilters((prev) => ({ ...prev, minRating: 0 }));
     } else if (filterType === "maxRating") {
@@ -57,6 +56,8 @@ const SearchPage = () => {
     handleSearch();
   };
 
+  const reqRef = useRef(0);
+
   const handleSearch = async () => {
     if (!query.trim()) return;
 
@@ -64,6 +65,7 @@ const SearchPage = () => {
     setError(null);
 
     try {
+      const reqId = ++reqRef.current;
       // Convert filters to API parameters
       const rating =
         filters.minRating > 0 || filters.maxRating < 10
@@ -83,20 +85,23 @@ const SearchPage = () => {
         20,
         0
       );
-      setResults(data.data);
-      setTotal(data.total);
+      if (reqRef.current === reqId) {
+        setResults(data.data);
+        setTotal(data.total);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "搜索失败");
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSearch();
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      setTotal(0);
+      setError(null);
     }
-  };
+  }, [query]);
 
   return (
     <div className="p-4">
@@ -106,6 +111,7 @@ const SearchPage = () => {
           <AutoComplete
             query={query}
             onQueryChange={setQuery}
+            onEnter={handleSearch}
             onSelect={(anime) => {
               // When a suggestion is selected, navigate to the anime detail page
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
@@ -130,7 +136,6 @@ const SearchPage = () => {
 
       {/* Active Filters */}
       {(filters.genres.length > 0 ||
-        filters.status.length > 0 ||
         filters.minRating > 0 ||
         filters.maxRating < 10) && (
         <div className="mb-4 flex flex-wrap gap-2">
@@ -140,17 +145,6 @@ const SearchPage = () => {
               <button
                 className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
                 onClick={() => handleRemoveFilter("genre", genre)}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-          {filters.status.map((status) => (
-            <Badge key={status} variant="secondary" className="flex items-center gap-1">
-              {status}
-              <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
-                onClick={() => handleRemoveFilter("status", status)}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -212,7 +206,11 @@ const SearchPage = () => {
       {isFiltersOpen && (
         <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+          role="button"
+          tabIndex={0}
+          aria-label="close filters"
           onClick={() => setIsFiltersOpen(false)}
+          onKeyDown={(e) => e.key === "Enter" && setIsFiltersOpen(false)}
         />
       )}
 

@@ -11,14 +11,12 @@ interface FiltersPanelProps {
     minRating: number;
     maxRating: number;
     genres: string[];
-    status: string[];
   };
   onFilterChange: (filters: {
     sort: string;
     minRating: number;
     maxRating: number;
     genres: string[];
-    status: string[];
   }) => void;
   onApply: () => void;
 }
@@ -54,8 +52,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     "神魔",
   ];
 
-  const animeStatus = ["正在播出", "已完结", "未播出"];
-
   const handleGenreChange = (genre: string, checked: boolean) => {
     let newGenres = [...filters.genres];
     if (checked) {
@@ -66,26 +62,16 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onFilterChange({ ...filters, genres: newGenres });
   };
 
-  const handleStatusChange = (status: string, checked: boolean) => {
-    let newStatus = [...filters.status];
-    if (checked) {
-      newStatus.push(status);
-    } else {
-      newStatus = newStatus.filter((s) => s !== status);
-    }
-    onFilterChange({ ...filters, status: newStatus });
+  const handleSortChange = (value: string) => {
+    onFilterChange({ ...filters, sort: value });
   };
 
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onFilterChange({ ...filters, sort: e.target.value });
+  const handleMinRatingChange = (value: string) => {
+    onFilterChange({ ...filters, minRating: parseFloat(value) });
   };
 
-  const handleMinRatingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFilterChange({ ...filters, minRating: parseFloat(e.target.value) });
-  };
-
-  const handleMaxRatingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFilterChange({ ...filters, maxRating: parseFloat(e.target.value) });
+  const handleMaxRatingChange = (value: string) => {
+    onFilterChange({ ...filters, maxRating: parseFloat(value) });
   };
 
   return (
@@ -110,7 +96,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <select
             className="w-full p-2 border border-border/60 rounded-lg bg-card"
             value={filters.sort}
-            onChange={handleSortChange}
+            onChange={(e) => handleSortChange(e.currentTarget.value)}
           >
             <option value="heat">热度</option>
             <option value="rank">排名</option>
@@ -124,31 +110,29 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <h3 className="text-sm font-medium mb-2">评分</h3>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-xs text-muted-foreground mb-1">
-                最低
-              </label>
+              <label htmlFor="minRating" className="block text-xs text-muted-foreground mb-1">最低</label>
               <input
                 type="number"
                 min="0"
                 max="10"
                 step="0.5"
                 className="w-full p-2 border border-border/60 rounded-lg bg-card"
+                id="minRating"
                 value={filters.minRating}
-                onChange={handleMinRatingChange}
+                onChange={(e) => handleMinRatingChange(e.currentTarget.value)}
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-muted-foreground mb-1">
-                最高
-              </label>
+              <label htmlFor="maxRating" className="block text-xs text-muted-foreground mb-1">最高</label>
               <input
                 type="number"
                 min="0"
                 max="10"
                 step="0.5"
                 className="w-full p-2 border border-border/60 rounded-lg bg-card"
+                id="maxRating"
                 value={filters.maxRating}
-                onChange={handleMaxRatingChange}
+                onChange={(e) => handleMaxRatingChange(e.currentTarget.value)}
               />
             </div>
           </div>
@@ -178,29 +162,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </div>
         </div>
 
-        {/* Status */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium mb-2">状态</h3>
-          <div className="grid grid-cols-1 gap-2">
-            {animeStatus.map((status) => (
-              <div key={status} className="flex items-center gap-2">
-                <Checkbox
-                  id={`status-${status}`}
-                  checked={filters.status.includes(status)}
-                  onCheckedChange={(checked) =>
-                    handleStatusChange(status, checked === true)
-                  }
-                />
-                <label
-                  htmlFor={`status-${status}`}
-                  className="text-sm cursor-pointer"
-                >
-                  {status}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
+        
       </div>
 
       {/* Footer */}
