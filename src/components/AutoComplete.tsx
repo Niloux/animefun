@@ -50,7 +50,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       try {
         const data = await searchSubject(query.trim(), [2], "match", undefined, undefined, undefined, undefined, undefined, false, 10, 0);
         setSuggestions(data.data);
-      } catch (err) {
+      } catch {
         setSuggestions([]);
       } finally {
         setIsLoading(false);

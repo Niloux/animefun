@@ -13,7 +13,6 @@ type UseSearchOptions = {
   initialFilters?: SearchFilters;
   subjectType?: number[];
   limit?: number;
-  offset?: number;
 };
 
 export const useSearch = (options?: UseSearchOptions) => {
@@ -21,7 +20,6 @@ export const useSearch = (options?: UseSearchOptions) => {
     initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] },
     subjectType = [2],
     limit = 20,
-    offset = 0,
   } = options || {};
 
   const [query, setQuery] = useState<string>("");
@@ -30,6 +28,7 @@ export const useSearch = (options?: UseSearchOptions) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
+  const [page, setPage] = useState<number>(1);
 
   const reqRef = useRef(0);
 
@@ -43,13 +42,14 @@ export const useSearch = (options?: UseSearchOptions) => {
     return undefined;
   };
 
-  const search = useCallback(async () => {
+  const fetchPage = useCallback(async (targetPage: number) => {
     if (!query.trim()) return;
     setIsLoading(true);
     setError(null);
 
     const reqId = ++reqRef.current;
     const rating = buildRating(filters);
+    const offset = (Math.max(1, targetPage) - 1) * limit;
 
     try {
       const data = await searchSubject(
@@ -68,53 +68,30 @@ export const useSearch = (options?: UseSearchOptions) => {
       if (reqRef.current === reqId) {
         setResults(data.data);
         setTotal(data.total);
+        setPage(targetPage);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "搜索失败");
     } finally {
       setIsLoading(false);
     }
-  }, [query, filters, subjectType, limit, offset]);
+  }, [query, filters, subjectType, limit]);
+
+  const search = useCallback(async () => {
+    await fetchPage(1);
+  }, [fetchPage]);
 
   const searchWithFilters = useCallback(async (nextFilters: SearchFilters) => {
     setFilters(nextFilters);
     if (!query.trim()) {
       return;
     }
-    setIsLoading(true);
-    setError(null);
-
-    const reqId = ++reqRef.current;
-    const rating = buildRating(nextFilters);
-
-    try {
-      const data = await searchSubject(
-        query.trim(),
-        subjectType,
-        nextFilters.sort,
-        nextFilters.genres.length > 0 ? nextFilters.genres : undefined,
-        undefined,
-        rating,
-        undefined,
-        undefined,
-        false,
-        limit,
-        offset
-      );
-      if (reqRef.current === reqId) {
-        setResults(data.data);
-        setTotal(data.total);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "搜索失败");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [query, subjectType, limit, offset]);
+    await fetchPage(1);
+  }, [query, fetchPage]);
 
   const applyFilters = useCallback(async () => {
-    await search();
-  }, [search]);
+    await fetchPage(1);
+  }, [fetchPage]);
 
   const removeFilter = useCallback(async (filterType: string, value: string | number) => {
     let next = filters;
@@ -141,11 +118,14 @@ export const useSearch = (options?: UseSearchOptions) => {
     setQuery,
     results,
     total,
+    limit,
+    page,
     isLoading,
     error,
     filters,
     setFilters,
     search,
+    fetchPage,
     searchWithFilters,
     applyFilters,
     removeFilter,
