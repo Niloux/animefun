@@ -3,6 +3,7 @@ import { Anime } from "../types/bangumi";
 import { getRatingColorClass } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
+import { Badge } from "./ui/badge";
 
 interface AnimeGridProps {
   items: Anime[];
@@ -57,16 +58,16 @@ const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number })
         />
         {/* 评分标签 */}
         {anime.rating && anime.rating.score !== 0 && (
-          <div
-            className={`absolute top-3 right-3 ${getRatingColorClass(anime.rating.score)} text-white rounded-full px-2 py-0.5 text-xs font-medium shadow-md`}
+          <Badge
+            className={`absolute top-3 right-3 ${getRatingColorClass(anime.rating.score)} text-white rounded-full text-xs font-medium`}
           >
             {anime.rating.score.toFixed(1)}
-          </div>
+          </Badge>
         )}
       </div>
       {/* 番剧信息 */}
       <div className="p-4 flex flex-col grow justify-between">
-        <h3 className="text-sm font-semibold line-clamp-1 transition-colors duration-200 hover:text-primary">
+        <h3 className="text-sm font-semibold line-clamp-1 hover:text-primary">
           {anime.name_cn || anime.name}
         </h3>
         {anime.air_date && (
