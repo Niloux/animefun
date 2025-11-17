@@ -1,3 +1,4 @@
+/* global ResizeObserver */
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
@@ -29,11 +30,14 @@ const AnimeDetailPage = () => {
     // 初始加载时更新高度
     updateHeight();
 
-    // 窗口大小变化时更新高度
-    window.addEventListener("resize", updateHeight);
+    // 使用 ResizeObserver 监听左侧面板尺寸变化（包括面板调整、窗口resize等所有情况）
+    const observer = new ResizeObserver(updateHeight);
+    if (leftPanelRef.current) {
+      observer.observe(leftPanelRef.current);
+    }
 
-    // 组件卸载时清理事件监听
-    return () => window.removeEventListener("resize", updateHeight);
+    // 组件卸载时清理监听
+    return () => observer.disconnect();
   }, [anime]);
 
   if (!anime || loading) {
