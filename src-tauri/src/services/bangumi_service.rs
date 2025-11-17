@@ -22,7 +22,14 @@ pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
 
 pub async fn search_subject(
     keywords: &str,
-    subject_type: Option<u8>,
+    subject_type: Option<Vec<u8>>,
+    sort: Option<String>,
+    tag: Option<Vec<String>>,
+    air_date: Option<Vec<String>>,
+    rating: Option<Vec<String>>,
+    rating_count: Option<Vec<String>>,
+    rank: Option<Vec<String>>,
+    nsfw: Option<bool>,
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<SearchResponse, AppError> {
@@ -49,6 +56,18 @@ pub async fn search_subject(
     struct FilterPayload {
         #[serde(skip_serializing_if = "Option::is_none")]
         r#type: Option<Vec<u8>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tag: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        air_date: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rating: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rating_count: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rank: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nsfw: Option<bool>,
     }
     #[derive(serde::Serialize)]
     struct SearchPayload {
@@ -60,9 +79,15 @@ pub async fn search_subject(
     }
     let payload = SearchPayload {
         keyword: keywords.to_string(),
-        sort: None,
-        filter: subject_type.map(|t| FilterPayload {
-            r#type: Some(vec![t]),
+        sort,
+        filter: Some(FilterPayload {
+            r#type: subject_type,
+            tag,
+            air_date,
+            rating,
+            rating_count,
+            rank,
+            nsfw,
         }),
     };
     let response = req
@@ -123,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_subject() {
-        let res = search_subject("Fate", Some(2), Some(10), Some(0))
+        let res = search_subject("Fate", Some(vec![2]), None, None, None, None, None, None, None, Some(10), Some(0))
             .await
             .unwrap();
         assert!(res.total > 0);

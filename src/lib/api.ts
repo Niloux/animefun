@@ -62,4 +62,55 @@ export async function getEpisodes(
   }
 }
 
-// 未来所有与后端交互的函数都应放在这里
+/**
+ * 从后端搜索番剧
+ * @param keywords 搜索关键词
+ * @param subjectType 条目类型（可选）
+ * @param sort 排序规则（可选）
+ * @param tag 标签（可选）
+ * @param airDate 播出日期（可选）
+ * @param rating 评分（可选）
+ * @param ratingCount 评分人数（可选）
+ * @param rank 排名（可选）
+ * @param nsfw 是否包含NSFW内容（可选）
+ * @param limit 每页数量（可选）
+ * @param offset 偏移量（可选）
+ * @returns Promise<{ total: number; limit: number; offset: number; data: Anime[] }> 搜索结果
+ * @throws 如果调用失败，则抛出错误
+ */
+export async function searchSubject(
+  keywords: string,
+  subjectType?: number[],
+  sort?: string,
+  tag?: string[],
+  airDate?: string[],
+  rating?: string[],
+  ratingCount?: string[],
+  rank?: string[],
+  nsfw?: boolean,
+  limit?: number,
+  offset?: number
+): Promise<{ total: number; limit: number; offset: number; data: Anime[] }> {
+  try {
+    const data = await invoke<{ total: number; limit: number; offset: number; data: Anime[] }>(
+      'search_subject',
+      {
+        keywords,
+        subjectType,
+        sort,
+        tag,
+        airDate,
+        rating,
+        ratingCount,
+        rank,
+        nsfw,
+        limit,
+        offset,
+      }
+    );
+    return data;
+  } catch (error) {
+    console.error("调用 'search_subject' 失败:", error);
+    throw new Error(`搜索番剧失败: ${keywords}`);
+  }
+}
