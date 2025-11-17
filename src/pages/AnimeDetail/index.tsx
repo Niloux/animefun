@@ -1,6 +1,8 @@
 import { Calendar } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../../components/ui/resizable";
 import EpisodesList from "../../components/EpisodesList";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 
@@ -8,6 +10,26 @@ const AnimeDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { anime, loading } = useAnimeDetail(id);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
+
+  // 同步左右面板高度
+  useEffect(() => {
+    const updateHeight = () => {
+      if (leftPanelRef.current) {
+        setLeftPanelHeight(leftPanelRef.current.offsetHeight);
+      }
+    };
+
+    // 初始加载时更新高度
+    updateHeight();
+
+    // 窗口大小变化时更新高度
+    window.addEventListener("resize", updateHeight);
+
+    // 组件卸载时清理事件监听
+    return () => window.removeEventListener("resize", updateHeight);
+  }, [anime]);
 
 
   if (!anime || loading) {
@@ -117,37 +139,44 @@ const AnimeDetailPage = () => {
           </div>
         </div>
 
-        {/* 主要内容区 - 两列布局 */}
-        <div className="grid md:grid-cols-3 gap-6">
+        {/* 主要内容区 - 可调整大小的两列布局 */}
+        <ResizablePanelGroup direction="horizontal" className="gap-6">
           {/* 左侧 - 剧情介绍和标签 */}
-          <div className="md:col-span-2 space-y-6">
-            {/* 简介 */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">剧情介绍</h2>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                {anime.summary || "暂无简介"}
-              </p>
-            </div>
+          <ResizablePanel defaultSize={66} minSize={50}>
+            <div ref={leftPanelRef} className="space-y-6">
+              {/* 简介 */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">剧情介绍</h2>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                  {anime.summary || "暂无简介"}
+                </p>
+              </div>
 
-            {/* 标签 */}
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">标签</h2>
-              <div className="flex flex-wrap gap-2">
-                {(anime.tags?.slice(0, 15) || []).map((tag: { name: string }, idx: number) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
-                  >
-                    {tag.name}
-                  </span>
-                ))}
+              {/* 标签 */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">标签</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(anime.tags?.slice(0, 15) || []).map((tag: { name: string }, idx: number) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
 
           {/* 右侧 - 制作信息 */}
-          <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+          <ResizablePanel defaultSize={34} minSize={25} className="space-y-6">
+            <div
+              className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700 overflow-y-auto"
+              style={{ maxHeight: `${leftPanelHeight}px` }}
+            >
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-500" />
                 制作信息
@@ -173,8 +202,8 @@ const AnimeDetailPage = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
 
         {/* 剧集列表 */}
         <div className="mt-8">
