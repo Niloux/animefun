@@ -1,7 +1,6 @@
 import { Calendar } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
 import EpisodesList from "../../components/EpisodesList";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 
@@ -10,102 +9,8 @@ const AnimeDetailPage = () => {
   const navigate = useNavigate();
   const { anime, loading } = useAnimeDetail(id);
 
-  if (loading) {
-    return (
-      <div className="p-8">
-        {/* 海报和基本信息区加载 */}
-        <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8">
-          {/* 左侧海报 */}
-          <div className="w-36 md:w-56 shrink-0">
-            <div className="aspect-2/3 bg-gray-200 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 animate-pulse"></div>
-          </div>
 
-          {/* 右侧标题和基本信息 */}
-          <div className="flex-1 space-y-6">
-            {/* 标题区域 */}
-            <div>
-              <div className="h-10 md:h-12 w-3/4 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-4 md:h-5 w-1/2 bg-gray-200 rounded animate-pulse mt-2"></div>
-            </div>
-
-            {/* 核心信息区 */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2">
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-              <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600 animate-pulse"></div>
-              <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-              <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600 animate-pulse"></div>
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-4 w-8 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-            </div>
-
-            {/* 订阅和状态统计区 */}
-            <div className="flex flex-col md:flex-row gap-4 pt-2">
-              {/* 订阅按钮 */}
-              <div className="flex-1 md:w-36 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
-
-              {/* 状态统计 */}
-              <div className="flex-1 grid grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="text-center">
-                    <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-7 w-20 bg-gray-200 rounded animate-pulse mt-1"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 主要内容区 - 两列布局 */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* 左侧 - 剧情介绍和标签 */}
-          <div className="md:col-span-2 space-y-6">
-            {/* 简介 */}
-            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 space-y-4">
-              <div className="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-4 w-full bg-gray-200 rounded animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-
-            {/* 标签 */}
-            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 space-y-4">
-              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-7 w-24 bg-gray-200 rounded-full animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 右侧 - 制作信息 */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200 space-y-4">
-              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex justify-between items-start pb-3 border-b border-gray-200 last:border-b-0 last:pb-0">
-                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!anime) {
+  if (!anime || loading) {
     return (
       <div className="p-8">
         <div className="text-center">
@@ -133,7 +38,6 @@ const AnimeDetailPage = () => {
               <img
                 src={anime.images.large}
                 alt={anime.name}
-                className="w-full aspect-2/3 object-cover"
               />
             </div>
           </div>
@@ -157,10 +61,11 @@ const AnimeDetailPage = () => {
                 <span>{anime.date || anime.air_date}</span>
               </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                  {anime.platform}
-                </Badge>
+               <div className="flex items-center gap-2">
+                <span className="text-gray-600 dark:text-gray-400">集数:</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {anime.platform || '未知'}
+                </span>
               </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
               <div className="flex items-center gap-2">
