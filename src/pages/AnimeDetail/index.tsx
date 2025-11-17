@@ -206,7 +206,7 @@ const AnimeDetailPage = () => {
                       key={idx}
                       className="flex justify-between items-start pb-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0 last:pb-0"
                     >
-                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium whitespace-nowrap">
                         {info.key}:
                       </span>
                       <span className="text-sm text-gray-900 dark:text-white font-semibold text-right">
