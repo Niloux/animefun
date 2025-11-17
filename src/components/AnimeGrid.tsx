@@ -19,7 +19,7 @@ const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number })
 
   return (
     <div
-      className="bg-card rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/60 flex flex-col hover:translate-y-[-2px] active:translate-y-0 cursor-pointer hover:border-primary/50"
+      className="bg-card rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/60 flex flex-col hover:translate-y-[-6px] active:translate-y-0 cursor-pointer hover:border-primary/50"
       onClick={handleAnimeClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -47,7 +47,7 @@ const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number })
           alt={anime.name}
           width={160}  // 设置明确的宽高，避免布局偏移
           height={240}
-          className={`absolute inset-0 w-full h-60 object-cover transition-opacity duration-300 hover:scale-105 ${
+          className={`absolute inset-0 w-full h-60 object-cover transition-opacity duration-300 ${
             isImageLoaded ? "opacity-100" : "opacity-0"
           }`}
           loading={index < 8 ? "eager" : "lazy"} // 前8个卡片使用eager加载，提升初始加载体验
