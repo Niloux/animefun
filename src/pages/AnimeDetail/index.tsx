@@ -65,7 +65,7 @@ const AnimeDetailPage = () => {
           </div>
 
           {/* 右侧标题和基本信息 */}
-          <div className="flex-1 space-y-6">
+          <div className="flex-1 flex flex-col gap-6">
             {/* 标题区域 */}
             <div>
               <h1 className="text-3xl md:text-[2.25rem] font-bold text-gray-900 dark:text-white mb-2 leading-tight">
@@ -94,8 +94,22 @@ const AnimeDetailPage = () => {
               </div>
             </div>
 
-            {/* 订阅和状态统计区 */}
-            <div className="flex flex-col md:flex-row gap-4 items-stretch pt-2">
+            {/* Meta Tags */}
+            {anime.meta_tags && anime.meta_tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {anime.meta_tags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 订阅和状态统计区 - 基本内容区域底部 */}
+            <div className="flex flex-col md:flex-row gap-4 items-stretch pt-2 mt-auto">
               {/* 订阅按钮 */}
               <Button
                 variant="default"
@@ -117,36 +131,6 @@ const AnimeDetailPage = () => {
                 </svg>
                 订阅番剧
               </Button>
-
-              {/* 状态统计 */}
-              {anime.collection && (
-                <div className="flex-1 grid grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      想看
-                    </p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      {anime.collection.wish.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      在看
-                    </p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      {anime.collection.doing.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      已看
-                    </p>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      {anime.collection.collect.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
