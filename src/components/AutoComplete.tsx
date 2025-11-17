@@ -4,7 +4,6 @@ import { searchSubject } from "../lib/api";
 import { scoreCandidate } from "../lib/utils";
 import { Loader2 } from "lucide-react";
 
-
 interface AutoCompleteProps {
   query: string;
   onQueryChange: (query: string) => void;
@@ -49,7 +48,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   useEffect(() => {
     const fetchSuggestions = async () => {
       const trimmed = query.trim();
-      if (trimmed.length < 2) {
+      if (trimmed.length < 1) {
         setSuggestions([]);
         setIsLoading(false);
         setIsOpen(false);
@@ -79,7 +78,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           const scored = data.data
             .map((a) => ({ a, s: scoreCandidate(q, a) }))
             .sort((x, y) => y.s - x.s)
-            .slice(0, 5)
+            .slice(0, 8)
             .map((x) => x.a);
           setSuggestions(scored);
         }
@@ -124,7 +123,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
         className="w-full p-3 border border-border/60 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
       />
 
-      {isOpen && query.trim().length >= 2 && (
+      {isOpen && query.trim().length >= 1 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/60 rounded-lg shadow-xl z-50 overflow-hidden">
           {isLoading ? (
             <div className="p-4 flex items-center justify-center">
