@@ -1,4 +1,4 @@
-import { Calendar } from "lucide-react";
+import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
@@ -84,16 +84,16 @@ const AnimeDetailPage = () => {
               </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
                <div className="flex items-center gap-2">
-                <span className="text-gray-600 dark:text-gray-400">集数:</span>
+                <Tv2Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span className="font-semibold text-gray-900 dark:text-white">
                   {anime.platform || '未知'}
                 </span>
               </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
               <div className="flex items-center gap-2">
-                <span className="text-gray-600 dark:text-gray-400">集数:</span>
+                <Film className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {anime.eps || anime.total_episodes || 0}
+                  {anime.eps || anime.total_episodes || 0} 话
                 </span>
               </div>
             </div>
