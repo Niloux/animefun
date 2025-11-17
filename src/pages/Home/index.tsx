@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Calendar } from "lucide-react";
 import { useCalendar } from "../../hooks/use-calendar";
-import { PageHeader } from "../../components/PageHeader";
 import { WeekDayNav } from "../../components/WeekDayNav";
 import { AnimeGrid } from "../../components/AnimeGrid";
 import { getWeekdayId } from "../../lib/utils";
@@ -36,21 +35,14 @@ const HomePage = () => {
   // loading handled in main conditional
 
   return (
-    <div className="p-4">
-      {/* 使用 PageHeader 组件 */}
-      <PageHeader
-        title="番剧日历"
-        description="Anime Calendar"
-        icon={Calendar}
-      />
-
+    <div className="p-0">
       {/* 使用 WeekDayNav 组件 */}
       <div className="px-8">
         <WeekDayNav selectedDay={selectedDay} onDayChange={handleDayChange} />
       </div>
 
       {/* 内容区域 */}
-      <div className="px-8">
+      <div className="p-8">
         <main className="w-full max-w-none">
           {loading ? (
             <HomeSkeleton />

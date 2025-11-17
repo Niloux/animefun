@@ -127,7 +127,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              className="group-data-[state=collapsed]:size-10"
+              className="group-data-[state=collapsed]:size-10 p-8"
             >
               <img
                 src={ikuyoAvatar}
