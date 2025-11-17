@@ -1,5 +1,7 @@
-import { Calendar, Award } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
 import EpisodesList from "../../components/EpisodesList";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 
@@ -20,22 +22,41 @@ const AnimeDetailPage = () => {
 
           {/* 右侧标题和基本信息 */}
           <div className="flex-1 space-y-6">
-            <div className="space-y-2">
-              <div className="h-10 w-3/4 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+            {/* 标题区域 */}
+            <div>
+              <div className="h-10 md:h-12 w-3/4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 md:h-5 w-1/2 bg-gray-200 rounded animate-pulse mt-2"></div>
             </div>
-            <div className="flex items-center gap-6 flex-wrap text-sm pt-2">
-              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+
+            {/* 核心信息区 */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+              </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600 animate-pulse"></div>
-              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+              <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600 animate-pulse"></div>
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-12 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-4 w-8 bg-gray-200 rounded animate-pulse"></div>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-8 pt-4 border-t border-gray-200">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="text-center">
-                  <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-7 w-20 bg-gray-200 rounded animate-pulse mt-2"></div>
-                </div>
-              ))}
+
+            {/* 订阅和状态统计区 */}
+            <div className="flex flex-col md:flex-row gap-4 pt-2">
+              {/* 订阅按钮 */}
+              <div className="flex-1 md:w-36 h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+
+              {/* 状态统计 */}
+              <div className="flex-1 grid grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="text-center">
+                    <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+                    <div className="h-7 w-20 bg-gray-200 rounded animate-pulse mt-1"></div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -121,50 +142,73 @@ const AnimeDetailPage = () => {
           <div className="flex-1 space-y-6">
             {/* 标题区域 */}
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              <h1 className="text-3xl md:text-[2.25rem] font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                 {anime.name_cn || anime.name}
               </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{anime.name}</p>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 font-medium">
+                {anime.name}
+              </p>
             </div>
 
-            {/* 基本信息 */}
-            <div className="flex items-center gap-6 flex-wrap text-sm pt-2">
+            {/* 核心信息区 */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-4 pt-2 text-sm text-gray-700 dark:text-gray-300">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-700 dark:text-gray-300">
-                  {anime.date || anime.air_date}
-                </span>
+                <Calendar className="w-4 h-4 text-blue-500" />
+                <span>{anime.date || anime.air_date}</span>
               </div>
               <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
               <div className="flex items-center gap-2">
-                <Award className="w-4 h-4 text-gray-500" />
-                <span className="text-gray-700 dark:text-gray-300">{anime.platform}</span>
+                <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+                  {anime.platform}
+                </Badge>
+              </div>
+              <div className="w-1 h-4 bg-gray-300 dark:bg-gray-600"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600 dark:text-gray-400">集数:</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {anime.eps || anime.total_episodes || 0}
+                </span>
               </div>
             </div>
 
-            {/* 收藏状态统计 */}
-            {anime.collection && (
-              <div className="grid grid-cols-3 gap-8 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">想看</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    {anime.collection.wish.toLocaleString()}
-                  </p>
+            {/* 订阅和状态统计区 */}
+            <div className="flex flex-col md:flex-row gap-4 items-stretch pt-2">
+              {/* 订阅按钮 */}
+              <Button
+                variant="default"
+                size="lg"
+                className="flex-1 md:flex-none"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                订阅番剧
+              </Button>
+
+              {/* 状态统计 */}
+              {anime.collection && (
+                <div className="flex-1 grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">想看</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      {anime.collection.wish.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">在看</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      {anime.collection.doing.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">已看</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      {anime.collection.collect.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">在看</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    {anime.collection.doing.toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">已看</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    {anime.collection.collect.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
