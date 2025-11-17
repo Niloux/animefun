@@ -20,13 +20,17 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef(0);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: unknown) => {
-      const target = (event as { target: unknown }).target as unknown;
-      if (dropdownRef.current && !dropdownRef.current.contains(target as never)) {
-        setIsOpen(false);
+      const path = (event as unknown as { composedPath?: () => unknown[] }).composedPath?.();
+      if (dropdownRef.current) {
+        const inPath = Array.isArray(path) && path.includes(dropdownRef.current);
+        if (!inPath) {
+          setIsOpen(false);
+        }
       }
     };
 
@@ -39,25 +43,35 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   // Fetch suggestions when query changes and is longer than 2 characters
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (query.trim().length < 2) {
+      const trimmed = query.trim();
+      if (trimmed.length < 2) {
         setSuggestions([]);
+        setIsLoading(false);
+        setIsOpen(false);
         return;
       }
 
+      const current = requestRef.current + 1;
+      requestRef.current = current;
       setIsLoading(true);
       setIsOpen(true);
 
       try {
-        const data = await searchSubject(query.trim(), [2], "match", undefined, undefined, undefined, undefined, undefined, false, 10, 0);
-        setSuggestions(data.data);
+        const data = await searchSubject(trimmed, [2], "match", undefined, undefined, undefined, undefined, undefined, false, 10, 0);
+        if (current === requestRef.current) {
+          setSuggestions(data.data);
+        }
       } catch {
-        setSuggestions([]);
+        if (current === requestRef.current) {
+          setSuggestions([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (current === requestRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
-    // Debounce fetch to avoid too many API calls
     const timer = window.setTimeout(() => {
       fetchSuggestions();
     }, 300);
