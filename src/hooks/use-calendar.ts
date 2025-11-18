@@ -1,34 +1,31 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { CalendarDay } from "../types/bangumi";
-import { getCalendar } from "../lib/api"; // 从封装的 API 模块导入
+import { getCalendar } from "../lib/api";
+import { useQuery } from "@tanstack/react-query";
 
 export function useCalendar() {
-  const [data, setData] = useState<CalendarDay[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
+  const query = useQuery<CalendarDay[]>({
+    queryKey: ['calendar'],
+    queryFn: async () => {
       const calendarData = await getCalendar();
-      setData(calendarData);
-    } catch (error) {
-      console.error("加载日历数据失败:", error);
-      toast.error(error instanceof Error ? error.message : "加载数据失败", {
-        duration: 5000,
-        action: {
-          label: "重试",
-          onClick: () => loadData(),
-        },
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return calendarData;
+    },
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
+    retry: 2,
+  });
 
   useEffect(() => {
-      loadData();
-  }, [loadData]);
+    const e = query.error as unknown;
+    if (e) {
+      const msg = e instanceof Error ? e.message : '加载数据失败';
+      toast.error(msg, {
+        duration: 5000,
+        action: { label: '重试', onClick: () => query.refetch() },
+      });
+    }
+  }, [query]);
 
-  return { data, loading, reload: loadData };
+  return { data: query.data ?? [], loading: query.isPending, reload: query.refetch };
 }

@@ -1,120 +1,98 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import { getEpisodes } from '../lib/api';
-import { Episode } from '../types/bangumi';
+import { PagedEpisode } from '../types/bangumi';
+import { useInfiniteQuery } from '@tanstack/react-query';
 
 // 分页常量定义
 const PAGE_LIMIT = 18; // 每页展示 18 条（3 行 × 每行 6 条）
 
 export const useEpisodes = (subjectId: number | undefined) => {
-  const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalEpisodes, setTotalEpisodes] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const totalPages = Math.ceil(totalEpisodes / PAGE_LIMIT);
+  const [pageBase, setPageBase] = useState(0);
 
-  const loadData = useCallback(async (page = 0, append = false) => {
-    if (!subjectId) {
-      setEpisodes([]);
-      setLoading(false);
-      setError(null);
-      setTotalEpisodes(0);
-      setHasMore(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 根据页码计算偏移量
-      const offset = page * PAGE_LIMIT;
-
-      // 按分页获取剧集数据
-      const result = await getEpisodes(subjectId, undefined, PAGE_LIMIT, offset);
-
-      // 处理并过滤剧集（仅保留正片）
-      const processedEpisodes = (result.data || [])
+  const query = useInfiniteQuery<PagedEpisode>({
+    queryKey: ['episodes', subjectId, pageBase, PAGE_LIMIT],
+    queryFn: async ({ pageParam }) => {
+      if (!subjectId) {
+        return { total: 0, limit: PAGE_LIMIT, offset: 0, data: [] };
+      }
+      const result = await getEpisodes(subjectId, undefined, PAGE_LIMIT, pageParam as number);
+      const processed = (result.data || [])
         .sort((a, b) => a.disc - b.disc || a.sort - b.sort)
-        .filter(e => e.type === 0 && e.ep !== null)
-        .map(e => ({
+        .filter((e) => e.type === 0 && e.ep !== null)
+        .map((e) => ({
           ...e,
           comment_str: e.comment.toLocaleString(),
           duration_display: e.duration || 'N/A',
         }));
+      return { ...result, data: processed };
+    },
+    initialPageParam: pageBase * PAGE_LIMIT,
+    getNextPageParam: (lastPage) => {
+      const nextOffset = (lastPage.offset ?? 0) + (lastPage.limit ?? PAGE_LIMIT);
+      return nextOffset < (lastPage.total ?? 0) ? nextOffset : undefined;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+    enabled: !!subjectId,
+  });
 
-      // 根据是否为追加模式更新状态
-      if (append) {
-        setEpisodes(prev => [...prev, ...processedEpisodes]);
-      } else {
-        setEpisodes(processedEpisodes);
-      }
-
-      // 更新分页相关状态
-      setTotalEpisodes(result.total || 0);
-      setCurrentPage(page);
-      setHasMore(offset + PAGE_LIMIT < result.total);
-
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '加载剧集失败';
-      setError(msg);
-
-      // 非追加模式才清空已加载的剧集
-      if (!append) {
-        setEpisodes([]);
-      }
-
-      toast.error(msg, { duration: 5000, action: { label: '重试', onClick: () => loadData(page, append) } });
-    } finally {
-      setLoading(false);
-    }
-  }, [subjectId]);
-
-  useEffect(() => {
-    // 当番剧 ID 变化时重置分页并重新加载
-    setCurrentPage(0);
-    loadData(0, false);
-  }, [subjectId, loadData]);
 
   // 加载下一页
   const loadNextPage = useCallback(() => {
-    if (hasMore && !loading) {
-      loadData(currentPage + 1, true);
+    if (query.hasNextPage && !query.isFetching) {
+      query.fetchNextPage();
     }
-  }, [hasMore, loading, currentPage, loadData]);
+  }, [query]);
 
   // 加载上一页
   const loadPreviousPage = useCallback(() => {
-    if (currentPage > 0 && !loading) {
-      loadData(currentPage - 1, false);
+    if (pageBase > 0 && !query.isFetching) {
+      setPageBase((p) => Math.max(0, p - 1));
     }
-  }, [currentPage, loading, loadData]);
+  }, [pageBase, query.isFetching]);
 
   // 跳转到指定页
   const jumpToPage = useCallback((page: number) => {
-    if (page >= 0 && page < totalPages && !loading) {
-      loadData(page, false);
+    const lastTotal = query.data?.pages?.[query.data.pages.length - 1]?.total ?? 0;
+    const tp = Math.ceil(lastTotal / PAGE_LIMIT);
+    if (page >= 0 && page < tp && !query.isFetching) {
+      setPageBase(page);
     }
-  }, [totalPages, loading, loadData]);
+  }, [query.data, query.isFetching]);
 
   // 重新加载当前页
   const reload = useCallback(() => {
-    loadData(currentPage, false);
-  }, [currentPage, loadData]);
+    query.refetch();
+  }, [query]);
 
+
+  const flatEpisodes = (query.data?.pages ?? []).flatMap((p) => p.data ?? []);
+  const last = query.data?.pages?.[query.data.pages.length - 1];
+  const totalEpisodes = last?.total ?? 0;
+  const totalPages = Math.ceil(totalEpisodes / PAGE_LIMIT);
+  const currentPage = pageBase + Math.max(0, (query.data?.pages?.length ?? 1) - 1);
+
+  useEffect(() => {
+    const e = query.error as unknown;
+    if (e) {
+      const msg = e instanceof Error ? e.message : '加载剧集失败';
+      toast.error(msg, { duration: 5000, action: { label: '重试', onClick: () => query.refetch() } });
+    }
+  }, [query]);
 
   return {
-    episodes,
-    loading,
-    error,
+    episodes: flatEpisodes,
+    loading: query.isFetching,
+    error: query.error ? (query.error as Error).message : null,
     currentPage,
     totalPages,
     totalEpisodes,
-    hasMore,
+    hasMore: !!query.hasNextPage,
     loadNextPage,
     loadPreviousPage,
     jumpToPage,
-    reload
+    reload,
   };
 };

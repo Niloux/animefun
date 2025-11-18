@@ -8,6 +8,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { Command, CommandList, CommandItem, CommandEmpty } from "./ui/command";
 import { Skeleton } from "./ui/skeleton";
 import { Badge } from "./ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 interface AutoCompleteProps {
   query: string;
@@ -26,81 +27,59 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   onEnter,
   maxSuggestions = 10,
 }) => {
-  const [suggestions, setSuggestions] = useState<Anime[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const requestRef = useRef(0);
-  const composingRef = useRef(false);
+  const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(
     undefined
   );
   const [popoverMaxHeight, setPopoverMaxHeight] = useState<number>(300);
 
-  // 当查询变更且长度不少于 2 个字符时获取建议列表
-  useEffect(() => {
-    const fetchSuggestions = async () => {
+  const queryResult = useQuery({
+    queryKey: [
+      'autocomplete',
+      query.trim(),
+      maxSuggestions,
+    ],
+    queryFn: async () => {
       const trimmed = query.trim();
-      if (composingRef.current) {
-        return;
-      }
-      if (trimmed.length < MIN_QUERY_LEN) {
-        setSuggestions([]);
-        setIsLoading(false);
-        setIsOpen(false);
-        return;
-      }
+      const data = await searchSubject(
+        trimmed,
+        [2],
+        'match',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        false,
+        20,
+        0
+      );
+      return data;
+    },
+    select: (data) => {
+      const q = query.trim().toLowerCase();
+      return data.data
+        .map((a) => ({ a, t: matchTier(q, a), s: scoreCandidate(a) }))
+        .sort((x, y) => y.t - x.t || y.s - x.s)
+        .slice(0, maxSuggestions)
+        .map((x) => x.a);
+    },
+    enabled: isOpen && !isComposing && query.trim().length >= MIN_QUERY_LEN,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 0,
+  });
 
-      const current = requestRef.current + 1;
-      requestRef.current = current;
-      setIsLoading(true);
-
-      try {
-        const data = await searchSubject(
-          trimmed,
-          [2],
-          "match",
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          false,
-          20,
-          0
-        );
-        if (current === requestRef.current) {
-          const q = trimmed.toLowerCase();
-          const scored = data.data
-            .map((a) => ({ a, t: matchTier(q, a), s: scoreCandidate(a) }))
-            .sort((x, y) => y.t - x.t || y.s - x.s)
-            .slice(0, maxSuggestions)
-            .map((x) => x.a);
-          setSuggestions(scored);
-        }
-      } catch {
-        if (current === requestRef.current) {
-          setSuggestions([]);
-        }
-      } finally {
-        if (current === requestRef.current) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    const timer = window.setTimeout(() => {
-      fetchSuggestions();
-    }, 300);
-
-    return () => window.clearTimeout(timer);
-  }, [query, maxSuggestions]);
+  const suggestions = (queryResult.data as Anime[] | undefined) ?? [];
+  const isLoading = queryResult.isPending;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       setIsOpen(false);
     } else if (e.key === "Enter") {
-      if (composingRef.current) return;
+      if (isComposing) return;
       setIsOpen(false);
       onEnter?.();
     }
@@ -124,7 +103,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   return (
     <Popover
       open={
-        isOpen && !composingRef.current && query.trim().length >= MIN_QUERY_LEN
+        isOpen && !isComposing && query.trim().length >= MIN_QUERY_LEN
       }
       onOpenChange={setIsOpen}
     >
@@ -141,10 +120,10 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
             setIsOpen(v.trim().length >= MIN_QUERY_LEN);
           }}
           onCompositionStart={() => {
-            composingRef.current = true;
+            setIsComposing(true);
           }}
           onCompositionEnd={(e) => {
-            composingRef.current = false;
+            setIsComposing(false);
             onQueryChange(e.currentTarget.value);
             setIsOpen(e.currentTarget.value.trim().length >= MIN_QUERY_LEN);
           }}

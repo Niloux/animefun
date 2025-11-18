@@ -1,9 +1,8 @@
 import React from "react";
-
-type Info = { key: string; value: unknown };
+import { InfoBoxItem } from "../types/bangumi";
 
 interface AnimeInfoBoxProps {
-  items?: Info[];
+  items?: InfoBoxItem[];
 }
 
 const AnimeInfoBoxBase: React.FC<AnimeInfoBoxProps> = ({ items }) => {
@@ -24,7 +23,7 @@ const AnimeInfoBoxBase: React.FC<AnimeInfoBoxProps> = ({ items }) => {
                 {info.key}:
               </span>
               <span className="text-sm text-gray-900 dark:text-white font-semibold text-right">
-                {String(info.value ?? "")}
+                {String((info as { value: unknown }).value ?? "")}
               </span>
             </div>
           ))

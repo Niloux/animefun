@@ -216,7 +216,7 @@ const AnimeDetailPage = () => {
           {/* 右侧 - 制作信息 */}
           <ResizablePanel defaultSize={34} minSize={25} className="space-y-6">
             <div className="overflow-y-auto" style={leftPanelHeight ? { height: `${leftPanelHeight}px` } : undefined}>
-              <AnimeInfoBox items={anime.infobox as { key: string; value: unknown }[] | undefined} />
+              <AnimeInfoBox items={anime.infobox} />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

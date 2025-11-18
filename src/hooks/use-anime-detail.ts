@@ -1,12 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import { toast } from "sonner";
 import { getAnimeDetail } from '../lib/api';
 import { Anime } from '../types/bangumi';
+import { useQuery } from '@tanstack/react-query';
 
 export const useAnimeDetail = (id: string | undefined) => {
-  const [anime, setAnime] = useState<Anime | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
 
   // 辅助函数：提取value的实际内容（迭代实现，避免嵌套过深导致栈溢出）
   const extractValue = useCallback((value: unknown): string => {
@@ -55,48 +53,43 @@ export const useAnimeDetail = (id: string | undefined) => {
     return results.filter(Boolean).join('、');
   }, []);
 
-  const loadData = useCallback(async () => {
-    if (!id) {
-      setAnime(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
+  const query = useQuery<Anime | null>({
+    queryKey: ['anime', id],
+    queryFn: async () => {
+      if (!id) return null;
       const data = await getAnimeDetail(Number(id));
-
-      // 检查并处理infobox数据
-      const processedData = {
+      const processed = {
         ...data,
-        infobox: Array.isArray(data.infobox) ? data.infobox.map(item => ({
-          ...item,
-          value: extractValue(item.value),
-        })) : [],
+        infobox: Array.isArray(data.infobox)
+          ? data.infobox.map((item) => ({
+              ...item,
+              value: extractValue(item.value),
+            }))
+          : [],
       };
-
-      setAnime(processedData);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '获取番剧详情失败';
-      setError(errorMsg);
-      setAnime(null);
-      toast.error(errorMsg, {
-        duration: 5000,
-        action: {
-          label: "重试",
-          onClick: () => loadData(),
-        },
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [id, extractValue]);
+      return processed as Anime;
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+  });
 
   useEffect(() => {
-    loadData();
-  }, [id, loadData]);
+    const e = query.error as unknown;
+    if (e) {
+      const msg = e instanceof Error ? e.message : '获取番剧详情失败';
+      toast.error(msg, {
+        duration: 5000,
+        action: { label: '重试', onClick: () => query.refetch() },
+      });
+    }
+  }, [query]);
 
-  return { anime, loading, error, reload: loadData };
+  return {
+    anime: (query.data as Anime | null) ?? null,
+    loading: query.isPending,
+    error: query.error ? (query.error as Error).message : null,
+    reload: query.refetch,
+  };
 };

@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { searchSubject } from "../lib/api";
-import { Anime } from "../types/bangumi";
+import { useQuery } from "@tanstack/react-query";
 
 export type SearchFilters = {
   sort: string;
@@ -23,14 +23,8 @@ export const useSearch = (options?: UseSearchOptions) => {
   } = options || {};
 
   const [query, setQuery] = useState<string>("");
-  const [results, setResults] = useState<Anime[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
   const [page, setPage] = useState<number>(1);
-
-  const reqRef = useRef(0);
 
   const buildRating = (f: SearchFilters): string[] | undefined => {
     if (f.minRating > 0 || f.maxRating < 10) {
@@ -45,40 +39,11 @@ export const useSearch = (options?: UseSearchOptions) => {
   const fetchPage = useCallback(
     async (targetPage: number, currentFilters?: SearchFilters) => {
       if (!query.trim()) return;
-      setIsLoading(true);
-      setError(null);
-
-      const reqId = ++reqRef.current;
       const f = currentFilters ?? filters;
-      const rating = buildRating(f);
-      const offset = (Math.max(1, targetPage) - 1) * limit;
-
-      try {
-        const data = await searchSubject(
-          query.trim(),
-          subjectType,
-          f.sort,
-          f.genres.length > 0 ? f.genres : undefined,
-          undefined,
-          rating,
-          undefined,
-          undefined,
-          false,
-          limit,
-          offset
-        );
-        if (reqRef.current === reqId) {
-          setResults(data.data);
-          setTotal(data.total);
-          setPage(targetPage);
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "搜索失败");
-      } finally {
-        setIsLoading(false);
-      }
+      setFilters(f);
+      setPage(targetPage);
     },
-    [query, filters, subjectType, limit]
+    [query, filters]
   );
 
   const search = useCallback(async () => {
@@ -112,23 +77,52 @@ export const useSearch = (options?: UseSearchOptions) => {
     await searchWithFilters(next);
   }, [filters, searchWithFilters]);
 
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setTotal(0);
-      setError(null);
-    }
-  }, [query]);
+  const queryResult = useQuery({
+    queryKey: [
+      'search',
+      subjectType,
+      filters.sort,
+      filters.genres.join(','),
+      filters.minRating,
+      filters.maxRating,
+      query.trim(),
+      page,
+      limit,
+    ],
+    queryFn: async () => {
+      const rating = buildRating(filters);
+      const offset = (Math.max(1, page) - 1) * limit;
+      const data = await searchSubject(
+        query.trim(),
+        subjectType,
+        filters.sort,
+        filters.genres.length > 0 ? filters.genres : undefined,
+        undefined,
+        rating,
+        undefined,
+        undefined,
+        false,
+        limit,
+        offset
+      );
+      return data;
+    },
+    enabled: !!query.trim(),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 2,
+  });
+
 
   return {
     query,
     setQuery,
-    results,
-    total,
+    results: query.trim() ? (queryResult.data?.data ?? []) : [],
+    total: query.trim() ? (queryResult.data?.total ?? 0) : 0,
     limit,
     page,
-    isLoading,
-    error,
+    isLoading: query.trim() ? queryResult.isPending : false,
+    error: query.trim() ? (queryResult.error ? (queryResult.error as Error).message : null) : null,
     filters,
     setFilters,
     search,
