@@ -32,7 +32,9 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const requestRef = useRef(0);
   const composingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined);
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(
+    undefined
+  );
   const [popoverMaxHeight, setPopoverMaxHeight] = useState<number>(300);
 
   // 当查询变更且长度不少于 2 个字符时获取建议列表
@@ -71,7 +73,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           const q = trimmed.toLowerCase();
           const scored = data.data
             .map((a) => ({ a, t: matchTier(q, a), s: scoreCandidate(a) }))
-            .sort((x, y) => (y.t - x.t) || (y.s - x.s))
+            .sort((x, y) => y.t - x.t || y.s - x.s)
             .slice(0, maxSuggestions)
             .map((x) => x.a);
           setSuggestions(scored);
@@ -160,8 +162,11 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
         {isLoading ? (
           <div className="p-2">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2">
-                <Skeleton className="h-[72px] w-[48px] rounded" />
+              <div
+                key={i}
+                className="grid grid-cols-[48px_1fr_auto] items-center gap-3 px-0 py-2"
+              >
+                <Skeleton className="h-[72px] w-[48px] rounded-2xl" />
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -190,9 +195,10 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
                     alt={anime.name}
                     width={48}
                     height={72}
-                    className="object-cover rounded"
+                    className="object-cover rounded-2xl"
                     onError={(e) => {
-                      e.currentTarget.src = "https://lain.bgm.tv/img/no_icon_subject.png";
+                      e.currentTarget.src =
+                        "https://lain.bgm.tv/img/no_icon_subject.png";
                     }}
                   />
                   <div className="min-w-0">
@@ -208,10 +214,15 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
                   <div className="flex items-center gap-2">
                     <div className="text-xs text-yellow-500 flex items-center gap-1">
                       <Star className="h-3 w-3" />
-                      {anime.rating?.score ? anime.rating.score.toFixed(1) : "—"}
+                      {anime.rating?.score
+                        ? anime.rating.score.toFixed(1)
+                        : "—"}
                     </div>
                     {getYear(anime) && (
-                      <Badge variant="outline" className="text-[10px] py-0.5 px-1">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] py-0.5 px-1"
+                      >
                         {getYear(anime)}
                       </Badge>
                     )}
