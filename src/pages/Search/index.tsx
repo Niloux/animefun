@@ -78,7 +78,7 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="px-4 py-0">
       {/* Search Bar */}
       <div className="mb-6 flex gap-2">
         <div className="grow">

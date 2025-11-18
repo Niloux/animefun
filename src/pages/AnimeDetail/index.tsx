@@ -13,6 +13,7 @@ import {
 } from "../../components/ui/resizable";
 import EpisodesList from "../../components/EpisodesList";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
+import { useSubscriptions } from "../../hooks/use-subscriptions";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -20,6 +21,7 @@ const AnimeDetailPage = () => {
   const { anime, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
+  const { isSubscribed, toggle } = useSubscriptions();
 
   useEffect(() => {
     if (anime) {
@@ -163,6 +165,9 @@ const AnimeDetailPage = () => {
                 variant="default"
                 size="lg"
                 className="flex-1 md:flex-none"
+                onClick={() => {
+                  if (anime) toggle(anime);
+                }}
               >
                 <svg
                   className="w-5 h-5"
@@ -177,7 +182,7 @@ const AnimeDetailPage = () => {
                     d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                   />
                 </svg>
-                订阅番剧
+                {anime && isSubscribed(anime.id) ? "取消订阅" : "订阅番剧"}
               </Button>
             </div>
           </div>

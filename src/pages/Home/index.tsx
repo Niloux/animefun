@@ -14,7 +14,9 @@ const HomePage = () => {
   const { data: calendarData, loading } = useCalendar();
 
   // 直接查找选中日期数据（日历数据按星期几有序，查找效率高）
-  const selectedDayData = calendarData.find(day => day.weekday.id === selectedDay);
+  const selectedDayData = calendarData.find(
+    (day) => day.weekday.id === selectedDay
+  );
 
   // 计算今天的 id
   const todayId = getWeekdayId();
@@ -26,25 +28,30 @@ const HomePage = () => {
 
   // loading handled in main conditional
 
-
   return (
     <div className="p-0">
       {/* 使用 WeekDayNav 组件 */}
-      <div className="px-8">
+      <div className="px-4 py-0">
         <WeekDayNav selectedDay={selectedDay} onDayChange={handleDayChange} />
       </div>
 
       {/* 内容区域 */}
-      <div className="p-8">
+      <div className="px-4 py-8">
         <main className="w-full max-w-none">
           {loading ? (
             <HomeSkeleton />
           ) : (
             <>
               <div className="flex items-center mb-6">
-                <div className={`flex items-center gap-3 ${selectedDay === todayId ? "text-primary" : "text-foreground"}`}>
-                  <div className={`w-1 h-8 rounded-full ${selectedDay === todayId ? "bg-primary" : "bg-border"}`} />
-                  <h2 className="text-2xl font-bold">{selectedDayData?.weekday.cn || "未找到数据"}</h2>
+                <div
+                  className={`flex items-center gap-3 ${selectedDay === todayId ? "text-primary" : "text-foreground"}`}
+                >
+                  <div
+                    className={`w-1 h-8 rounded-full ${selectedDay === todayId ? "bg-primary" : "bg-border"}`}
+                  />
+                  <h2 className="text-2xl font-bold">
+                    {selectedDayData?.weekday.cn || "未找到数据"}
+                  </h2>
                 </div>
                 <div className="flex-1 h-px bg-border ml-3"></div>
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-card/80 text-card-foreground border border-border/60">
