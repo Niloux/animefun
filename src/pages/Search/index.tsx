@@ -94,7 +94,7 @@ const SearchPage = () => {
           )}
         </Button>
         <Button variant="outline" onClick={() => setIsFiltersOpen(true)}>
-          <Filter className="mr-2 h-4 w-4" />
+          <Filter className="h-4 w-4" />
           筛选
         </Button>
       </div>

@@ -42,56 +42,63 @@ export const useSearch = (options?: UseSearchOptions) => {
     return undefined;
   };
 
-  const fetchPage = useCallback(async (targetPage: number) => {
-    if (!query.trim()) return;
-    setIsLoading(true);
-    setError(null);
+  const fetchPage = useCallback(
+    async (targetPage: number, currentFilters?: SearchFilters) => {
+      if (!query.trim()) return;
+      setIsLoading(true);
+      setError(null);
 
-    const reqId = ++reqRef.current;
-    const rating = buildRating(filters);
-    const offset = (Math.max(1, targetPage) - 1) * limit;
+      const reqId = ++reqRef.current;
+      const f = currentFilters ?? filters;
+      const rating = buildRating(f);
+      const offset = (Math.max(1, targetPage) - 1) * limit;
 
-    try {
-      const data = await searchSubject(
-        query.trim(),
-        subjectType,
-        filters.sort,
-        filters.genres.length > 0 ? filters.genres : undefined,
-        undefined,
-        rating,
-        undefined,
-        undefined,
-        false,
-        limit,
-        offset
-      );
-      if (reqRef.current === reqId) {
-        setResults(data.data);
-        setTotal(data.total);
-        setPage(targetPage);
+      try {
+        const data = await searchSubject(
+          query.trim(),
+          subjectType,
+          f.sort,
+          f.genres.length > 0 ? f.genres : undefined,
+          undefined,
+          rating,
+          undefined,
+          undefined,
+          false,
+          limit,
+          offset
+        );
+        if (reqRef.current === reqId) {
+          setResults(data.data);
+          setTotal(data.total);
+          setPage(targetPage);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "搜索失败");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "搜索失败");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [query, filters, subjectType, limit]);
+    },
+    [query, filters, subjectType, limit]
+  );
 
   const search = useCallback(async () => {
-    await fetchPage(1);
-  }, [fetchPage]);
+    await fetchPage(1, filters);
+  }, [fetchPage, filters]);
 
-  const searchWithFilters = useCallback(async (nextFilters: SearchFilters) => {
-    setFilters(nextFilters);
-    if (!query.trim()) {
-      return;
-    }
-    await fetchPage(1);
-  }, [query, fetchPage]);
+  const searchWithFilters = useCallback(
+    async (nextFilters: SearchFilters) => {
+      setFilters(nextFilters);
+      if (!query.trim()) {
+        return;
+      }
+      await fetchPage(1, nextFilters);
+    },
+    [query, fetchPage]
+  );
 
   const applyFilters = useCallback(async () => {
-    await fetchPage(1);
-  }, [fetchPage]);
+    await fetchPage(1, filters);
+  }, [fetchPage, filters]);
 
   const removeFilter = useCallback(async (filterType: string, value: string | number) => {
     let next = filters;

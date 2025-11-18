@@ -18,6 +18,7 @@ import {
   SheetHeader,
   SheetFooter,
   SheetTitle,
+  SheetDescription,
 } from "./ui/sheet";
 import { X } from "lucide-react";
 
@@ -111,6 +112,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       <SheetContent side="right">
         <SheetHeader>
           <SheetTitle>筛选条件</SheetTitle>
+          <SheetDescription className="sr-only">设置排序、评分范围和标签</SheetDescription>
         </SheetHeader>
         <div className="p-4 space-y-6">
           <div className="space-y-2">
