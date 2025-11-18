@@ -41,7 +41,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
           }
         });
       },
-      { threshold: 0.5 } // 当元素可见面积达到 50% 时触发
+      { threshold: 0.25 }
     );
 
     const triggerElement = loadMoreTriggerRef.current;

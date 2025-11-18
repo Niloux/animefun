@@ -23,18 +23,10 @@ export default class ErrorBoundary extends Component<{children: ReactNode}, Stat
 
   render() {
     if (this.state.hasError) {
-      const isLazyLoadError = this.state.error && this.state.error.message.includes('failed to fetch chunk');
-
       return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-6">
-          <h2 className="text-2xl font-bold text-destructive">
-            {isLazyLoadError ? '资源加载失败' : '程序出错了'}
-          </h2>
-          <p className="text-muted-foreground text-center">
-            {isLazyLoadError
-              ? '网络可能出现了问题，请尝试刷新页面'
-              : '抱歉，程序发生了意外错误，请尝试刷新页面'}
-          </p>
+          <h2 className="text-2xl font-bold text-destructive">程序出错了</h2>
+          <p className="text-muted-foreground text-center">抱歉，程序发生了错误，请尝试刷新页面</p>
           <button
             onClick={this.handleReload}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"

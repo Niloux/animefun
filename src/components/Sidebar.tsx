@@ -184,6 +184,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
                                 asChild
                                 isActive={isActive(child.url)}
                                 onMouseEnter={() => handlePreload(child.url)}
+                                onFocus={() => handlePreload(child.url)}
                               >
                                 <Link to={child.url}>
                                   <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">

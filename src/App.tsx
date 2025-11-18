@@ -7,14 +7,14 @@ import "./App.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // 使用自定义的 lazyWithPreload 动态导入所有页面组件，并添加块名称便于分析
-const HomePage = lazyWithPreload(() => import(/* viteChunkName: "page-home" */ "./pages/Home"));
-const SearchPage = lazyWithPreload(() => import(/* viteChunkName: "page-search" */ "./pages/Search"));
-const SubscribePage = lazyWithPreload(() => import(/* viteChunkName: "page-subscribe" */ "./pages/Subscribe"));
-const ResourcesAllPage = lazyWithPreload(() => import(/* viteChunkName: "page-resources-all" */ "./pages/Resources/All"));
-const ResourcesDownloadingPage = lazyWithPreload(() => import(/* viteChunkName: "page-resources-downloading" */ "./pages/Resources/Downloading"));
-const ResourcesDownloadedPage = lazyWithPreload(() => import(/* viteChunkName: "page-resources-downloaded" */ "./pages/Resources/Downloaded"));
-const SettingsPage = lazyWithPreload(() => import(/* viteChunkName: "page-settings" */ "./pages/Settings"));
-const AnimeDetailPage = lazyWithPreload(() => import(/* viteChunkName: "page-anime-detail" */ "./pages/AnimeDetail"));
+const HomePage = lazyWithPreload(() => import("./pages/Home"));
+const SearchPage = lazyWithPreload(() => import("./pages/Search"));
+const SubscribePage = lazyWithPreload(() => import("./pages/Subscribe"));
+const ResourcesAllPage = lazyWithPreload(() => import("./pages/Resources/All"));
+const ResourcesDownloadingPage = lazyWithPreload(() => import("./pages/Resources/Downloading"));
+const ResourcesDownloadedPage = lazyWithPreload(() => import("./pages/Resources/Downloaded"));
+const SettingsPage = lazyWithPreload(() => import("./pages/Settings"));
+const AnimeDetailPage = lazyWithPreload(() => import("./pages/AnimeDetail"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
