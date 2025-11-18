@@ -1,7 +1,6 @@
-/* global ResizeObserver */
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
@@ -20,35 +19,8 @@ const AnimeDetailPage = () => {
   const navigate = useNavigate();
   const { anime, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<number | null>(null);
-  const heightRef = useRef<number>(0);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
 
-  // 同步左右面板高度
-  useEffect(() => {
-    const update = () => {
-      if (frameRef.current != null) return;
-      frameRef.current = window.requestAnimationFrame(() => {
-        frameRef.current = null;
-        if (leftPanelRef.current) {
-          const h = leftPanelRef.current.offsetHeight;
-          if (h !== heightRef.current) {
-            heightRef.current = h;
-            setLeftPanelHeight(h);
-          }
-        }
-      });
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    if (leftPanelRef.current) {
-      observer.observe(leftPanelRef.current);
-    }
-    return () => {
-      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-      observer.disconnect();
-    };
-  }, [anime]);
 
   useEffect(() => {
     if (anime) {
@@ -58,6 +30,21 @@ const AnimeDetailPage = () => {
       }
     }
   }, [anime]);
+
+  useEffect(() => {
+    const el = leftPanelRef.current;
+    if (!el) return;
+    const update = () => {
+      const h = el.offsetHeight;
+      if (h !== leftPanelHeight) setLeftPanelHeight(h);
+    };
+    update();
+    const ro = new window.ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, [anime, leftPanelHeight]);
 
   if (loading) {
     return (
@@ -97,10 +84,10 @@ const AnimeDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <div className="p-0">
         {/* 海报和基本信息区 */}
-        <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8">
+        <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8 shrink-0">
           {/* 左侧海报 */}
           <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
@@ -192,7 +179,8 @@ const AnimeDetailPage = () => {
         </div>
 
         {/* 主要内容区 - 可调整大小的两列布局 */}
-        <ResizablePanelGroup direction="horizontal" className="gap-6">
+        <div className="flex-1 min-h-0">
+        <ResizablePanelGroup direction="horizontal" className="gap-6 h-full">
           {/* 左侧 - 剧情介绍和标签 */}
           <ResizablePanel defaultSize={66} minSize={50}>
             <div ref={leftPanelRef} className="space-y-6">
@@ -231,11 +219,12 @@ const AnimeDetailPage = () => {
 
           {/* 右侧 - 制作信息 */}
           <ResizablePanel defaultSize={34} minSize={25} className="space-y-6">
-            <div className="overflow-y-auto" style={{ height: `${leftPanelHeight}px` }}>
+            <div className="overflow-y-auto" style={leftPanelHeight ? { height: `${leftPanelHeight}px` } : undefined}>
               <AnimeInfoBox items={anime.infobox as { key: string; value: unknown }[] | undefined} />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
+        </div>
 
         {/* 剧集列表 */}
         <div className="mt-8">
