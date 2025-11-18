@@ -2,7 +2,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use serde_json::Value;
 
-// Helper function to recursively collect strings from a serde_json::Value
+// 辅助函数：递归收集 serde_json::Value 中的字符串
 fn collect_strings_from_value(v: &Value, out: &mut Vec<String>) {
     match v {
         Value::String(s) => out.push(s.clone()),
@@ -12,17 +12,17 @@ fn collect_strings_from_value(v: &Value, out: &mut Vec<String>) {
             }
         }
         Value::Object(map) => {
-            // Special case for objects like `{"v": "some_value"}`
+            // 特例：形如 `{"v": "some_value"}` 的对象
             if let Some(inner) = map.get("v") {
                 collect_strings_from_value(inner, out);
             } else {
-                // Generic fallback for other objects, might not be ideal
+                // 其他对象的通用回退，可能不够理想
                 for (_, val) in map.iter() {
                     collect_strings_from_value(val, out);
                 }
             }
         }
-        // For other types like Number, Bool, convert them to string
+        // 对于数字、布尔等类型，转换为字符串
         other => {
             let s = other.to_string();
             if !s.is_empty() && s != "null" {
@@ -32,7 +32,7 @@ fn collect_strings_from_value(v: &Value, out: &mut Vec<String>) {
     }
 }
 
-// Custom deserializer for the 'infobox' field
+// 'infobox' 字段的自定义反序列化器
 fn deserialize_infobox<'de, D>(deserializer: D) -> Result<Option<Vec<InfoItem>>, D::Error>
 where
     D: Deserializer<'de>,

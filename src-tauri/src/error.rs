@@ -25,9 +25,8 @@ impl serde::Serialize for AppError {
     where
         S: serde::Serializer,
     {
-        // For now, we'll keep it as a string for simplicity, but it's now
-        // derived from a structured error. A future improvement could be
-        // to serialize this as a JSON object with an error code and message.
+        // 目前为简化仍以字符串序列化，但它源自结构化错误。
+        // 未来可改为带错误码与消息的 JSON 对象。
         serializer.serialize_str(self.to_string().as_ref())
     }
 }

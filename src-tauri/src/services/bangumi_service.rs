@@ -27,12 +27,12 @@ pub(crate) static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
         .expect("client builder should not fail")
 });
 
-/// A generic helper to fetch data from an API with caching support.
+/// 通用的 API 获取辅助函数，支持缓存。
 ///
-/// 1. Checks for a valid cached response and returns it if found.
-/// 2. If no valid cache, it builds a request with ETag/Last-Modified headers.
-/// 3. If the API returns 304 Not Modified, it retrieves from cache again (as it should be there).
-/// 4. If the API returns new data, it parses it, stores it in the cache, and returns it.
+/// 1. 先检查有效缓存，命中则直接返回。
+/// 2. 若无有效缓存，构建带 ETag/Last-Modified 的条件请求。
+/// 3. 若返回 304 Not Modified，则再次从缓存读取（应当存在）。
+/// 4. 若返回新数据，解析后写入缓存并返回。
 async fn fetch_api<T>(
     key: &str,
     req_builder: RequestBuilder,
@@ -41,14 +41,14 @@ async fn fetch_api<T>(
 where
     T: Serialize + DeserializeOwned,
 {
-    // 1. Try to get from cache first.
+    // 1. 先尝试从缓存读取。
     if let Ok(Some(cached_data)) = cache::get(key).await {
         if let Ok(parsed) = serde_json::from_str::<T>(&cached_data) {
             return Ok(parsed);
         }
     }
 
-    // 2. Prepare request with conditional headers.
+    // 2. 准备带条件头的请求。
     let (etag, last_modified) = cache::get_meta(key).await.unwrap_or((None, None));
     let mut req = req_builder;
     if let Some(e) = etag {
@@ -60,20 +60,20 @@ where
 
     let resp = req.send().await?;
 
-    // 3. Handle 304 Not Modified.
+    // 3. 处理 304 Not Modified。
     if resp.status() == StatusCode::NOT_MODIFIED {
-        // The server confirmed our cache is fresh. We MUST read from cache.
-        // If this fails, it's a cache error, we should not re-fetch.
+        // 服务端确认缓存仍然有效，必须从缓存读取。
+        // 若读取失败，则为缓存错误，不应重新拉取。
         let cached_data = cache::get(key).await?.ok_or_else(|| AppError::CacheMissAfter304(key.to_string()))?;
         return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
     }
 
-    // 4. Handle new data.
-    resp.error_for_status_ref()?; // Ensure we have a success status code.
+    // 4. 处理新数据。
+    resp.error_for_status_ref()?; // 确认成功状态码
     let headers = resp.headers().clone();
     let data = resp.json::<T>().await?;
 
-    // 5. Update cache.
+    // 5. 更新缓存。
     if let Ok(s) = serde_json::to_string(&data) {
         let _ = cache::set(key, s, cache_duration_secs.try_into().unwrap()).await;
     }
@@ -117,7 +117,7 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<SearchResponse, AppError> {
-    // Using a stable JSON representation for the cache key.
+    // 使用稳定的 JSON 表示作为缓存键。
     let key_payload = serde_json::json!({
         "keywords": keywords, "subject_type": subject_type, "sort": sort, "tag": tag,
         "air_date": air_date, "rating": rating, "rating_count": rating_count,
@@ -130,7 +130,7 @@ pub async fn search_subject(
 
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
 
-    // Use owned types in the payload to prevent lifetime issues with async reqwest.
+    // 负载使用拥有所有权的类型，避免异步 reqwest 的生命周期问题。
     #[derive(serde::Serialize)]
     struct FilterPayload {
         #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
