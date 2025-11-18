@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
+import { useCachedImage } from "../hooks/use-cached-image";
 
 interface AnimeGridProps {
   items: Anime[];
@@ -14,6 +15,13 @@ interface AnimeGridProps {
 const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number }) => {
   const navigate = useNavigate();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const rawImgSrc =
+    anime.images?.large ||
+    anime.images?.common ||
+    anime.images?.medium ||
+    anime.images?.small ||
+    "https://lain.bgm.tv/img/no_icon_subject.png";
+  const { src: cachedSrc } = useCachedImage(rawImgSrc);
 
   const handleAnimeClick = () => {
     navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
@@ -33,30 +41,20 @@ const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number })
       tabIndex={0}
     >
       <div className="relative overflow-hidden">
-        {(() => {
-          const imgSrc =
-            anime.images?.large ||
-            anime.images?.common ||
-            anime.images?.medium ||
-            anime.images?.small ||
-            "https://lain.bgm.tv/img/no_icon_subject.png";
-          return (
-            <img
-              src={imgSrc}
-              alt={anime.name}
-              width={160}
-              height={240}
-              className={`w-full h-60 object-cover transition-opacity duration-300 ${
-                isImageLoaded ? "opacity-100" : "opacity-0"
-              }`}
-              loading={index < 8 ? "eager" : "lazy"}
-              decoding="async"
-              fetchPriority={index < 8 ? "high" : "auto"}
-              onLoad={() => setIsImageLoaded(true)}
-              onError={() => setIsImageLoaded(false)}
-            />
-          );
-        })()}
+        <img
+          src={cachedSrc ?? rawImgSrc}
+          alt={anime.name}
+          width={160}
+          height={240}
+          className={`w-full h-60 object-cover transition-opacity duration-300 ${
+            isImageLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          loading={index < 8 ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={index < 8 ? "high" : "auto"}
+          onLoad={() => setIsImageLoaded(true)}
+          onError={() => setIsImageLoaded(false)}
+        />
         {!isImageLoaded && (
           <Skeleton className="absolute inset-0 w-full h-60" />
         )}

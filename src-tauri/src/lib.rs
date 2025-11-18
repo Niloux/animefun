@@ -27,6 +27,7 @@ pub fn run() {
             commands::episodes::get_episodes,
             commands::subject::get_subject,
             commands::search::search_subject,
+            commands::cache::cache_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
