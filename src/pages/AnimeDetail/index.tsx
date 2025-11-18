@@ -14,6 +14,7 @@ import {
 import EpisodesList from "../../components/EpisodesList";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
+import { useCachedImage } from "../../hooks/use-cached-image";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -22,6 +23,14 @@ const AnimeDetailPage = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
   const { isSubscribed, toggle } = useSubscriptions();
+  const rawImgSrc = anime
+    ? anime.images?.large ||
+      anime.images?.common ||
+      anime.images?.medium ||
+      anime.images?.small ||
+      "https://lain.bgm.tv/img/no_icon_subject.png"
+    : undefined;
+  const { src: cachedSrc } = useCachedImage(rawImgSrc);
 
   useEffect(() => {
     if (anime) {
@@ -98,13 +107,7 @@ const AnimeDetailPage = () => {
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
               <AspectRatio ratio={2 / 3}>
                 <img
-                  src={
-                    anime.images?.large ||
-                    anime.images?.common ||
-                    anime.images?.medium ||
-                    anime.images?.small ||
-                    "https://lain.bgm.tv/img/no_icon_subject.png"
-                  }
+                  src={(cachedSrc ?? rawImgSrc) as string}
                   alt={anime.name}
                   className="w-full h-full object-cover"
                   decoding="async"

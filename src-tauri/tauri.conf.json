@@ -18,10 +18,10 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost https: data:",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**/.animefun/**"]
+        "scope": ["$APPDATA/**", "**/.animefun/**"]
       }
     }
   },
