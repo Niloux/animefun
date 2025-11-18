@@ -69,7 +69,7 @@ pub struct SubjectResponse {
     pub nsfw: bool,
     pub locked: bool,
     pub date: Option<String>,
-    pub platform: String,
+    pub platform: Option<String>,
     pub images: Images,
     pub infobox: Option<serde_json::Value>,
     pub volumes: Option<u32>,

@@ -7,8 +7,16 @@ const BGM_API_HOST: &str = "https://api.bgm.tv";
 
 pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
     let url = format!("{}/calendar", BGM_API_HOST);
-    let response = reqwest::get(&url)
+    let client = reqwest::Client::builder()
+        .user_agent("animefun/0.1")
+        .gzip(true)
+        .deflate(true)
+        .build()?;
+    let response = client
+        .get(&url)
+        .send()
         .await?
+        .error_for_status()? // 返回非 2xx 时直接报错，而不是尝试解码错误体
         .json::<Vec<CalendarResponse>>()
         .await?;
     Ok(response)
@@ -16,7 +24,24 @@ pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
 
 pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
     let url = format!("{}/v0/subjects/{}", BGM_API_HOST, id);
-    let response = reqwest::get(&url).await?.json::<SubjectResponse>().await?;
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::ACCEPT_ENCODING,
+        reqwest::header::HeaderValue::from_static("gzip, deflate"),
+    );
+    let client = reqwest::Client::builder()
+        .user_agent("animefun/0.1")
+        .default_headers(headers)
+        .gzip(true)
+        .deflate(true)
+        .build()?;
+    let response = client
+        .get(&url)
+        .send()
+        .await?
+        .error_for_status()? // 如果是 4xx/5xx，避免出现“error decoding response body”误报
+        .json::<SubjectResponse>()
+        .await?;
     Ok(response)
 }
 
@@ -130,6 +155,7 @@ pub async fn fetch_episodes(
     let response = req
         .send()
         .await?
+        .error_for_status()? // 统一错误处理
         .json::<crate::models::bangumi::PagedEpisode>()
         .await?;
     Ok(response)
@@ -141,8 +167,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_subject() {
-        let res = fetch_subject(12).await.unwrap();
-        assert_eq!(res.id, 12);
+        // 使用已确认存在的条目 ID 以避免 404 造成的误报
+        let res = fetch_subject(12381).await.unwrap();
+        assert_eq!(res.id, 12381);
         assert!(!res.name.is_empty());
     }
 
