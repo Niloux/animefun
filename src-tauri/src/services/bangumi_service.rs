@@ -1,11 +1,17 @@
 //! src-tauri/src/services/bangumi_service.rs
 
 use crate::error::AppError;
+use crate::cache;
 use crate::models::bangumi::{CalendarResponse, SearchResponse, SubjectResponse};
 
 const BGM_API_HOST: &str = "https://api.bgm.tv";
 
 pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
+    if let Some(v) = cache::get("calendar").await.ok().flatten() {
+        if let Ok(parsed) = serde_json::from_str::<Vec<CalendarResponse>>(&v) {
+            return Ok(parsed);
+        }
+    }
     let url = format!("{}/calendar", BGM_API_HOST);
     let client = reqwest::Client::builder()
         .user_agent("animefun/0.1")
@@ -19,10 +25,19 @@ pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
         .error_for_status()? // 返回非 2xx 时直接报错，而不是尝试解码错误体
         .json::<Vec<CalendarResponse>>()
         .await?;
+    if let Ok(s) = serde_json::to_string(&response) {
+        let _ = cache::set("calendar", s, 6 * 3600).await;
+    }
     Ok(response)
 }
 
 pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
+    let key = format!("subject:{}", id);
+    if let Some(v) = cache::get(&key).await.ok().flatten() {
+        if let Ok(parsed) = serde_json::from_str::<SubjectResponse>(&v) {
+            return Ok(parsed);
+        }
+    }
     let url = format!("{}/v0/subjects/{}", BGM_API_HOST, id);
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
@@ -42,6 +57,9 @@ pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
         .error_for_status()? // 如果是 4xx/5xx，避免出现“error decoding response body”误报
         .json::<SubjectResponse>()
         .await?;
+    if let Ok(s) = serde_json::to_string(&response) {
+        let _ = cache::set(&key, s, 24 * 3600).await;
+    }
     Ok(response)
 }
 
@@ -58,6 +76,25 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<SearchResponse, AppError> {
+    let key = format!(
+        "search:{}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}:{:?}",
+        keywords,
+        subject_type,
+        sort,
+        tag,
+        air_date,
+        rating,
+        rating_count,
+        rank,
+        nsfw,
+        limit,
+        offset
+    );
+    if let Some(v) = cache::get(&key).await.ok().flatten() {
+        if let Ok(parsed) = serde_json::from_str::<SearchResponse>(&v) {
+            return Ok(parsed);
+        }
+    }
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
@@ -121,6 +158,9 @@ pub async fn search_subject(
         .await?
         .json::<SearchResponse>()
         .await?;
+    if let Ok(s) = serde_json::to_string(&response) {
+        let _ = cache::set(&key, s, 3600).await;
+    }
     Ok(response)
 }
 
@@ -130,6 +170,15 @@ pub async fn fetch_episodes(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<crate::models::bangumi::PagedEpisode, AppError> {
+    let key = format!(
+        "episodes:{}:{:?}:{:?}:{:?}",
+        subject_id, ep_type, limit, offset
+    );
+    if let Some(v) = cache::get(&key).await.ok().flatten() {
+        if let Ok(parsed) = serde_json::from_str::<crate::models::bangumi::PagedEpisode>(&v) {
+            return Ok(parsed);
+        }
+    }
     let url = format!("{}/v0/episodes", BGM_API_HOST);
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
@@ -158,6 +207,9 @@ pub async fn fetch_episodes(
         .error_for_status()? // 统一错误处理
         .json::<crate::models::bangumi::PagedEpisode>()
         .await?;
+    if let Ok(s) = serde_json::to_string(&response) {
+        let _ = cache::set(&key, s, 3600).await;
+    }
     Ok(response)
 }
 

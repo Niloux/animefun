@@ -5,9 +5,10 @@
 pub enum AppError {
     #[error(transparent)]
     Reqwest(#[from] reqwest::Error),
-    // 在这里可以添加更多错误类型, 例如 I/O 错误或数据库错误
-    // #[error("I/O error: {0}")]
-    // Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Sqlite(#[from] rusqlite::Error),
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名

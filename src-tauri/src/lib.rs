@@ -1,6 +1,7 @@
 // src-tauri/src/lib.rs
 
 mod commands;
+mod cache;
 mod error;
 mod models;
 mod services;
