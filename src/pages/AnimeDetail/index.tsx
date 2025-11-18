@@ -92,17 +92,13 @@ const AnimeDetailPage = () => {
           <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
               <AspectRatio ratio={2/3}>
-                {(() => {
-                  const imgSrc =
-                    anime.images?.large ||
-                    anime.images?.common ||
-                    anime.images?.medium ||
-                    anime.images?.small ||
-                    "https://lain.bgm.tv/img/no_icon_subject.png";
-                  return (
-                    <img src={imgSrc} alt={anime.name} className="w-full h-full object-cover" decoding="async" fetchPriority="high" />
-                  );
-                })()}
+                <img
+                  src={anime.images?.large || anime.images?.common || anime.images?.medium || anime.images?.small || "https://lain.bgm.tv/img/no_icon_subject.png"}
+                  alt={anime.name}
+                  className="w-full h-full object-cover"
+                  decoding="async"
+                  fetchPriority="high"
+                />
               </AspectRatio>
             </div>
           </div>
@@ -137,7 +133,7 @@ const AnimeDetailPage = () => {
               </div>
             </div>
 
-            {/* Meta Tags */}
+            {/* 元标签 */}
             {anime.meta_tags && anime.meta_tags.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-2">
                 {anime.meta_tags.map((tag, idx) => (

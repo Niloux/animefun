@@ -8,33 +8,51 @@ export const useAnimeDetail = (id: string | undefined) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 辅助函数：提取value的实际内容
+  // 辅助函数：提取value的实际内容（迭代实现，避免嵌套过深导致栈溢出）
   const extractValue = useCallback((value: unknown): string => {
-    if (value === null || value === undefined) {
-      return '';
+    const stack: unknown[] = [value];
+    const results: string[] = [];
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+
+      if (current === null || current === undefined) {
+        continue;
+      }
+
+      // 字符串直接收集
+      if (typeof current === 'string') {
+        results.push(current);
+        continue;
+      }
+
+      // 包含v键的对象 - 压入v的值继续处理
+      if (typeof current === 'object' && !Array.isArray(current)) {
+        const obj = current as Record<string, unknown>;
+        if ('v' in obj) {
+          stack.push(obj.v);
+          continue;
+        }
+      }
+
+      // 数组 - 将所有元素压入栈
+      if (Array.isArray(current)) {
+        // 倒序压入保持原有顺序
+        for (let i = current.length - 1; i >= 0; i--) {
+          stack.push(current[i]);
+        }
+        continue;
+      }
+
+      // 其他类型转换为字符串
+      try {
+        results.push(String(current));
+      } catch {
+        continue;
+      }
     }
 
-    // 字符串直接返回
-    if (typeof value === 'string') {
-      return value;
-    }
-
-    // 包含v键的对象
-    if (typeof value === 'object' && !Array.isArray(value) && 'v' in value) {
-      return extractValue((value as Record<string, unknown>).v);
-    }
-
-    // 数组，将多个值用顿号连接
-    if (Array.isArray(value)) {
-      return value.map(item => extractValue(item)).filter(Boolean).join('、');
-    }
-
-    // 其他类型转换为字符串
-    try {
-      return String(value);
-    } catch {
-      return '';
-    }
+    return results.filter(Boolean).join('、');
   }, []);
 
   const loadData = useCallback(async () => {

@@ -30,7 +30,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const requestRef = useRef(0);
   const composingRef = useRef(false);
 
-  // Fetch suggestions when query changes and is longer than 2 characters
+  // 当查询变更且长度不少于 2 个字符时获取建议列表
   useEffect(() => {
     const fetchSuggestions = async () => {
       const trimmed = query.trim();
