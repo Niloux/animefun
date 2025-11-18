@@ -11,10 +11,7 @@ import {
 import { Input } from "./ui/input";
 import { Slider } from "./ui/slider";
 import { ScrollArea } from "./ui/scroll-area";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "./ui/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import {
   Sheet,
   SheetContent,
@@ -163,10 +160,15 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 type="multiple"
                 value={filters.genres}
                 onValueChange={handleGenresChange}
-                className="grid grid-cols-2 gap-2"
+                className="grid grid-cols-5 gap-5"
               >
                 {animeGenres.map((genre) => (
-                  <ToggleGroupItem key={genre} value={genre} variant="outline" size="sm">
+                  <ToggleGroupItem
+                    key={genre}
+                    value={genre}
+                    variant="outline"
+                    size="sm"
+                  >
                     {genre}
                   </ToggleGroupItem>
                 ))}
@@ -176,7 +178,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         </div>
         <SheetFooter>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset} className="flex-1">重置</Button>
+            <Button variant="outline" onClick={handleReset} className="flex-1">
+              重置
+            </Button>
             <Button
               className="flex-1"
               onClick={() => {
