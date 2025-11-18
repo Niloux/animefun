@@ -9,8 +9,8 @@ interface AnimeInfoBoxProps {
 const AnimeInfoBoxBase: React.FC<AnimeInfoBoxProps> = ({ items }) => {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700 overflow-y-auto">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <span className="w-5 h-5 inline-block" aria-hidden="true" />
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <span className="w-5 h-5" />
         制作信息
       </h2>
       <div className="space-y-3">
@@ -29,7 +29,9 @@ const AnimeInfoBoxBase: React.FC<AnimeInfoBoxProps> = ({ items }) => {
             </div>
           ))
         ) : (
-          <div className="text-sm text-gray-500 dark:text-gray-400">暂无制作信息</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            暂无制作信息
+          </div>
         )}
       </div>
     </div>
