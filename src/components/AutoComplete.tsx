@@ -12,13 +12,17 @@ interface AutoCompleteProps {
   onQueryChange: (query: string) => void;
   onSelect: (anime: Anime) => void;
   onEnter?: () => void;
+  maxSuggestions?: number;
 }
+
+const MIN_QUERY_LEN = 2;
 
 const AutoComplete: React.FC<AutoCompleteProps> = ({
   query,
   onQueryChange,
   onSelect,
   onEnter,
+  maxSuggestions = 10,
 }) => {
   const [suggestions, setSuggestions] = useState<Anime[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +37,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       if (composingRef.current) {
         return;
       }
-      if (trimmed.length < 22) {
+      if (trimmed.length < MIN_QUERY_LEN) {
         setSuggestions([]);
         setIsLoading(false);
         setIsOpen(false);
@@ -63,7 +67,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           const scored = data.data
             .map((a) => ({ a, s: scoreCandidate(q, a) }))
             .sort((x, y) => y.s - x.s)
-            .slice(0, 5)
+            .slice(0, maxSuggestions)
             .map((x) => x.a);
           setSuggestions(scored);
         }
@@ -83,7 +87,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [query, maxSuggestions]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -96,7 +100,12 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   };
 
   return (
-    <Popover open={isOpen && query.trim().length >= 2} onOpenChange={setIsOpen}>
+    <Popover
+      open={
+        isOpen && !composingRef.current && query.trim().length >= MIN_QUERY_LEN
+      }
+      onOpenChange={setIsOpen}
+    >
       <PopoverTrigger asChild>
         <Input
           type="text"
@@ -105,7 +114,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           onChange={(e) => {
             const v = e.target.value;
             onQueryChange(v);
-            setIsOpen(v.trim().length >= 2);
+            setIsOpen(v.trim().length >= MIN_QUERY_LEN);
           }}
           onCompositionStart={() => {
             composingRef.current = true;
@@ -113,7 +122,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           onCompositionEnd={(e) => {
             composingRef.current = false;
             onQueryChange(e.currentTarget.value);
-            setIsOpen(e.currentTarget.value.trim().length >= 2);
+            setIsOpen(e.currentTarget.value.trim().length >= MIN_QUERY_LEN);
           }}
           onKeyDown={handleKeyDown}
         />
