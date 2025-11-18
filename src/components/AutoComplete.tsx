@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Anime } from "../types/bangumi";
 import { searchSubject } from "../lib/api";
-import { scoreCandidate } from "../lib/utils";
+import { scoreCandidate, matchTier } from "../lib/utils";
 import { Loader2, Star } from "lucide-react";
 import { Input } from "./ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
@@ -65,8 +65,8 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
         if (current === requestRef.current) {
           const q = trimmed.toLowerCase();
           const scored = data.data
-            .map((a) => ({ a, s: scoreCandidate(q, a) }))
-            .sort((x, y) => y.s - x.s)
+            .map((a) => ({ a, t: matchTier(q, a), s: scoreCandidate(a) }))
+            .sort((x, y) => (y.t - x.t) || (y.s - x.s))
             .slice(0, maxSuggestions)
             .map((x) => x.a);
           setSuggestions(scored);
