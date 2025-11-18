@@ -19,6 +19,7 @@ pub fn run() {
                     std::path::PathBuf::from(home).join(".animefun")
                 });
             cache::init(base).map_err(|e| e.to_string())?;
+            let _ = tauri::async_runtime::block_on(crate::commands::cache::cleanup_images(app.handle().clone()));
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
