@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Anime } from "../types/bangumi";
 import { searchSubject } from "../lib/api";
 import { scoreCandidate, matchTier } from "../lib/utils";
-import { Loader2, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { Input } from "./ui/input";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { Command, CommandList, CommandItem, CommandEmpty } from "./ui/command";
+import { Skeleton } from "./ui/skeleton";
+import { Badge } from "./ui/badge";
 
 interface AutoCompleteProps {
   query: string;
@@ -29,6 +31,9 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const requestRef = useRef(0);
   const composingRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined);
+  const [popoverMaxHeight, setPopoverMaxHeight] = useState<number>(300);
 
   // 当查询变更且长度不少于 2 个字符时获取建议列表
   useEffect(() => {
@@ -99,6 +104,21 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const update = () => {
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPopoverWidth(rect.width);
+      const avail = window.innerHeight - rect.bottom - 16;
+      const mh = Math.max(200, Math.min(avail, 480));
+      setPopoverMaxHeight(mh);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [isOpen]);
+
   return (
     <Popover
       open={
@@ -108,6 +128,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     >
       <PopoverTrigger asChild>
         <Input
+          ref={inputRef}
           type="text"
           placeholder="搜索番剧名称..."
           value={query}
@@ -129,23 +150,33 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="p-0 w-80"
+        side="bottom"
+        sideOffset={6}
+        className="p-1"
+        style={{ width: popoverWidth }}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {isLoading ? (
-          <div className="p-4 flex items-center justify-center">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="ml-2 text-sm text-muted-foreground">
-              加载中...
-            </span>
+          <div className="p-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2">
+                <Skeleton className="h-[72px] w-[48px] rounded" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+                <Skeleton className="h-3 w-10" />
+              </div>
+            ))}
           </div>
         ) : suggestions.length > 0 ? (
           <Command>
-            <CommandList>
+            <CommandList style={{ maxHeight: popoverMaxHeight }}>
               {suggestions.map((anime) => (
                 <CommandItem
                   key={anime.id}
+                  className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2"
                   onSelect={() => {
                     onSelect(anime);
                     setIsOpen(false);
@@ -157,24 +188,32 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
                       "https://lain.bgm.tv/img/no_icon_subject.png"
                     }
                     alt={anime.name}
-                    width={40}
-                    height={60}
+                    width={48}
+                    height={72}
                     className="object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.src = "https://lain.bgm.tv/img/no_icon_subject.png";
+                    }}
                   />
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0">
                     <div className="text-sm font-medium line-clamp-1 hover:text-primary">
-                      {anime.name_cn || anime.name}
+                      {highlight(query, anime.name_cn || anime.name)}
                     </div>
                     {anime.name_cn && anime.name_cn !== anime.name && (
                       <div className="text-xs text-muted-foreground line-clamp-1">
-                        {anime.name}
+                        {highlight(query, anime.name)}
                       </div>
                     )}
-                    {anime.rating && anime.rating.score !== 0 && (
-                      <div className="text-xs text-yellow-500 mt-1 flex items-center gap-1">
-                        <Star className="h-3 w-3" />{" "}
-                        {anime.rating.score.toFixed(1)}
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-yellow-500 flex items-center gap-1">
+                      <Star className="h-3 w-3" />
+                      {anime.rating?.score ? anime.rating.score.toFixed(1) : "—"}
+                    </div>
+                    {getYear(anime) && (
+                      <Badge variant="outline" className="text-[10px] py-0.5 px-1">
+                        {getYear(anime)}
+                      </Badge>
                     )}
                   </div>
                 </CommandItem>
@@ -190,5 +229,28 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     </Popover>
   );
 };
+
+function highlight(q: string, text: string) {
+  const s = q.trim();
+  if (!s) return text;
+  const i = text.toLowerCase().indexOf(s.toLowerCase());
+  if (i < 0) return text;
+  const pre = text.slice(0, i);
+  const mid = text.slice(i, i + s.length);
+  const post = text.slice(i + s.length);
+  return (
+    <span>
+      {pre}
+      <span className="bg-primary/10 rounded px-0.5">{mid}</span>
+      {post}
+    </span>
+  );
+}
+
+function getYear(a: Anime) {
+  const d = a.air_date || a.date || "";
+  const y = d.split("-")[0];
+  return y || "";
+}
 
 export default AutoComplete;

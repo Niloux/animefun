@@ -11,6 +11,7 @@ const browserGlobals = {
   window: "readonly",
   document: "readonly",
   HTMLElement: "readonly",
+  HTMLInputElement: "readonly",
   navigator: "readonly",
   localStorage: "readonly",
   console: "readonly",
