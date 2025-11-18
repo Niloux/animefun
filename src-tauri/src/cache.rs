@@ -1,6 +1,7 @@
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
+use once_cell::sync::OnceCell;
 
 use crate::error::AppError;
 
@@ -12,10 +13,22 @@ fn now_secs() -> i64 {
 }
 
 fn db_file_path() -> Result<PathBuf, AppError> {
+    if let Some(p) = DB_FILE.get() {
+        return Ok(p.clone());
+    }
     let home = std::env::var("HOME").map_err(|e| std::io::Error::new(std::io::ErrorKind::NotFound, e.to_string()))?;
     let dir = PathBuf::from(home).join(".animefun");
     std::fs::create_dir_all(&dir)?;
-    Ok(dir.join("cache.sqlite"))
+    let file = dir.join("cache.sqlite");
+    DB_FILE.set(file.clone()).ok();
+    Ok(file)
+}
+
+pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
+    std::fs::create_dir_all(&base_dir)?;
+    let file = base_dir.join("cache.sqlite");
+    DB_FILE.set(file).ok();
+    Ok(())
 }
 
 fn ensure_table(conn: &Connection) -> Result<(), AppError> {
@@ -25,6 +38,14 @@ fn ensure_table(conn: &Connection) -> Result<(), AppError> {
             value TEXT NOT NULL,
             updated_at INTEGER NOT NULL,
             expires_at INTEGER NOT NULL
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY,
+            etag TEXT,
+            last_modified TEXT
         )",
         [],
     )?;
@@ -42,12 +63,7 @@ pub async fn get(key: &str) -> Result<Option<String>, AppError> {
         if let Some(row) = rows.next()? {
             let value: String = row.get(0)?;
             let expires_at: i64 = row.get(1)?;
-            if now_secs() <= expires_at {
-                Ok(Some(value))
-            } else {
-                let _ = conn.execute("DELETE FROM cache WHERE key = ?1", params![key]);
-                Ok(None)
-            }
+            if now_secs() <= expires_at { Ok(Some(value)) } else { Ok(None) }
         } else {
             Ok(None)
         }
@@ -69,8 +85,47 @@ pub async fn set(key: &str, value: String, ttl_secs: i64) -> Result<(), AppError
              ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, expires_at=excluded.expires_at",
             params![key, value, now, expires],
         )?;
+        let _ = conn.execute("DELETE FROM cache WHERE expires_at < ?1", params![now]);
         Ok(())
     })
     .await
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
 }
+
+pub async fn get_meta(key: &str) -> Result<(Option<String>, Option<String>), AppError> {
+    let key = key.to_string();
+    tokio::task::spawn_blocking(move || {
+        let path = db_file_path()?;
+        let conn = Connection::open(path)?;
+        ensure_table(&conn)?;
+        let mut stmt = conn.prepare("SELECT etag, last_modified FROM meta WHERE key = ?1")?;
+        let mut rows = stmt.query(params![key])?;
+        if let Some(row) = rows.next()? {
+            let etag: Option<String> = row.get(0)?;
+            let last_modified: Option<String> = row.get(1)?;
+            Ok((etag, last_modified))
+        } else {
+            Ok((None, None))
+        }
+    })
+    .await
+    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+}
+
+pub async fn set_meta(key: &str, etag: Option<String>, last_modified: Option<String>) -> Result<(), AppError> {
+    let key = key.to_string();
+    tokio::task::spawn_blocking(move || {
+        let path = db_file_path()?;
+        let conn = Connection::open(path)?;
+        ensure_table(&conn)?;
+        conn.execute(
+            "INSERT INTO meta(key, etag, last_modified) VALUES(?1, ?2, ?3)
+             ON CONFLICT(key) DO UPDATE SET etag=excluded.etag, last_modified=excluded.last_modified",
+            params![key, etag, last_modified],
+        )?;
+        Ok(())
+    })
+    .await
+    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+}
+static DB_FILE: OnceCell<PathBuf> = OnceCell::new();

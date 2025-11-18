@@ -3,8 +3,26 @@
 use crate::error::AppError;
 use crate::cache;
 use crate::models::bangumi::{CalendarResponse, SearchResponse, SubjectResponse};
+use once_cell::sync::Lazy;
+use reqwest::StatusCode;
+use reqwest::header::{IF_NONE_MATCH, IF_MODIFIED_SINCE, ETAG, LAST_MODIFIED};
 
 const BGM_API_HOST: &str = "https://api.bgm.tv";
+
+static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert(
+        reqwest::header::ACCEPT_ENCODING,
+        reqwest::header::HeaderValue::from_static("gzip, deflate"),
+    );
+    reqwest::Client::builder()
+        .user_agent("animefun/0.1")
+        .default_headers(headers)
+        .gzip(true)
+        .deflate(true)
+        .build()
+        .expect("client")
+});
 
 pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
     if let Some(v) = cache::get("calendar").await.ok().flatten() {
@@ -13,22 +31,36 @@ pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
         }
     }
     let url = format!("{}/calendar", BGM_API_HOST);
-    let client = reqwest::Client::builder()
-        .user_agent("animefun/0.1")
-        .gzip(true)
-        .deflate(true)
-        .build()?;
-    let response = client
-        .get(&url)
-        .send()
-        .await?
-        .error_for_status()? // 返回非 2xx 时直接报错，而不是尝试解码错误体
-        .json::<Vec<CalendarResponse>>()
-        .await?;
-    if let Ok(s) = serde_json::to_string(&response) {
-        let _ = cache::set("calendar", s, 6 * 3600).await;
+    let client = &*CLIENT;
+    let (etag, last_modified) = cache::get_meta("calendar").await.unwrap_or((None, None));
+    let mut req = client.get(&url);
+    if let Some(e) = etag.clone() { req = req.header(IF_NONE_MATCH, e); }
+    if let Some(lm) = last_modified.clone() { req = req.header(IF_MODIFIED_SINCE, lm); }
+    let resp = req.send().await?;
+    if resp.status() == StatusCode::NOT_MODIFIED {
+        if let Some(v) = cache::get("calendar").await.ok().flatten() {
+            if let Ok(parsed) = serde_json::from_str::<Vec<CalendarResponse>>(&v) {
+                return Ok(parsed);
+            }
+        }
+        let fallback = client.get(&url).send().await?;
+        let headers = fallback.headers().clone();
+        fallback.error_for_status_ref()?;
+        let data = fallback.json::<Vec<CalendarResponse>>().await?;
+        if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set("calendar", s, 6 * 3600).await; }
+        let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let _ = cache::set_meta("calendar", new_etag, new_lm).await;
+        return Ok(data);
     }
-    Ok(response)
+    let headers = resp.headers().clone();
+    resp.error_for_status_ref()?;
+    let data = resp.json::<Vec<CalendarResponse>>().await?;
+    if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set("calendar", s, 6 * 3600).await; }
+    let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let _ = cache::set_meta("calendar", new_etag, new_lm).await;
+    Ok(data)
 }
 
 pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
@@ -39,28 +71,36 @@ pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
         }
     }
     let url = format!("{}/v0/subjects/{}", BGM_API_HOST, id);
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        reqwest::header::ACCEPT_ENCODING,
-        reqwest::header::HeaderValue::from_static("gzip, deflate"),
-    );
-    let client = reqwest::Client::builder()
-        .user_agent("animefun/0.1")
-        .default_headers(headers)
-        .gzip(true)
-        .deflate(true)
-        .build()?;
-    let response = client
-        .get(&url)
-        .send()
-        .await?
-        .error_for_status()? // 如果是 4xx/5xx，避免出现“error decoding response body”误报
-        .json::<SubjectResponse>()
-        .await?;
-    if let Ok(s) = serde_json::to_string(&response) {
-        let _ = cache::set(&key, s, 24 * 3600).await;
+    let client = &*CLIENT;
+    let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
+    let mut req = client.get(&url);
+    if let Some(e) = etag.clone() { req = req.header(IF_NONE_MATCH, e); }
+    if let Some(lm) = last_modified.clone() { req = req.header(IF_MODIFIED_SINCE, lm); }
+    let resp = req.send().await?;
+    if resp.status() == StatusCode::NOT_MODIFIED {
+        if let Some(v) = cache::get(&key).await.ok().flatten() {
+            if let Ok(parsed) = serde_json::from_str::<SubjectResponse>(&v) {
+                return Ok(parsed);
+            }
+        }
+        let fallback = client.get(&url).send().await?;
+        let headers = fallback.headers().clone();
+        fallback.error_for_status_ref()?;
+        let data = fallback.json::<SubjectResponse>().await?;
+        if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set(&key, s, 24 * 3600).await; }
+        let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let _ = cache::set_meta(&key, new_etag, new_lm).await;
+        return Ok(data);
     }
-    Ok(response)
+    let headers = resp.headers().clone();
+    resp.error_for_status_ref()?;
+    let data = resp.json::<SubjectResponse>().await?;
+    if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set(&key, s, 24 * 3600).await; }
+    let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let _ = cache::set_meta(&key, new_etag, new_lm).await;
+    Ok(data)
 }
 
 pub async fn search_subject(
@@ -96,24 +136,12 @@ pub async fn search_subject(
         }
     }
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        reqwest::header::ACCEPT_ENCODING,
-        reqwest::header::HeaderValue::from_static("gzip, deflate"),
-    );
-    let client = reqwest::Client::builder()
-        .user_agent("animefun/0.1")
-        .default_headers(headers)
-        .gzip(true)
-        .deflate(true)
-        .build()?;
+    let client = &*CLIENT;
     let mut req = client.post(&url);
-    if let Some(l) = limit {
-        req = req.query(&[("limit", l)]);
-    }
-    if let Some(o) = offset {
-        req = req.query(&[("offset", o)]);
-    }
+    let mut qs: Vec<(&str, String)> = Vec::new();
+    if let Some(l) = limit { qs.push(("limit", l.to_string())); }
+    if let Some(o) = offset { qs.push(("offset", o.to_string())); }
+    if !qs.is_empty() { req = req.query(&qs); }
     #[derive(serde::Serialize)]
     struct FilterPayload {
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -152,16 +180,36 @@ pub async fn search_subject(
             nsfw,
         }),
     };
-    let response = req
-        .json(&payload)
-        .send()
-        .await?
-        .json::<SearchResponse>()
-        .await?;
-    if let Ok(s) = serde_json::to_string(&response) {
-        let _ = cache::set(&key, s, 3600).await;
+    let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
+    if let Some(e) = etag.clone() { req = req.header(IF_NONE_MATCH, e); }
+    if let Some(lm) = last_modified.clone() { req = req.header(IF_MODIFIED_SINCE, lm); }
+    let resp = req.json(&payload).send().await?;
+    if resp.status() == StatusCode::NOT_MODIFIED {
+        if let Some(v) = cache::get(&key).await.ok().flatten() {
+            if let Ok(parsed) = serde_json::from_str::<SearchResponse>(&v) {
+                return Ok(parsed);
+            }
+        }
+        let mut req2 = client.post(&url);
+        if !qs.is_empty() { req2 = req2.query(&qs); }
+        let fallback = req2.json(&payload).send().await?;
+        let headers = fallback.headers().clone();
+        fallback.error_for_status_ref()?;
+        let data = fallback.json::<SearchResponse>().await?;
+        if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set(&key, s, 3600).await; }
+        let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let _ = cache::set_meta(&key, new_etag, new_lm).await;
+        return Ok(data);
     }
-    Ok(response)
+    let headers = resp.headers().clone();
+    resp.error_for_status_ref()?;
+    let data = resp.json::<SearchResponse>().await?;
+    if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set(&key, s, 3600).await; }
+    let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let _ = cache::set_meta(&key, new_etag, new_lm).await;
+    Ok(data)
 }
 
 pub async fn fetch_episodes(
@@ -180,37 +228,40 @@ pub async fn fetch_episodes(
         }
     }
     let url = format!("{}/v0/episodes", BGM_API_HOST);
-    let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert(
-        reqwest::header::ACCEPT_ENCODING,
-        reqwest::header::HeaderValue::from_static("gzip, deflate"),
-    );
-    let client = reqwest::Client::builder()
-        .user_agent("animefun/0.1")
-        .default_headers(headers)
-        .gzip(true)
-        .deflate(true)
-        .build()?;
-    let mut req = client.get(&url).query(&[("subject_id", subject_id)]);
-    if let Some(t) = ep_type {
-        req = req.query(&[("type", t as u32)]);
+    let client = &*CLIENT;
+    let mut qs: Vec<(&str, String)> = vec![("subject_id", subject_id.to_string())];
+    if let Some(t) = ep_type { qs.push(("type", (t as u32).to_string())); }
+    if let Some(l) = limit { qs.push(("limit", l.to_string())); }
+    if let Some(o) = offset { qs.push(("offset", o.to_string())); }
+    let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
+    let mut req = client.get(&url).query(&qs);
+    if let Some(e) = etag.clone() { req = req.header(IF_NONE_MATCH, e); }
+    if let Some(lm) = last_modified.clone() { req = req.header(IF_MODIFIED_SINCE, lm); }
+    let resp = req.send().await?;
+    if resp.status() == StatusCode::NOT_MODIFIED {
+        if let Some(v) = cache::get(&key).await.ok().flatten() {
+            if let Ok(parsed) = serde_json::from_str::<crate::models::bangumi::PagedEpisode>(&v) {
+                return Ok(parsed);
+            }
+        }
+        let fallback = client.get(&url).query(&qs).send().await?;
+        let headers = fallback.headers().clone();
+        fallback.error_for_status_ref()?;
+        let data = fallback.json::<crate::models::bangumi::PagedEpisode>().await?;
+        if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set(&key, s, 3600).await; }
+        let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+        let _ = cache::set_meta(&key, new_etag, new_lm).await;
+        return Ok(data);
     }
-    if let Some(l) = limit {
-        req = req.query(&[("limit", l)]);
-    }
-    if let Some(o) = offset {
-        req = req.query(&[("offset", o)]);
-    }
-    let response = req
-        .send()
-        .await?
-        .error_for_status()? // 统一错误处理
-        .json::<crate::models::bangumi::PagedEpisode>()
-        .await?;
-    if let Ok(s) = serde_json::to_string(&response) {
-        let _ = cache::set(&key, s, 3600).await;
-    }
-    Ok(response)
+    let headers = resp.headers().clone();
+    resp.error_for_status_ref()?;
+    let data = resp.json::<crate::models::bangumi::PagedEpisode>().await?;
+    if let Ok(s) = serde_json::to_string(&data) { let _ = cache::set(&key, s, 3600).await; }
+    let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let _ = cache::set_meta(&key, new_etag, new_lm).await;
+    Ok(data)
 }
 
 #[cfg(test)]

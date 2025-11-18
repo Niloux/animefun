@@ -57,6 +57,7 @@ dependencies = [
 name = "animefun"
 version = "0.1.0"
 dependencies = [
+ "once_cell",
  "reqwest",
  "rusqlite",
  "serde",
