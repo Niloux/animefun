@@ -133,6 +133,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           ref={inputRef}
           type="text"
           placeholder="搜索番剧名称..."
+          className="border-border"
           value={query}
           onChange={(e) => {
             const v = e.target.value;
