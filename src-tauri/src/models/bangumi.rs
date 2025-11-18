@@ -1,6 +1,69 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use serde_json::Value;
+
+// Helper function to recursively collect strings from a serde_json::Value
+fn collect_strings_from_value(v: &Value, out: &mut Vec<String>) {
+    match v {
+        Value::String(s) => out.push(s.clone()),
+        Value::Array(arr) => {
+            for item in arr {
+                collect_strings_from_value(item, out);
+            }
+        }
+        Value::Object(map) => {
+            // Special case for objects like `{"v": "some_value"}`
+            if let Some(inner) = map.get("v") {
+                collect_strings_from_value(inner, out);
+            } else {
+                // Generic fallback for other objects, might not be ideal
+                for (_, val) in map.iter() {
+                    collect_strings_from_value(val, out);
+                }
+            }
+        }
+        // For other types like Number, Bool, convert them to string
+        other => {
+            let s = other.to_string();
+            if !s.is_empty() && s != "null" {
+                out.push(s.trim_matches('"').to_string());
+            }
+        }
+    }
+}
+
+// Custom deserializer for the 'infobox' field
+fn deserialize_infobox<'de, D>(deserializer: D) -> Result<Option<Vec<InfoItem>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let v: Option<Value> = Option::deserialize(deserializer)?;
+    match v {
+        Some(Value::Array(arr)) => {
+            let mut items: Vec<InfoItem> = Vec::new();
+            for it in arr {
+                if let Value::Object(map) = it {
+                    let key = map.get("key").and_then(|k| k.as_str()).unwrap_or("").to_string();
+                    if key.is_empty() {
+                        continue;
+                    }
+                    let val = map.get("value").unwrap_or(&Value::Null);
+                    let mut parts: Vec<String> = Vec::new();
+                    collect_strings_from_value(val, &mut parts);
+                    let value = parts
+                        .into_iter()
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<_>>()
+                        .join("、");
+                    items.push(InfoItem { key, value });
+                }
+            }
+            Ok(Some(items))
+        }
+        _ => Ok(None),
+    }
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Weekday {
@@ -72,7 +135,8 @@ pub struct SubjectResponse {
     pub date: Option<String>,
     pub platform: Option<String>,
     pub images: Images,
-    pub infobox: Option<serde_json::Value>,
+    #[serde(default, deserialize_with = "deserialize_infobox")]
+    pub infobox: Option<Vec<InfoItem>>,
     pub volumes: Option<u32>,
     pub eps: Option<u32>,
     pub total_episodes: Option<u32>,
@@ -140,103 +204,8 @@ pub struct PagedEpisode {
     pub data: Vec<Episode>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InfoItem {
     pub key: String,
     pub value: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SubjectView {
-    pub id: u32,
-    pub url: Option<String>,
-    #[serde(rename = "type")]
-    pub item_type: u8,
-    pub name: String,
-    pub name_cn: String,
-    pub summary: String,
-    pub series: Option<bool>,
-    pub nsfw: bool,
-    pub locked: bool,
-    pub date: Option<String>,
-    pub platform: Option<String>,
-    pub images: Images,
-    pub infobox: Option<Vec<InfoItem>>,
-    pub volumes: Option<u32>,
-    pub eps: Option<u32>,
-    pub total_episodes: Option<u32>,
-    pub rating: Option<SubjectRating>,
-    pub collection: Option<SubjectCollection>,
-    pub meta_tags: Option<Vec<String>>,
-    pub tags: Option<Vec<SubjectTag>>,
-}
-
-fn collect_strings(v: &Value, out: &mut Vec<String>) {
-    match v {
-        Value::String(s) => out.push(s.clone()),
-        Value::Array(arr) => {
-            for item in arr {
-                collect_strings(item, out);
-            }
-        }
-        Value::Object(map) => {
-            if let Some(inner) = map.get("v") {
-                collect_strings(inner, out);
-            } else {
-                for (_, val) in map.iter() {
-                    collect_strings(val, out);
-                }
-            }
-        }
-        other => {
-            let s = other.to_string();
-            if !s.is_empty() && s != "null" { out.push(s); }
-        }
-    }
-}
-
-fn flatten_infobox(v: &Value) -> Vec<InfoItem> {
-    let mut items: Vec<InfoItem> = Vec::new();
-    if let Value::Array(arr) = v {
-        for it in arr {
-            if let Value::Object(map) = it {
-                let key = map.get("key").and_then(|k| k.as_str()).unwrap_or("").to_string();
-                if key.is_empty() { continue; }
-                let val = map.get("value").unwrap_or(&Value::Null);
-                let mut parts: Vec<String> = Vec::new();
-                collect_strings(val, &mut parts);
-                let value = parts.into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("、");
-                items.push(InfoItem { key, value });
-            }
-        }
-    }
-    items
-}
-
-impl From<SubjectResponse> for SubjectView {
-    fn from(s: SubjectResponse) -> Self {
-        let infobox = s.infobox.as_ref().map(|v| flatten_infobox(v));
-        SubjectView {
-            id: s.id,
-            url: s.url,
-            item_type: s.item_type,
-            name: s.name,
-            name_cn: s.name_cn,
-            summary: s.summary,
-            series: s.series,
-            nsfw: s.nsfw,
-            locked: s.locked,
-            date: s.date,
-            platform: s.platform,
-            images: s.images,
-            infobox,
-            volumes: s.volumes,
-            eps: s.eps,
-            total_episodes: s.total_episodes,
-            rating: s.rating,
-            collection: s.collection,
-            meta_tags: s.meta_tags,
-            tags: s.tags,
-        }
-    }
 }

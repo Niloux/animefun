@@ -9,10 +9,15 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
+    #[error("Cache miss for key '{0}' after receiving 304 Not Modified")]
+    CacheMissAfter304(String),
+    #[error(transparent)]
+    SerdeJson(#[from] serde_json::Error),
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名
-pub type CommandResult<T, E = String> = std::result::Result<T, E>;
+// 现在它返回一个结构化的错误，而不是一个无用的字符串
+pub type CommandResult<T> = std::result::Result<T, AppError>;
 
 // 实现 Serialize 以便错误可以被发送到前端
 impl serde::Serialize for AppError {
@@ -20,6 +25,9 @@ impl serde::Serialize for AppError {
     where
         S: serde::Serializer,
     {
+        // For now, we'll keep it as a string for simplicity, but it's now
+        // derived from a structured error. A future improvement could be
+        // to serialize this as a JSON object with an error code and message.
         serializer.serialize_str(self.to_string().as_ref())
     }
 }
