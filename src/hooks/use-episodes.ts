@@ -1,13 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getEpisodes } from '../lib/api';
 import { PagedEpisode } from '../types/bangumi';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 // 分页常量定义
 const PAGE_LIMIT = 18; // 每页展示 18 条（3 行 × 每行 6 条）
 
 export const useEpisodes = (subjectId: number | undefined) => {
   const [pageBase, setPageBase] = useState(0);
+  const queryClient = useQueryClient();
 
   const query = useInfiniteQuery<PagedEpisode>({
     queryKey: ['episodes', subjectId, pageBase, PAGE_LIMIT],
@@ -37,6 +39,13 @@ export const useEpisodes = (subjectId: number | undefined) => {
     enabled: !!subjectId,
     placeholderData: (prev) => prev,
   });
+
+  useEffect(() => {
+    if (query.error) {
+      const msg = (query.error as Error).message;
+      toast.error(msg, { duration: 5000, action: { label: '重试', onClick: () => queryClient.refetchQueries({ queryKey: ['episodes', subjectId, pageBase, PAGE_LIMIT], exact: true }) } });
+    }
+  }, [query.error, queryClient, subjectId, pageBase]);
 
 
   // 加载下一页

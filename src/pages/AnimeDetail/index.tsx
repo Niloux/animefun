@@ -1,7 +1,6 @@
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
@@ -21,7 +20,6 @@ const AnimeDetailPage = () => {
   const { anime, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
-
 
   useEffect(() => {
     if (anime) {
@@ -47,12 +45,6 @@ const AnimeDetailPage = () => {
     };
   }, [anime, leftPanelHeight]);
 
-  useEffect(() => {
-    if (error) {
-      toast.error(error, { duration: 5000, action: { label: "重试", onClick: () => reload() } });
-    }
-  }, [error, reload]);
-
   if (loading) {
     return (
       <div className="p-8">
@@ -69,10 +61,14 @@ const AnimeDetailPage = () => {
       <div className="p-8">
         <div className="text-center space-y-4">
           <h2 className="text-xl font-bold">加载失败</h2>
-          <div className="text-sm text-gray-600 dark:text-gray-400">{error}</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {error}
+          </div>
           <div className="flex items-center justify-center gap-3">
             <Button onClick={() => reload()}>重试</Button>
-            <Button variant="outline" onClick={() => navigate(-1)}>返回上一页</Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              返回上一页
+            </Button>
           </div>
         </div>
       </div>
@@ -98,9 +94,15 @@ const AnimeDetailPage = () => {
           {/* 左侧海报 */}
           <div className="w-36 md:w-56 shrink-0">
             <div className="relative rounded-lg overflow-hidden shadow-2xl border border-gray-200 dark:border-gray-700">
-              <AspectRatio ratio={2/3}>
+              <AspectRatio ratio={2 / 3}>
                 <img
-                  src={anime.images?.large || anime.images?.common || anime.images?.medium || anime.images?.small || "https://lain.bgm.tv/img/no_icon_subject.png"}
+                  src={
+                    anime.images?.large ||
+                    anime.images?.common ||
+                    anime.images?.medium ||
+                    anime.images?.small ||
+                    "https://lain.bgm.tv/img/no_icon_subject.png"
+                  }
                   alt={anime.name}
                   className="w-full h-full object-cover"
                   decoding="async"
@@ -183,50 +185,57 @@ const AnimeDetailPage = () => {
 
         {/* 主要内容区 - 可调整大小的两列布局 */}
         <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="gap-6 h-full">
-          {/* 左侧 - 剧情介绍和标签 */}
-          <ResizablePanel defaultSize={66} minSize={50}>
-            <div ref={leftPanelRef} className="space-y-6">
-              {/* 简介 */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  剧情介绍
-                </h2>
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                  {anime.summary || "暂无简介"}
-                </p>
-              </div>
+          <ResizablePanelGroup direction="horizontal" className="gap-6 h-full">
+            {/* 左侧 - 剧情介绍和标签 */}
+            <ResizablePanel defaultSize={66} minSize={50}>
+              <div ref={leftPanelRef} className="space-y-6">
+                {/* 简介 */}
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    剧情介绍
+                  </h2>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                    {anime.summary || "暂无简介"}
+                  </p>
+                </div>
 
-              {/* 标签 */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  标签
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {(anime.tags?.slice(0, 15) || []).map(
-                    (tag: { name: string }, idx: number) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
-                      >
-                        {tag.name}
-                      </span>
-                    )
-                  )}
+                {/* 标签 */}
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    标签
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {(anime.tags?.slice(0, 15) || []).map(
+                      (tag: { name: string }, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                        >
+                          {tag.name}
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </ResizablePanel>
+            </ResizablePanel>
 
-          <ResizableHandle withHandle />
+            <ResizableHandle withHandle />
 
-          {/* 右侧 - 制作信息 */}
-          <ResizablePanel defaultSize={34} minSize={25} className="space-y-6">
-            <div className="overflow-y-auto" style={leftPanelHeight ? { height: `${leftPanelHeight}px` } : undefined}>
-              <AnimeInfoBox items={anime.infobox} />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            {/* 右侧 - 制作信息 */}
+            <ResizablePanel defaultSize={34} minSize={25} className="space-y-6">
+              <div
+                className="overflow-y-auto"
+                style={
+                  leftPanelHeight
+                    ? { height: `${leftPanelHeight}px` }
+                    : undefined
+                }
+              >
+                <AnimeInfoBox items={anime.infobox} />
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
 
         {/* 剧集列表 */}

@@ -30,10 +30,7 @@ const SearchPage = () => {
     error,
     filters,
     setFilters,
-    search,
-    fetchPage,
-    applyFilters,
-    removeFilter,
+    setPage,
   } = useSearch({ subjectType: [2], limit: 20 });
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -43,11 +40,18 @@ const SearchPage = () => {
   };
 
   const handleApplyFilters = () => {
-    applyFilters();
+    setPage(1);
   };
 
   const handleRemoveFilter = (filterType: string, value: string | number) => {
-    removeFilter(filterType, value);
+    if (filterType === "genre") {
+      setFilters({ ...filters, genres: filters.genres.filter((g) => g !== value) });
+    } else if (filterType === "minRating") {
+      setFilters({ ...filters, minRating: 0 });
+    } else if (filterType === "maxRating") {
+      setFilters({ ...filters, maxRating: 10 });
+    }
+    setPage(1);
   };
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
@@ -76,14 +80,14 @@ const SearchPage = () => {
           <AutoComplete
             query={query}
             onQueryChange={setQuery}
-            onEnter={search}
+            onEnter={() => setPage(1)}
             onSelect={(anime) => {
               // When a suggestion is selected, navigate to the anime detail page
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
             }}
           />
         </div>
-        <Button onClick={search} disabled={isLoading}>
+        <Button onClick={() => setPage(1)} disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -221,7 +225,7 @@ const SearchPage = () => {
                   }
                   onClick={(e) => {
                     e.preventDefault();
-                    if (page > 1) fetchPage(page - 1);
+                        if (page > 1) setPage(page - 1);
                   }}
                 />
               </PaginationItem>
@@ -237,7 +241,7 @@ const SearchPage = () => {
                       isActive={p === page}
                       onClick={(e) => {
                         e.preventDefault();
-                        if (p !== page) fetchPage(p);
+                        if (p !== page) setPage(p);
                       }}
                     >
                       {p}
@@ -255,7 +259,7 @@ const SearchPage = () => {
                   }
                   onClick={(e) => {
                     e.preventDefault();
-                    if (page < totalPages) fetchPage(page + 1);
+                        if (page < totalPages) setPage(page + 1);
                   }}
                 />
               </PaginationItem>

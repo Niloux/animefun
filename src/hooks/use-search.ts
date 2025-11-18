@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useMemo, useState } from "react";
 import { searchSubject } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { Anime } from "../types/bangumi";
+import { useDebouncedValue } from "./use-debounce";
 
 export type SearchFilters = {
   sort: string;
@@ -16,6 +17,14 @@ type UseSearchOptions = {
   limit?: number;
 };
 
+type SearchState = {
+  keywords: string;
+  filters: SearchFilters;
+  page: number;
+  subjectType: number[];
+  limit: number;
+};
+
 export const useSearch = (options?: UseSearchOptions) => {
   const {
     initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] },
@@ -23,123 +32,76 @@ export const useSearch = (options?: UseSearchOptions) => {
     limit = 20,
   } = options || {};
 
-  const [query, setQueryState] = useState<string>("");
-  const [filters, setFilters] = useState<SearchFilters>(initialFilters);
-  const [page, setPage] = useState<number>(1);
-  const [requested, setRequested] = useState<boolean>(false);
+  const [state, setState] = useState<SearchState>({
+    keywords: "",
+    filters: initialFilters,
+    page: 1,
+    subjectType,
+    limit,
+  });
 
-  const buildRating = (f: SearchFilters): string[] | undefined => {
-    if (f.minRating > 0 || f.maxRating < 10) {
-      return [
-        `>=${f.minRating}`,
-        `<=${f.maxRating}`,
-      ];
+  const debouncedKeywords = useDebouncedValue(state.keywords, 400);
+  const normalizedGenres = useMemo(() => [...state.filters.genres].sort(), [state.filters.genres]);
+  const rating = useMemo(() => {
+    if (state.filters.minRating > 0 || state.filters.maxRating < 10) {
+      return [`>=${state.filters.minRating}`, `<=${state.filters.maxRating}`];
     }
     return undefined;
-  };
+  }, [state.filters.minRating, state.filters.maxRating]);
+  const offset = (Math.max(1, state.page) - 1) * state.limit;
 
-  const fetchPage = useCallback(
-    async (targetPage: number, currentFilters?: SearchFilters) => {
-      if (!query.trim()) return;
-      const f = currentFilters ?? filters;
-      setFilters(f);
-      setPage(targetPage);
-    },
-    [query, filters]
-  );
-
-  const search = useCallback(async () => {
-    setRequested(true);
-    await fetchPage(1, filters);
-  }, [fetchPage, filters]);
-
-  const searchWithFilters = useCallback(
-    async (nextFilters: SearchFilters) => {
-      setRequested(true);
-      setFilters(nextFilters);
-      if (!query.trim()) {
-        return;
-      }
-      await fetchPage(1, nextFilters);
-    },
-    [query, fetchPage]
-  );
-
-  const applyFilters = useCallback(async () => {
-    setRequested(true);
-    await fetchPage(1, filters);
-  }, [fetchPage, filters]);
-
-  const removeFilter = useCallback(async (filterType: string, value: string | number) => {
-    let next = filters;
-    if (filterType === "genre") {
-      next = { ...filters, genres: filters.genres.filter((g) => g !== value) };
-    } else if (filterType === "minRating") {
-      next = { ...filters, minRating: 0 };
-    } else if (filterType === "maxRating") {
-      next = { ...filters, maxRating: 10 };
-    }
-    await searchWithFilters(next);
-  }, [filters, searchWithFilters]);
-
-  const queryResult = useQuery<{ total: number; limit: number; offset: number; data: Anime[] }>({
+  const query = useQuery<{ total: number; limit: number; offset: number; data: Anime[] }>({
     queryKey: [
-      'search',
-      subjectType,
-      filters.sort,
-      [...filters.genres].sort(),
-      filters.minRating,
-      filters.maxRating,
-      query.trim(),
-      page,
-      limit,
+      "search",
+      {
+        subjectType: state.subjectType,
+        sort: state.filters.sort,
+        genres: normalizedGenres,
+        minRating: state.filters.minRating,
+        maxRating: state.filters.maxRating,
+        keywords: debouncedKeywords.trim(),
+        page: state.page,
+        limit: state.limit,
+      },
     ],
     queryFn: async () => {
-      const rating = buildRating(filters);
-      const offset = (Math.max(1, page) - 1) * limit;
       const data = await searchSubject(
-        query.trim(),
-        subjectType,
-        filters.sort,
-        filters.genres.length > 0 ? filters.genres : undefined,
+        debouncedKeywords.trim(),
+        state.subjectType,
+        state.filters.sort,
+        normalizedGenres.length > 0 ? normalizedGenres : undefined,
         undefined,
         rating,
         undefined,
         undefined,
         false,
-        limit,
+        state.limit,
         offset
       );
       return data;
     },
-    enabled: !!query.trim() && requested,
+    enabled: !!debouncedKeywords.trim(),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 2,
     placeholderData: (prev) => prev,
   });
 
-  const setQuery = useCallback((v: string) => {
-    setQueryState(v);
-    setRequested(false);
-  }, []);
-
+  const setQuery = (v: string) => setState((s) => ({ ...s, keywords: v }));
+  const setFilters = (f: SearchFilters) => setState((s) => ({ ...s, filters: f }));
+  const setPage = (p: number) => setState((s) => ({ ...s, page: p }));
 
   return {
-    query,
+    query: state.keywords,
     setQuery,
-    results: requested && query.trim() ? (queryResult.data?.data ?? []) : [],
-    total: requested && query.trim() ? (queryResult.data?.total ?? 0) : 0,
-    limit,
-    page,
-    isLoading: requested && query.trim() ? queryResult.isPending : false,
-    error: requested && query.trim() ? (queryResult.error ? (queryResult.error as Error).message : null) : null,
-    filters,
+    results: query.data?.data ?? [],
+    total: query.data?.total ?? 0,
+    limit: state.limit,
+    page: state.page,
+    isLoading: query.isPending,
+    error: query.error ? (query.error as Error).message : null,
+    filters: state.filters,
     setFilters,
-    search,
-    fetchPage,
-    searchWithFilters,
-    applyFilters,
-    removeFilter,
+    setPage,
   };
 };
