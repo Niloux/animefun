@@ -4,13 +4,14 @@ use crate::cache;
 use crate::error::AppError;
 use crate::models::bangumi::{CalendarResponse, PagedEpisode, SearchResponse, SubjectResponse};
 use once_cell::sync::Lazy;
+use std::time::Duration;
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
 
 const BGM_API_HOST: &str = "https://api.bgm.tv";
 
-static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
+pub(crate) static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert(
         reqwest::header::ACCEPT_ENCODING,
@@ -19,6 +20,7 @@ static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     reqwest::Client::builder()
         .user_agent("animefun/0.1")
         .default_headers(headers)
+        .timeout(Duration::from_secs(10))
         .gzip(true)
         .deflate(true)
         .build()

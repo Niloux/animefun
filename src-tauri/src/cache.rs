@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use once_cell::sync::OnceCell;
 
 use crate::error::AppError;
+use tauri::Manager;
 
 fn now_secs() -> i64 {
     SystemTime::now()
@@ -16,7 +17,9 @@ fn db_file_path() -> Result<PathBuf, AppError> {
     if let Some(p) = DB_FILE.get() {
         return Ok(p.clone());
     }
-    let home = std::env::var("HOME").map_err(|e| std::io::Error::new(std::io::ErrorKind::NotFound, e.to_string()))?;
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".into());
     let dir = PathBuf::from(home).join(".animefun");
     std::fs::create_dir_all(&dir)?;
     let file = dir.join("cache.sqlite");
@@ -29,6 +32,18 @@ pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     let file = base_dir.join("cache.sqlite");
     DB_FILE.set(file).ok();
     Ok(())
+}
+
+pub fn app_base_dir(app: &tauri::AppHandle) -> PathBuf {
+    app
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME")
+                .or_else(|_| std::env::var("USERPROFILE"))
+                .unwrap_or_else(|_| ".".into());
+            PathBuf::from(home).join(".animefun")
+        })
 }
 
 fn ensure_table(conn: &Connection) -> Result<(), AppError> {

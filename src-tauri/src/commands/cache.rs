@@ -1,5 +1,5 @@
 use crate::error::{AppError, CommandResult};
-use tauri::Manager;
+use crate::services::bangumi_service;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
@@ -8,7 +8,7 @@ const IMAGE_TTL_SECS: i64 = 90 * 24 * 3600;
 fn infer_ext_from_url(url: &str) -> &'static str {
     let url_no_query = url.split('?').next().unwrap_or(url);
     if let Some(pos) = url_no_query.rfind('.') {
-        let ext = &url_no_query[pos + 1..].to_lowercase();
+        let ext = url_no_query[pos + 1..].to_ascii_lowercase();
         match ext.as_str() {
             "jpg" | "jpeg" => "jpg",
             "png" => "png",
@@ -42,13 +42,7 @@ async fn expired(path: &Path) -> Result<bool, AppError> {
 
 #[tauri::command]
 pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<String> {
-    let base = app
-        .path()
-        .app_data_dir()
-        .unwrap_or_else(|_| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-            std::path::PathBuf::from(home).join(".animefun")
-        });
+    let base = crate::cache::app_base_dir(&app);
 
     let images_dir = base.join("images");
     tokio::fs::create_dir_all(&images_dir).await?;
@@ -70,7 +64,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
         }
     }
 
-    let resp = reqwest::get(&url).await?;
+    let resp = bangumi_service::CLIENT.get(&url).send().await?;
     resp.error_for_status_ref()?;
     let ct = resp
         .headers()
@@ -89,13 +83,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
 }
 
 pub async fn cleanup_images(app: tauri::AppHandle) -> Result<(), AppError> {
-    let base = app
-        .path()
-        .app_data_dir()
-        .unwrap_or_else(|_| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-            std::path::PathBuf::from(home).join(".animefun")
-        });
+    let base = crate::cache::app_base_dir(&app);
     let images_dir = base.join("images");
     if tokio::fs::metadata(&images_dir).await.is_err() {
         return Ok(());
@@ -108,4 +96,18 @@ pub async fn cleanup_images(app: tauri::AppHandle) -> Result<(), AppError> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_infer_ext_from_url() {
+        assert_eq!(infer_ext_from_url("http://x/y.jpg"), "jpg");
+        assert_eq!(infer_ext_from_url("http://x/y.jpeg?x=1"), "jpg");
+        assert_eq!(infer_ext_from_url("http://x/y.png"), "png");
+        assert_eq!(infer_ext_from_url("http://x/y.webp"), "webp");
+        assert_eq!(infer_ext_from_url("http://x/y"), "jpg");
+    }
 }
