@@ -186,7 +186,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 {filters.genres.map((t) => (
                   <Badge
                     key={t}
-                    variant="secondary"
+                    variant="default"
                     className="flex items-center gap-1"
                   >
                     {t}

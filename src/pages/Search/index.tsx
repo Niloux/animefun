@@ -107,7 +107,7 @@ const SearchPage = () => {
           {filters.genres.map((genre) => (
             <Badge
               key={genre}
-              variant="secondary"
+              variant="default"
               className="flex items-center gap-1"
             >
               {genre}
