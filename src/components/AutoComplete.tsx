@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Anime } from "../types/bangumi";
 import { searchSubject } from "../lib/api";
 import { scoreCandidate } from "../lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, Star } from "lucide-react";
+import { Input } from "./ui/input";
+import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
+import { Command, CommandList, CommandItem, CommandEmpty } from "./ui/command";
 
 interface AutoCompleteProps {
   query: string;
@@ -20,35 +23,17 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const [suggestions, setSuggestions] = useState<Anime[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef(0);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: unknown) => {
-      const path = (
-        event as unknown as { composedPath?: () => unknown[] }
-      ).composedPath?.();
-      if (dropdownRef.current) {
-        const inPath =
-          Array.isArray(path) && path.includes(dropdownRef.current);
-        if (!inPath) {
-          setIsOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  const composingRef = useRef(false);
 
   // Fetch suggestions when query changes and is longer than 2 characters
   useEffect(() => {
     const fetchSuggestions = async () => {
       const trimmed = query.trim();
-      if (trimmed.length < 1) {
+      if (composingRef.current) {
+        return;
+      }
+      if (trimmed.length < 22) {
         setSuggestions([]);
         setIsLoading(false);
         setIsOpen(false);
@@ -78,7 +63,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
           const scored = data.data
             .map((a) => ({ a, s: scoreCandidate(q, a) }))
             .sort((x, y) => y.s - x.s)
-            .slice(0, 8)
+            .slice(0, 5)
             .map((x) => x.a);
           setSuggestions(scored);
         }
@@ -104,83 +89,96 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     if (e.key === "Escape") {
       setIsOpen(false);
     } else if (e.key === "Enter") {
+      if (composingRef.current) return;
       setIsOpen(false);
       onEnter?.();
     }
   };
 
   return (
-    <div className="relative w-full" ref={dropdownRef}>
-      <input
-        type="text"
-        placeholder="搜索番剧名称..."
-        value={query}
-        onChange={(e) => {
-          onQueryChange(e.target.value);
-          setIsOpen(true);
-        }}
-        onKeyDown={handleKeyDown}
-        className="w-full p-3 border border-border/60 rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-      />
-
-      {isOpen && query.trim().length >= 1 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border/60 rounded-lg shadow-xl z-50 overflow-hidden">
-          {isLoading ? (
-            <div className="p-4 flex items-center justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="ml-2 text-sm text-muted-foreground">
-                加载中...
-              </span>
-            </div>
-          ) : suggestions.length > 0 ? (
-            <ul>
+    <Popover open={isOpen && query.trim().length >= 2} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Input
+          type="text"
+          placeholder="搜索番剧名称..."
+          value={query}
+          onChange={(e) => {
+            const v = e.target.value;
+            onQueryChange(v);
+            setIsOpen(v.trim().length >= 2);
+          }}
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={(e) => {
+            composingRef.current = false;
+            onQueryChange(e.currentTarget.value);
+            setIsOpen(e.currentTarget.value.trim().length >= 2);
+          }}
+          onKeyDown={handleKeyDown}
+        />
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="p-0 w-80"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        {isLoading ? (
+          <div className="p-4 flex items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="ml-2 text-sm text-muted-foreground">
+              加载中...
+            </span>
+          </div>
+        ) : suggestions.length > 0 ? (
+          <Command>
+            <CommandList>
               {suggestions.map((anime) => (
-                <li key={anime.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelect(anime);
-                      setIsOpen(false);
-                    }}
-                    className="w-full p-3 hover:bg-muted transition-colors flex gap-3 text-left"
-                  >
-                    <img
-                      src={
-                        anime.images?.small ||
-                        "https://lain.bgm.tv/img/no_icon_subject.png"
-                      }
-                      alt={anime.name}
-                      width={40}
-                      height={60}
-                      className="object-cover rounded"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium line-clamp-1 hover:text-primary">
-                        {anime.name_cn || anime.name}
-                      </h3>
-                      {anime.name_cn && anime.name_cn !== anime.name && (
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {anime.name}
-                        </p>
-                      )}
-                      {anime.rating && anime.rating.score !== 0 && (
-                        <span className="text-xs text-yellow-500 mt-1">
-                          ⭐ {anime.rating.score.toFixed(1)}
-                        </span>
-                      )}
+                <CommandItem
+                  key={anime.id}
+                  onSelect={() => {
+                    onSelect(anime);
+                    setIsOpen(false);
+                  }}
+                >
+                  <img
+                    src={
+                      anime.images?.small ||
+                      "https://lain.bgm.tv/img/no_icon_subject.png"
+                    }
+                    alt={anime.name}
+                    width={40}
+                    height={60}
+                    className="object-cover rounded"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium line-clamp-1 hover:text-primary">
+                      {anime.name_cn || anime.name}
                     </div>
-                  </button>
-                </li>
+                    {anime.name_cn && anime.name_cn !== anime.name && (
+                      <div className="text-xs text-muted-foreground line-clamp-1">
+                        {anime.name}
+                      </div>
+                    )}
+                    {anime.rating && anime.rating.score !== 0 && (
+                      <div className="text-xs text-yellow-500 mt-1 flex items-center gap-1">
+                        <Star className="h-3 w-3" />{" "}
+                        {anime.rating.score.toFixed(1)}
+                      </div>
+                    )}
+                  </div>
+                </CommandItem>
               ))}
-            </ul>
-          ) : (
-            <div className="p-4 text-sm text-muted-foreground">
-              未找到匹配的结果
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+            </CommandList>
+          </Command>
+        ) : (
+          <Command>
+            <CommandEmpty>未找到匹配的结果</CommandEmpty>
+          </Command>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 };
 
