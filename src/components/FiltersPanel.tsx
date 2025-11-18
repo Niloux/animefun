@@ -1,7 +1,27 @@
 import React from "react";
-import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
-import { X } from "lucide-react";
+import { Label } from "./ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "./ui/select";
+import { Input } from "./ui/input";
+import { Slider } from "./ui/slider";
+import { ScrollArea } from "./ui/scroll-area";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "./ui/toggle-group";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+  SheetTitle,
+} from "./ui/sheet";
 
 interface FiltersPanelProps {
   open: boolean;
@@ -52,14 +72,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     "神魔",
   ];
 
-  const handleGenreChange = (genre: string, checked: boolean) => {
-    let newGenres = [...filters.genres];
-    if (checked) {
-      newGenres.push(genre);
-    } else {
-      newGenres = newGenres.filter((g) => g !== genre);
-    }
-    onFilterChange({ ...filters, genres: newGenres });
+  const handleGenresChange = (value: string[]) => {
+    onFilterChange({ ...filters, genres: value });
   };
 
   const handleSortChange = (value: string) => {
@@ -74,110 +88,108 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     onFilterChange({ ...filters, maxRating: parseFloat(value) });
   };
 
+  const handleRatingRangeChange = (values: number[]) => {
+    const [min, max] = values;
+    onFilterChange({ ...filters, minRating: min, maxRating: max });
+  };
+
+  const handleReset = () => {
+    onFilterChange({ sort: "heat", minRating: 0, maxRating: 10, genres: [] });
+  };
+
   return (
-    <div
-      className={`fixed right-0 top-0 h-screen w-80 bg-card border-l border-border/60 shadow-xl transform transition-transform duration-300 z-50 ${
-        open ? "translate-x-0" : "translate-x-full"
-      }`}
-    >
-      {/* Header */}
-      <div className="p-4 flex justify-between items-center border-b border-border/60">
-        <h2 className="text-lg font-semibold">筛选条件</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Content */}
-      <div className="p-4 overflow-y-auto h-[calc(100%-6rem)]">
-        {/* Sort */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium mb-2">排序方式</h3>
-          <select
-            className="w-full p-2 border border-border/60 rounded-lg bg-card"
-            value={filters.sort}
-            onChange={(e) => handleSortChange(e.currentTarget.value)}
-          >
-            <option value="heat">热度</option>
-            <option value="rank">排名</option>
-            <option value="score">评分</option>
-            <option value="match">匹配度</option>
-          </select>
-        </div>
-
-        {/* Rating Range */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium mb-2">评分</h3>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label htmlFor="minRating" className="block text-xs text-muted-foreground mb-1">最低</label>
-              <input
-                type="number"
-                min="0"
-                max="10"
-                step="0.5"
-                className="w-full p-2 border border-border/60 rounded-lg bg-card"
-                id="minRating"
-                value={filters.minRating}
-                onChange={(e) => handleMinRatingChange(e.currentTarget.value)}
-              />
-            </div>
-            <div className="flex-1">
-              <label htmlFor="maxRating" className="block text-xs text-muted-foreground mb-1">最高</label>
-              <input
-                type="number"
-                min="0"
-                max="10"
-                step="0.5"
-                className="w-full p-2 border border-border/60 rounded-lg bg-card"
-                id="maxRating"
-                value={filters.maxRating}
-                onChange={(e) => handleMaxRatingChange(e.currentTarget.value)}
-              />
-            </div>
+    <Sheet open={open} onOpenChange={(v) => (v ? undefined : onClose())}>
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>筛选条件</SheetTitle>
+        </SheetHeader>
+        <div className="p-4 space-y-6">
+          <div className="space-y-2">
+            <Label>排序方式</Label>
+            <Select value={filters.sort} onValueChange={handleSortChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择排序" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="heat">热度</SelectItem>
+                <SelectItem value="rank">排名</SelectItem>
+                <SelectItem value="score">评分</SelectItem>
+                <SelectItem value="match">匹配度</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div>
 
-        {/* Genres */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium mb-2">类型</h3>
-          <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
-            {animeGenres.map((genre) => (
-              <div key={genre} className="flex items-center gap-2">
-                <Checkbox
-                  id={`genre-${genre}`}
-                  checked={filters.genres.includes(genre)}
-                  onCheckedChange={(checked) =>
-                    handleGenreChange(genre, checked === true)
-                  }
+          <div className="space-y-3">
+            <Label>评分</Label>
+            <Slider
+              value={[filters.minRating, filters.maxRating]}
+              min={0}
+              max={10}
+              step={0.5}
+              onValueChange={handleRatingRangeChange}
+            />
+            <div className="flex gap-4">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="minRating">最低</Label>
+                <Input
+                  id="minRating"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  value={filters.minRating}
+                  onChange={(e) => handleMinRatingChange(e.currentTarget.value)}
                 />
-                <label
-                  htmlFor={`genre-${genre}`}
-                  className="text-sm cursor-pointer"
-                >
-                  {genre}
-                </label>
               </div>
-            ))}
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="maxRating">最高</Label>
+                <Input
+                  id="maxRating"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  value={filters.maxRating}
+                  onChange={(e) => handleMaxRatingChange(e.currentTarget.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>类型</Label>
+            <ScrollArea className="h-48">
+              <ToggleGroup
+                type="multiple"
+                value={filters.genres}
+                onValueChange={handleGenresChange}
+                className="grid grid-cols-2 gap-2"
+              >
+                {animeGenres.map((genre) => (
+                  <ToggleGroupItem key={genre} value={genre} variant="outline" size="sm">
+                    {genre}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </ScrollArea>
           </div>
         </div>
-
-        
-      </div>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-border/60">
-        <Button
-          className="w-full"
-          onClick={() => {
-            onApply();
-            onClose();
-          }}
-        >
-          应用筛选
-        </Button>
-      </div>
-    </div>
+        <SheetFooter>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleReset} className="flex-1">重置</Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                onApply();
+                onClose();
+              }}
+            >
+              应用筛选
+            </Button>
+          </div>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
 
