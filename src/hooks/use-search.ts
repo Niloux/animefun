@@ -22,9 +22,10 @@ export const useSearch = (options?: UseSearchOptions) => {
     limit = 20,
   } = options || {};
 
-  const [query, setQuery] = useState<string>("");
+  const [query, setQueryState] = useState<string>("");
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
   const [page, setPage] = useState<number>(1);
+  const [requested, setRequested] = useState<boolean>(false);
 
   const buildRating = (f: SearchFilters): string[] | undefined => {
     if (f.minRating > 0 || f.maxRating < 10) {
@@ -47,11 +48,13 @@ export const useSearch = (options?: UseSearchOptions) => {
   );
 
   const search = useCallback(async () => {
+    setRequested(true);
     await fetchPage(1, filters);
   }, [fetchPage, filters]);
 
   const searchWithFilters = useCallback(
     async (nextFilters: SearchFilters) => {
+      setRequested(true);
       setFilters(nextFilters);
       if (!query.trim()) {
         return;
@@ -62,6 +65,7 @@ export const useSearch = (options?: UseSearchOptions) => {
   );
 
   const applyFilters = useCallback(async () => {
+    setRequested(true);
     await fetchPage(1, filters);
   }, [fetchPage, filters]);
 
@@ -107,22 +111,27 @@ export const useSearch = (options?: UseSearchOptions) => {
       );
       return data;
     },
-    enabled: !!query.trim(),
+    enabled: !!query.trim() && requested,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 2,
   });
 
+  const setQuery = useCallback((v: string) => {
+    setQueryState(v);
+    setRequested(false);
+  }, []);
+
 
   return {
     query,
     setQuery,
-    results: query.trim() ? (queryResult.data?.data ?? []) : [],
-    total: query.trim() ? (queryResult.data?.total ?? 0) : 0,
+    results: requested && query.trim() ? (queryResult.data?.data ?? []) : [],
+    total: requested && query.trim() ? (queryResult.data?.total ?? 0) : 0,
     limit,
     page,
-    isLoading: query.trim() ? queryResult.isPending : false,
-    error: query.trim() ? (queryResult.error ? (queryResult.error as Error).message : null) : null,
+    isLoading: requested && query.trim() ? queryResult.isPending : false,
+    error: requested && query.trim() ? (queryResult.error ? (queryResult.error as Error).message : null) : null,
     filters,
     setFilters,
     search,
