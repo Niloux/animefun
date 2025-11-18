@@ -1,6 +1,7 @@
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
@@ -45,6 +46,12 @@ const AnimeDetailPage = () => {
       ro.disconnect();
     };
   }, [anime, leftPanelHeight]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { duration: 5000, action: { label: "重试", onClick: () => reload() } });
+    }
+  }, [error, reload]);
 
   if (loading) {
     return (

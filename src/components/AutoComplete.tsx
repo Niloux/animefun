@@ -70,6 +70,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 0,
+    placeholderData: (prev) => prev,
   });
 
   const suggestions = (queryResult.data as Anime[] | undefined) ?? [];

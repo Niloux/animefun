@@ -1,5 +1,4 @@
-import { useEffect, useCallback } from 'react';
-import { toast } from "sonner";
+import { useCallback } from 'react';
 import { getAnimeDetail } from '../lib/api';
 import { Anime } from '../types/bangumi';
 import { useQuery } from '@tanstack/react-query';
@@ -74,17 +73,6 @@ export const useAnimeDetail = (id: string | undefined) => {
     gcTime: 10 * 60 * 1000,
     retry: 2,
   });
-
-  useEffect(() => {
-    const e = query.error as unknown;
-    if (e) {
-      const msg = e instanceof Error ? e.message : '获取番剧详情失败';
-      toast.error(msg, {
-        duration: 5000,
-        action: { label: '重试', onClick: () => query.refetch() },
-      });
-    }
-  }, [query]);
 
   return {
     anime: (query.data as Anime | null) ?? null,

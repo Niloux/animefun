@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { searchSubject } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
+import { Anime } from "../types/bangumi";
 
 export type SearchFilters = {
   sort: string;
@@ -81,12 +82,12 @@ export const useSearch = (options?: UseSearchOptions) => {
     await searchWithFilters(next);
   }, [filters, searchWithFilters]);
 
-  const queryResult = useQuery({
+  const queryResult = useQuery<{ total: number; limit: number; offset: number; data: Anime[] }>({
     queryKey: [
       'search',
       subjectType,
       filters.sort,
-      filters.genres.join(','),
+      [...filters.genres].sort(),
       filters.minRating,
       filters.maxRating,
       query.trim(),
@@ -115,6 +116,7 @@ export const useSearch = (options?: UseSearchOptions) => {
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 2,
+    placeholderData: (prev) => prev,
   });
 
   const setQuery = useCallback((v: string) => {

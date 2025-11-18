@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Calendar } from "lucide-react";
 import { useCalendar } from "../../hooks/use-calendar";
 import { WeekDayNav } from "../../components/WeekDayNav";
@@ -11,7 +12,7 @@ const HomePage = () => {
   const [selectedDay, setSelectedDay] = useState<number>(getWeekdayId);
 
   // 使用自定义 Hook 加载日历数据
-  const { data: calendarData, loading } = useCalendar();
+  const { data: calendarData, loading, error, reload } = useCalendar();
 
   // 直接查找选中日期数据（日历数据按星期几有序，查找效率高）
   const selectedDayData = calendarData.find(day => day.weekday.id === selectedDay);
@@ -25,6 +26,12 @@ const HomePage = () => {
   };
 
   // loading handled in main conditional
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { duration: 5000, action: { label: '重试', onClick: () => reload() } });
+    }
+  }, [error, reload]);
 
   return (
     <div className="p-0">

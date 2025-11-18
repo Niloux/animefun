@@ -1,5 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useState } from 'react';
 import { getEpisodes } from '../lib/api';
 import { PagedEpisode } from '../types/bangumi';
 import { useInfiniteQuery } from '@tanstack/react-query';
@@ -36,6 +35,7 @@ export const useEpisodes = (subjectId: number | undefined) => {
     gcTime: 10 * 60 * 1000,
     retry: 2,
     enabled: !!subjectId,
+    placeholderData: (prev) => prev,
   });
 
 
@@ -73,14 +73,6 @@ export const useEpisodes = (subjectId: number | undefined) => {
   const totalEpisodes = last?.total ?? 0;
   const totalPages = Math.ceil(totalEpisodes / PAGE_LIMIT);
   const currentPage = pageBase + Math.max(0, (query.data?.pages?.length ?? 1) - 1);
-
-  useEffect(() => {
-    const e = query.error as unknown;
-    if (e) {
-      const msg = e instanceof Error ? e.message : '加载剧集失败';
-      toast.error(msg, { duration: 5000, action: { label: '重试', onClick: () => query.refetch() } });
-    }
-  }, [query]);
 
   return {
     episodes: flatEpisodes,

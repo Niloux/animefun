@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Eye, Clock, ChevronDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
@@ -17,6 +18,12 @@ interface EpisodesListProps {
 const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
   const { episodes, loading, error, hasMore, loadNextPage, reload, currentPage, totalPages, jumpToPage } = useEpisodes(subjectId);
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error, { duration: 5000, action: { label: '重试', onClick: () => reload() } });
+    }
+  }, [error, reload]);
 
   // 发生错误时重新加载
   const handleReload = () => {

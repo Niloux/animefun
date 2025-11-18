@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { toast } from "sonner";
 import { CalendarDay } from "../types/bangumi";
 import { getCalendar } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -16,16 +14,5 @@ export function useCalendar() {
     retry: 2,
   });
 
-  useEffect(() => {
-    const e = query.error as unknown;
-    if (e) {
-      const msg = e instanceof Error ? e.message : '加载数据失败';
-      toast.error(msg, {
-        duration: 5000,
-        action: { label: '重试', onClick: () => query.refetch() },
-      });
-    }
-  }, [query]);
-
-  return { data: query.data ?? [], loading: query.isPending, reload: query.refetch };
+  return { data: query.data ?? [], loading: query.isPending, error: query.error ? (query.error as Error).message : null, reload: query.refetch };
 }
