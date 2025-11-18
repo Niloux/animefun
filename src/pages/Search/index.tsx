@@ -31,6 +31,8 @@ const SearchPage = () => {
     filters,
     setFilters,
     setPage,
+    submitted,
+    submit,
   } = useSearch({ subjectType: [2], limit: 20 });
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -40,12 +42,15 @@ const SearchPage = () => {
   };
 
   const handleApplyFilters = () => {
-    setPage(1);
+    submit();
   };
 
   const handleRemoveFilter = (filterType: string, value: string | number) => {
     if (filterType === "genre") {
-      setFilters({ ...filters, genres: filters.genres.filter((g) => g !== value) });
+      setFilters({
+        ...filters,
+        genres: filters.genres.filter((g) => g !== value),
+      });
     } else if (filterType === "minRating") {
       setFilters({ ...filters, minRating: 0 });
     } else if (filterType === "maxRating") {
@@ -80,14 +85,14 @@ const SearchPage = () => {
           <AutoComplete
             query={query}
             onQueryChange={setQuery}
-            onEnter={() => setPage(1)}
+            onEnter={() => submit()}
             onSelect={(anime) => {
               // When a suggestion is selected, navigate to the anime detail page
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
             }}
           />
         </div>
-        <Button onClick={() => setPage(1)} disabled={isLoading}>
+        <Button onClick={() => submit()} disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -124,7 +129,7 @@ const SearchPage = () => {
             </Badge>
           ))}
           {filters.minRating > 0 && (
-            <Badge variant="secondary" className="flex items-center gap-1">
+            <Badge variant="default" className="flex items-center gap-1">
               评分 ≥ {filters.minRating}
               <button
                 className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
@@ -137,7 +142,7 @@ const SearchPage = () => {
             </Badge>
           )}
           {filters.maxRating < 10 && (
-            <Badge variant="secondary" className="flex items-center gap-1">
+            <Badge variant="default" className="flex items-center gap-1">
               评分 ≤ {filters.maxRating}
               <button
                 className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
@@ -153,23 +158,26 @@ const SearchPage = () => {
       )}
 
       {/* Search Results */}
-      <div className="mb-4">
-        {isLoading ? (
-          <div className="flex items-center">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            加载中...
-          </div>
-        ) : error ? (
-          <div className="text-red-500">{error}</div>
-        ) : total > 0 ? (
-          <div className="text-muted-foreground">
-            找到 <span className="font-semibold text-foreground">{total}</span>{" "}
-            条结果
-          </div>
-        ) : query ? (
-          <div className="text-muted-foreground">未找到匹配的番剧</div>
-        ) : null}
-      </div>
+      {submitted && (
+        <div className="mb-4">
+          {isLoading ? (
+            <div className="flex items-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              加载中...
+            </div>
+          ) : error ? (
+            <div className="text-red-500">{error}</div>
+          ) : total > 0 ? (
+            <div className="text-muted-foreground">
+              找到{" "}
+              <span className="font-semibold text-foreground">{total}</span>{" "}
+              条结果
+            </div>
+          ) : query ? (
+            <div className="text-muted-foreground">未找到匹配的番剧</div>
+          ) : null}
+        </div>
+      )}
 
       {/* Filters Panel */}
       <FiltersPanel
@@ -193,24 +201,25 @@ const SearchPage = () => {
       )}
 
       {/* Anime Cards Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-card rounded-xl shadow-md overflow-hidden border border-border/60"
-            >
-              <div className="bg-muted h-60 animate-pulse" />
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
-                <div className="h-3 bg-muted rounded w-1/2 animate-pulse" />
+      {submitted &&
+        (isLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-card rounded-xl shadow-md overflow-hidden border border-border/60"
+              >
+                <div className="bg-muted h-60 animate-pulse" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
+                  <div className="h-3 bg-muted rounded w-1/2 animate-pulse" />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <AnimeGrid items={results} />
-      )}
+            ))}
+          </div>
+        ) : (
+          <AnimeGrid items={results} />
+        ))}
 
       {/* Pagination */}
       {!isLoading && total > limit && (
@@ -225,7 +234,7 @@ const SearchPage = () => {
                   }
                   onClick={(e) => {
                     e.preventDefault();
-                        if (page > 1) setPage(page - 1);
+                    if (page > 1) setPage(page - 1);
                   }}
                 />
               </PaginationItem>
@@ -259,7 +268,7 @@ const SearchPage = () => {
                   }
                   onClick={(e) => {
                     e.preventDefault();
-                        if (page < totalPages) setPage(page + 1);
+                    if (page < totalPages) setPage(page + 1);
                   }}
                 />
               </PaginationItem>
