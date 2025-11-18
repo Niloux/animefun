@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import {
@@ -11,7 +11,7 @@ import {
 import { Input } from "./ui/input";
 import { Slider } from "./ui/slider";
 import { ScrollArea } from "./ui/scroll-area";
-import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { Badge } from "./ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -19,6 +19,7 @@ import {
   SheetFooter,
   SheetTitle,
 } from "./ui/sheet";
+import { X } from "lucide-react";
 
 interface FiltersPanelProps {
   open: boolean;
@@ -45,6 +46,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   onFilterChange,
   onApply,
 }) => {
+  const [tagInput, setTagInput] = useState("");
   // 预设的动画类型
   const animeGenres = [
     "科幻",
@@ -69,8 +71,18 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     "神魔",
   ];
 
-  const handleGenresChange = (value: string[]) => {
-    onFilterChange({ ...filters, genres: value });
+  const addTag = (t: string) => {
+    const v = t.trim();
+    if (!v) return;
+    if (filters.genres.includes(v)) return;
+    onFilterChange({ ...filters, genres: [...filters.genres, v] });
+  };
+
+  const removeTag = (t: string) => {
+    onFilterChange({
+      ...filters,
+      genres: filters.genres.filter((g) => g !== t),
+    });
   };
 
   const handleSortChange = (value: string) => {
@@ -104,7 +116,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <div className="space-y-2">
             <Label>排序方式</Label>
             <Select value={filters.sort} onValueChange={handleSortChange}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full border-border">
                 <SelectValue placeholder="选择排序" />
               </SelectTrigger>
               <SelectContent>
@@ -129,6 +141,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <div className="flex-1 space-y-1">
                 <Label htmlFor="minRating">最低</Label>
                 <Input
+                  className="border-border"
                   id="minRating"
                   type="number"
                   min={0}
@@ -141,6 +154,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               <div className="flex-1 space-y-1">
                 <Label htmlFor="maxRating">最高</Label>
                 <Input
+                  className="border-border"
                   id="maxRating"
                   type="number"
                   min={0}
@@ -154,25 +168,51 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label>类型</Label>
+            <Label>标签</Label>
+            <Input
+              className="border-border"
+              value={tagInput}
+              placeholder="输入标签后按回车添加"
+              onChange={(e) => setTagInput(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  addTag(tagInput);
+                  setTagInput("");
+                }
+              }}
+            />
+            {filters.genres.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {filters.genres.map((t) => (
+                  <Badge
+                    key={t}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {t}
+                    <button
+                      className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                      onClick={() => removeTag(t)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
             <ScrollArea className="h-48">
-              <ToggleGroup
-                type="multiple"
-                value={filters.genres}
-                onValueChange={handleGenresChange}
-                className="grid grid-cols-5 gap-5"
-              >
+              <div className="grid grid-cols-5 gap-5">
                 {animeGenres.map((genre) => (
-                  <ToggleGroupItem
+                  <Button
                     key={genre}
-                    value={genre}
                     variant="outline"
                     size="sm"
+                    onClick={() => addTag(genre)}
                   >
                     {genre}
-                  </ToggleGroupItem>
+                  </Button>
                 ))}
-              </ToggleGroup>
+              </div>
             </ScrollArea>
           </div>
         </div>
