@@ -35,7 +35,9 @@ const AnimeDetailPage = () => {
       "https://lain.bgm.tv/img/no_icon_subject.png"
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
-  const { status, loading: statusLoading } = useSubjectStatus(id ? Number(id) : undefined);
+  const { status, loading: statusLoading } = useSubjectStatus(
+    id ? Number(id) : undefined
+  );
 
   useEffect(() => {
     if (anime) {
@@ -158,17 +160,7 @@ const AnimeDetailPage = () => {
                   <Badge variant="outline">状态加载中</Badge>
                 ) : status ? (
                   <Badge
-                    variant={
-                      status.code === "Airing"
-                        ? "default"
-                        : status.code === "Finished"
-                          ? "secondary"
-                          : status.code === "OnHiatus"
-                            ? "destructive"
-                            : status.code === "PreAir"
-                              ? "outline"
-                              : "outline"
-                    }
+                    variant={status.code === "Airing" ? "default" : "outline"}
                     title={status.reason}
                   >
                     {status.code === "Airing"

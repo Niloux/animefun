@@ -48,28 +48,27 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   onApply,
 }) => {
   const [tagInput, setTagInput] = useState("");
-  // 预设的动画类型
   const animeGenres = [
-    "科幻",
-    "喜剧",
-    "动作",
-    "冒险",
-    "爱情",
-    "奇幻",
-    "悬疑",
-    "恐怖",
-    "校园",
+    "日本",
+    "中国",
+    "美国",
+    "TV",
+    "剧场版",
+    "原创",
+    "漫画改",
+    "小说改",
+    "游戏改",
+    "少年向",
+    "青年向",
+    "女性向",
     "日常",
-    "治愈",
+    "喜剧",
+    "恋爱",
     "音乐",
-    "偶像",
-    "历史",
-    "战争",
+    "奇幻",
+    "战斗",
+    "冒险",
     "运动",
-    "美食",
-    "机战",
-    "魔法",
-    "神魔",
   ];
 
   const addTag = (t: string) => {
@@ -112,7 +111,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       <SheetContent side="right">
         <SheetHeader>
           <SheetTitle>筛选条件</SheetTitle>
-          <SheetDescription className="sr-only">设置排序、评分范围和标签</SheetDescription>
+          <SheetDescription className="sr-only">
+            设置排序、评分范围和标签
+          </SheetDescription>
         </SheetHeader>
         <div className="p-4 space-y-6">
           <div className="space-y-2">
