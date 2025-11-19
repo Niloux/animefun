@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Anime } from "../types/bangumi";
+import { Anime, CalendarItem } from "../types/bangumi";
 import { getRatingColorClass } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
@@ -8,11 +8,11 @@ import { Skeleton } from "./ui/skeleton";
 import { useCachedImage } from "../hooks/use-cached-image";
 
 interface AnimeGridProps {
-  items: Anime[];
+  items: Array<Anime | CalendarItem>;
 }
 
 // 单个番剧卡片组件
-const AnimeCard = React.memo(({ anime, index }: { anime: Anime; index: number }) => {
+const AnimeCard = React.memo(({ anime, index }: { anime: Anime | CalendarItem; index: number }) => {
   const navigate = useNavigate();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const rawImgSrc =

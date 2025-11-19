@@ -73,7 +73,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     placeholderData: (prev) => prev,
   });
 
-  const suggestions = (queryResult.data as Anime[] | undefined) ?? [];
+  const suggestions = queryResult.data ?? [];
   const isLoading = queryResult.isPending;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

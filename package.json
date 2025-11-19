@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint --ext .ts,.tsx src/",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "types:gen": "cargo test -q --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

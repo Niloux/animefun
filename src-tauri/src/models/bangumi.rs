@@ -1,6 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use serde_json::Value;
+use ts_rs::TS;
 
 // 辅助函数：递归收集 serde_json::Value 中的字符串
 fn collect_strings_from_value(v: &Value, out: &mut Vec<String>) {
@@ -65,7 +66,8 @@ where
 }
 
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct Weekday {
     pub en: String,
     pub cn: String,
@@ -73,13 +75,15 @@ pub struct Weekday {
     pub id: u8,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct Rating {
     pub total: u32,
     pub score: f32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct Images {
     pub large: String,
     pub common: String,
@@ -88,7 +92,9 @@ pub struct Images {
     pub grid: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+#[ts(optional_fields)]
 pub struct Collection {
     pub wish: Option<u32>,
     pub collect: Option<u32>,
@@ -97,11 +103,15 @@ pub struct Collection {
     pub dropped: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+#[ts(rename = "CalendarItem")]
+#[ts(optional_fields)]
 pub struct CalendarItem {
     pub id: u32,
     pub url: String,
     #[serde(rename = "type")]
+    #[ts(rename = "type")]
     pub item_type: u8,
     pub name: String,
     pub name_cn: String,
@@ -114,17 +124,23 @@ pub struct CalendarItem {
     pub collection: Option<Collection>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+#[ts(rename = "CalendarDay")]
 pub struct CalendarResponse {
     pub weekday: Weekday,
     pub items: Vec<CalendarItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+#[ts(rename = "Anime")]
+#[ts(optional_fields)]
 pub struct SubjectResponse {
     pub id: u32,
     pub url: Option<String>,
     #[serde(rename = "type")]
+    #[ts(rename = "type")]
     pub item_type: u8,
     pub name: String,
     pub name_cn: String,
@@ -146,13 +162,16 @@ pub struct SubjectResponse {
     pub tags: Option<Vec<SubjectTag>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct SubjectTag {
     pub name: String,
     pub count: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+#[ts(optional_fields)]
 pub struct SubjectRating {
     pub rank: Option<u32>,
     pub total: u32,
@@ -160,7 +179,8 @@ pub struct SubjectRating {
     pub score: f32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct SubjectCollection {
     pub wish: u32,
     pub collect: u32,
@@ -169,7 +189,8 @@ pub struct SubjectCollection {
     pub dropped: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct SearchResponse {
     pub total: u32,
     pub limit: u32,
@@ -177,10 +198,12 @@ pub struct SearchResponse {
     pub data: Vec<SubjectResponse>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct Episode {
     pub id: u32,
     #[serde(rename = "type")]
+    #[ts(rename = "type")]
     pub item_type: u8,
     pub name: String,
     pub name_cn: String,
@@ -191,12 +214,15 @@ pub struct Episode {
     pub duration: String,
     pub desc: String,
     pub disc: u32,
+    #[ts(optional)]
     pub duration_seconds: Option<u32>,
     #[serde(default)]
+    #[ts(optional)]
     pub subject_id: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct PagedEpisode {
     pub total: u32,
     pub limit: u32,
@@ -204,7 +230,8 @@ pub struct PagedEpisode {
     pub data: Vec<Episode>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct InfoItem {
     pub key: String,
     pub value: String,

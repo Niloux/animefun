@@ -12,7 +12,7 @@ export const useAnimeDetail = (id: string | undefined) => {
     queryFn: async () => {
       if (!id) return null;
       const data = await getAnimeDetail(Number(id));
-      return data as Anime;
+      return data;
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
@@ -28,7 +28,7 @@ export const useAnimeDetail = (id: string | undefined) => {
   }, [query.error, queryClient, id]);
 
   return {
-    anime: (query.data as Anime | null) ?? null,
+    anime: query.data ?? null,
     loading: query.isPending,
     error: query.error ? (query.error as Error).message : null,
     reload: query.refetch,

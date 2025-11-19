@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { searchSubject } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
-import { Anime } from "../types/bangumi";
+import type { SearchResponse } from "@/types/gen/bangumi";
 import { useDebouncedValue } from "./use-debounce";
 
 export type SearchFilters = {
@@ -53,7 +53,7 @@ export const useSearch = (options?: UseSearchOptions) => {
   }, [state.filters.minRating, state.filters.maxRating]);
   const offset = (Math.max(1, state.page) - 1) * state.limit;
 
-  const query = useQuery<{ total: number; limit: number; offset: number; data: Anime[] }>({
+  const query = useQuery<SearchResponse>({
     queryKey: [
       "search",
       {
