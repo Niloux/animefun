@@ -1,4 +1,4 @@
-import { Calendar, Tv2Icon, Film } from "lucide-react";
+import { Calendar, Tv2Icon, Film, Heart } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
@@ -193,31 +193,23 @@ const AnimeDetailPage = () => {
               </div>
             )}
 
-            {/* 订阅和状态统计区 - 基本内容区域底部 */}
             <div className="flex flex-col md:flex-row gap-4 items-stretch pt-2 mt-auto">
               {/* 订阅按钮 */}
               <Button
-                variant="default"
+                variant={isSubscribed(anime.id) ? "default" : "outline"}
                 size="lg"
                 className="flex-1 md:flex-none"
+                aria-pressed={isSubscribed(anime.id)}
                 onClick={() => {
-                  if (anime) toggle(anime);
+                  toggle(anime);
                 }}
+                title={isSubscribed(anime.id) ? "已订阅" : "未订阅"}
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-                {anime && isSubscribed(anime.id) ? "取消订阅" : "订阅番剧"}
+                <Heart
+                  className="h-4 w-4"
+                  fill={isSubscribed(anime.id) ? "currentColor" : "none"}
+                />
+                {isSubscribed(anime.id) ? "已订阅" : "未订阅"}
               </Button>
             </div>
           </div>
