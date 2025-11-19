@@ -1,10 +1,11 @@
 // src-tauri/src/lib.rs
 
-mod commands;
 mod cache;
+mod commands;
 mod error;
 mod models;
 mod services;
+mod subscriptions;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -12,7 +13,12 @@ pub fn run() {
         .setup(|app| {
             let base = cache::app_base_dir(&app.handle());
             cache::init(base).map_err(|e| e.to_string())?;
-            let _ = tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(app.handle().clone()));
+            let base2 = cache::app_base_dir(&app.handle());
+            subscriptions::init(base2).map_err(|e| e.to_string())?;
+            let _ = tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
+                app.handle().clone(),
+            ));
+            subscriptions::spawn_refresh_worker();
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
@@ -23,6 +29,10 @@ pub fn run() {
             commands::subject::get_subject_status,
             commands::search::search_subject,
             commands::cache::cache_image,
+            commands::subscriptions::sub_list,
+            commands::subscriptions::sub_toggle,
+            commands::subscriptions::sub_clear,
+            commands::subscriptions::sub_query,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

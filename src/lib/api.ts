@@ -124,3 +124,40 @@ export async function searchSubject(
     throw new Error(`搜索番剧失败: ${keywords}`);
   }
 }
+
+export async function getSubscriptions(): Promise<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]> {
+  const data = await invoke<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]>("sub_list");
+  return Array.isArray(data) ? data : [];
+}
+
+export async function toggleSubscription(id: number): Promise<boolean> {
+  const res = await invoke<boolean>("sub_toggle", { id });
+  return !!res;
+}
+
+export async function clearSubscriptions(): Promise<void> {
+  await invoke<void>("sub_clear");
+}
+
+export async function querySubscriptions(
+  keywords: string,
+  sort: string,
+  genres: string[],
+  minRating: number,
+  maxRating: number,
+  limit: number,
+  offset: number,
+): Promise<{ total: number; limit: number; offset: number; data: Anime[] }> {
+  const data = await invoke<{ total: number; limit: number; offset: number; data: Anime[] }>("sub_query", {
+    params: {
+      keywords,
+      sort,
+      genres,
+      min_rating: minRating,
+      max_rating: maxRating,
+      limit,
+      offset,
+    },
+  });
+  return data;
+}

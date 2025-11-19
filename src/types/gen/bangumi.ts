@@ -20,6 +20,8 @@ export type Rating = { total: number, score: number, };
 
 export type SearchResponse = { total: number, limit: number, offset: number, data: Array<Anime>, };
 
+export type SubQueryParams = { keywords: string | null, sort: string | null, genres: Array<string> | null, min_rating: number | null, max_rating: number | null, limit: number | null, offset: number | null, };
+
 export type SubjectCollection = { wish: number, collect: number, doing: number, on_hold: number, dropped: number, };
 
 export type SubjectRating = { rank?: number, total: number, count: { [key in string]?: number }, score: number, };
@@ -29,5 +31,7 @@ export type SubjectStatus = { code: SubjectStatusCode, first_air_date?: string, 
 export type SubjectStatusCode = "PreAir" | "Airing" | "Finished" | "OnHiatus" | "Unknown";
 
 export type SubjectTag = { name: string, count: number, };
+
+export type SubscriptionItem = { id: number, anime: Anime, addedAt: bigint, notify?: boolean, };
 
 export type Weekday = { en: string, cn: string, ja: string, id: number, };
