@@ -12,12 +12,14 @@ const HomePage = lazyWithPreload(() => import("./pages/Home"));
 const SearchPage = lazyWithPreload(() => import("./pages/Search"));
 const SubscribePage = lazyWithPreload(() => import("./pages/Subscribe"));
 const ResourcesAllPage = lazyWithPreload(() => import("./pages/Resources/All"));
-const ResourcesDownloadingPage = lazyWithPreload(() => import("./pages/Resources/Downloading"));
-const ResourcesDownloadedPage = lazyWithPreload(() => import("./pages/Resources/Downloaded"));
+const ResourcesDownloadingPage = lazyWithPreload(
+  () => import("./pages/Resources/Downloading")
+);
+const ResourcesDownloadedPage = lazyWithPreload(
+  () => import("./pages/Resources/Downloaded")
+);
 const SettingsPage = lazyWithPreload(() => import("./pages/Settings"));
 const AnimeDetailPage = lazyWithPreload(() => import("./pages/AnimeDetail"));
-
- 
 
 function App() {
   // 创建预加载函数映射表
@@ -41,7 +43,10 @@ function App() {
               <Route path={ROUTES.HOME} element={<HomePage />} />
               <Route path={ROUTES.SEARCH} element={<SearchPage />} />
               <Route path={ROUTES.SUBSCRIBE} element={<SubscribePage />} />
-              <Route path={ROUTES.RESOURCES.ALL} element={<ResourcesAllPage />} />
+              <Route
+                path={ROUTES.RESOURCES.ALL}
+                element={<ResourcesAllPage />}
+              />
               <Route
                 path={ROUTES.RESOURCES.DOWNLOADING}
                 element={<ResourcesDownloadingPage />}
