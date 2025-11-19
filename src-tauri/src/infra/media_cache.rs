@@ -1,4 +1,5 @@
 use crate::error::{AppError, CommandResult};
+use crate::infra::path::app_base_dir;
 use crate::services::bangumi_service;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
@@ -53,7 +54,10 @@ fn sha256_hex(input: &str) -> String {
     use sha2::Digest;
     hasher.update(input.as_bytes());
     let digest = hasher.finalize();
-    digest.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+    digest
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>()
 }
 
 async fn try_existing(images_dir: &Path, hash: &str) -> Result<Option<String>, AppError> {
@@ -72,7 +76,7 @@ async fn try_existing(images_dir: &Path, hash: &str) -> Result<Option<String>, A
 }
 
 pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<String> {
-    let base = crate::cache::app_base_dir(&app);
+    let base = app_base_dir(&app);
 
     let images_dir = base.join("images");
     tokio::fs::create_dir_all(&images_dir).await?;
@@ -106,7 +110,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
 }
 
 pub async fn cleanup_images(app: tauri::AppHandle) -> Result<(), AppError> {
-    let base = crate::cache::app_base_dir(&app);
+    let base = app_base_dir(&app);
     let images_dir = base.join("images");
     if tokio::fs::metadata(&images_dir).await.is_err() {
         return Ok(());

@@ -3,17 +3,14 @@ use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
 use crate::error::AppError;
+use crate::infra::path::default_app_dir;
 use crate::infra::time::now_secs;
-use tauri::Manager;
 
 fn db_file_path() -> Result<PathBuf, AppError> {
     if let Some(p) = DB_FILE.get() {
         return Ok(p.clone());
     }
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .unwrap_or_else(|_| ".".into());
-    let dir = PathBuf::from(home).join(".animefun");
+    let dir = default_app_dir();
     std::fs::create_dir_all(&dir)?;
     let file = dir.join("cache.sqlite");
     DB_FILE.set(file.clone()).ok();
@@ -25,15 +22,6 @@ pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     let file = base_dir.join("cache.sqlite");
     DB_FILE.set(file).ok();
     Ok(())
-}
-
-pub fn app_base_dir(app: &tauri::AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap_or_else(|_| {
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_else(|_| ".".into());
-        PathBuf::from(home).join(".animefun")
-    })
 }
 
 fn ensure_table(conn: &Connection) -> Result<(), AppError> {
