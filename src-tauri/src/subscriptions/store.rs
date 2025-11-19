@@ -98,3 +98,26 @@ pub async fn clear() -> Result<(), AppError> {
     .await
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_toggle_list_clear() {
+        let dir = default_app_dir();
+        let _ = init(dir);
+        let _ = clear().await.unwrap();
+        let r0 = list().await.unwrap();
+        assert!(r0.is_empty());
+        let added = toggle(12345, Some(true)).await.unwrap();
+        assert!(added);
+        let r1 = list().await.unwrap();
+        assert_eq!(r1.len(), 1);
+        assert_eq!(r1[0].0, 12345);
+        let removed = toggle(12345, None).await.unwrap();
+        assert!(!removed);
+        let r2 = list().await.unwrap();
+        assert!(r2.is_empty());
+    }
+}

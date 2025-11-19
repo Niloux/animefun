@@ -59,6 +59,7 @@ pub async fn get(key: &str) -> Result<Option<String>, AppError> {
             if now_secs() <= expires_at {
                 Ok(Some(value))
             } else {
+                let _ = conn.execute("DELETE FROM cache WHERE key = ?1", params![key]);
                 Ok(None)
             }
         } else {
@@ -130,3 +131,23 @@ pub async fn set_meta(
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
 }
 static DB_FILE: OnceCell<PathBuf> = OnceCell::new();
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::time::{sleep, Duration};
+
+    #[tokio::test]
+    async fn test_cache_set_get_expire_and_delete() {
+        let dir = crate::infra::path::default_app_dir();
+        let _ = init(dir);
+        let k = "__test_key__";
+        let v = "__test_value__".to_string();
+        let _ = set(k, v, 1).await.unwrap();
+        let v1 = get(k).await.unwrap();
+        assert!(v1.is_some());
+        sleep(Duration::from_secs(2)).await;
+        let v2 = get(k).await.unwrap();
+        assert!(v2.is_none());
+    }
+}
