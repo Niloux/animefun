@@ -35,7 +35,7 @@ const AnimeDetailPage = () => {
       "https://lain.bgm.tv/img/no_icon_subject.png"
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
-  const { status, loading: statusLoading } = useSubjectStatus(anime?.id);
+  const { status, loading: statusLoading } = useSubjectStatus(id ? Number(id) : undefined);
 
   useEffect(() => {
     if (anime) {
@@ -45,8 +45,6 @@ const AnimeDetailPage = () => {
       }
     }
   }, [anime]);
-
-  
 
   useEffect(() => {
     const el = leftPanelRef.current;
@@ -68,7 +66,9 @@ const AnimeDetailPage = () => {
       <div className="p-8">
         <div className="flex flex-col items-center gap-4">
           <Spinner className="size-10" />
-          <div className="text-sm text-gray-600 dark:text-gray-400">{epsLoading ? "加载详情与剧集中" : "加载详情中"}</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {epsLoading ? "加载详情与剧集中" : "加载详情中"}
+          </div>
         </div>
       </div>
     );
@@ -162,24 +162,24 @@ const AnimeDetailPage = () => {
                       status.code === "Airing"
                         ? "default"
                         : status.code === "Finished"
-                        ? "secondary"
-                        : status.code === "OnHiatus"
-                        ? "destructive"
-                        : status.code === "PreAir"
-                        ? "outline"
-                        : "outline"
+                          ? "secondary"
+                          : status.code === "OnHiatus"
+                            ? "destructive"
+                            : status.code === "PreAir"
+                              ? "outline"
+                              : "outline"
                     }
                     title={status.reason}
                   >
                     {status.code === "Airing"
                       ? "连载中"
                       : status.code === "Finished"
-                      ? "已完结"
-                      : status.code === "OnHiatus"
-                      ? "停更"
-                      : status.code === "PreAir"
-                      ? "未开播"
-                      : "未知"}
+                        ? "已完结"
+                        : status.code === "OnHiatus"
+                          ? "停更"
+                          : status.code === "PreAir"
+                            ? "未开播"
+                            : "未知"}
                   </Badge>
                 ) : (
                   <Badge variant="outline">状态不可用</Badge>

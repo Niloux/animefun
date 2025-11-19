@@ -236,8 +236,13 @@ fn latest_episode_airdate(episodes: &[Episode]) -> Option<String> {
 }
 
 pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
-    let subject = fetch_subject(id).await?;
-    let calendar = fetch_calendar().await?;
+    let (subject_res, calendar_res, initial_eps_res) = tokio::join!(
+        fetch_subject(id),
+        fetch_calendar(),
+        fetch_episodes(id, None, Some(200), Some(0)),
+    );
+    let subject = subject_res?;
+    let calendar = calendar_res?;
 
     let calendar_on_air = calendar
         .iter()
@@ -248,16 +253,15 @@ pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
     let mut current_eps: Option<u32> = subject.total_episodes;
 
     let mut latest_airdate: Option<String> = None;
-
-    let initial_eps = fetch_episodes(id, None, Some(200), Some(0)).await?;
+    let initial_eps = initial_eps_res?;
     if current_eps.is_none() {
         current_eps = Some(initial_eps.total);
     }
     if initial_eps.total > 0 {
-        let limit = initial_eps.limit;
+        let limit = initial_eps.limit.max(1);
         let total = initial_eps.total;
-        let offset_last = if total <= limit { 0 } else { total - limit };
-        let last_page = if offset_last == 0 {
+        let offset_last = ((total.saturating_sub(1)) / limit) * limit;
+        let last_page = if offset_last == initial_eps.offset {
             initial_eps
         } else {
             fetch_episodes(id, None, Some(limit), Some(offset_last)).await?
