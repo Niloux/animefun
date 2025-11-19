@@ -40,6 +40,37 @@ async fn expired(path: &Path) -> Result<bool, AppError> {
     Ok(age > IMAGE_TTL_SECS)
 }
 
+fn normalize_for_cache(url: &str) -> String {
+    let u = url.trim();
+    match u.find("://") {
+        Some(idx) => u[idx + 3..].to_string(),
+        None => u.to_string(),
+    }
+}
+
+fn sha256_hex(input: &str) -> String {
+    let mut hasher = sha2::Sha256::new();
+    use sha2::Digest;
+    hasher.update(input.as_bytes());
+    let digest = hasher.finalize();
+    digest.iter().map(|b| format!("{:02x}", b)).collect::<String>()
+}
+
+async fn try_existing(images_dir: &Path, hash: &str) -> Result<Option<String>, AppError> {
+    for ext in ["jpg", "png", "webp"] {
+        let p = images_dir.join(format!("{}.{}", hash, ext));
+        if tokio::fs::metadata(&p).await.is_ok() {
+            if expired(&p).await? {
+                let _ = tokio::fs::remove_file(&p).await;
+                continue;
+            } else {
+                return Ok(Some(p.to_string_lossy().to_string()));
+            }
+        }
+    }
+    Ok(None)
+}
+
 #[tauri::command]
 pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<String> {
     let base = crate::cache::app_base_dir(&app);
@@ -47,22 +78,15 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
     let images_dir = base.join("images");
     tokio::fs::create_dir_all(&images_dir).await?;
 
-    let mut hasher = sha2::Sha256::new();
-    use sha2::Digest;
-    hasher.update(url.as_bytes());
-    let digest = hasher.finalize();
-    let hash_hex = digest.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+    let norm = normalize_for_cache(&url);
+    let hash_norm = sha256_hex(&norm);
+
+    if let Some(p) = try_existing(&images_dir, &hash_norm).await? {
+        return Ok(p);
+    }
 
     let mut ext = infer_ext_from_url(&url);
-    let mut file_path = images_dir.join(format!("{}.{}", hash_hex, ext));
-
-    if tokio::fs::metadata(&file_path).await.is_ok() {
-        if expired(&file_path).await? {
-            let _ = tokio::fs::remove_file(&file_path).await;
-        } else {
-            return Ok(file_path.to_string_lossy().to_string());
-        }
-    }
+    let mut file_path = images_dir.join(format!("{}.{}", hash_norm, ext));
 
     let resp = bangumi_service::CLIENT.get(&url).send().await?;
     resp.error_for_status_ref()?;
@@ -74,7 +98,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
     let content_ext = ext_from_content_type(ct);
     if content_ext != ext {
         ext = content_ext;
-        file_path = images_dir.join(format!("{}.{}", hash_hex, ext));
+        file_path = images_dir.join(format!("{}.{}", hash_norm, ext));
     }
     let bytes = resp.bytes().await?;
     tokio::fs::write(&file_path, &bytes).await?;
