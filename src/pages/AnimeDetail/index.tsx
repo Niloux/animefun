@@ -17,8 +17,7 @@ import { useAnimeDetail } from "../../hooks/use-anime-detail";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 import { useCachedImage } from "../../hooks/use-cached-image";
 import { Badge } from "../../components/ui/badge";
-import { getSubjectStatus } from "../../lib/api";
-import type { SubjectStatus } from "../../types/bangumi";
+import { useSubjectStatus } from "../../hooks/use-subject-status";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -36,8 +35,7 @@ const AnimeDetailPage = () => {
       "https://lain.bgm.tv/img/no_icon_subject.png"
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
-  const [status, setStatus] = useState<SubjectStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState<boolean>(false);
+  const { status, loading: statusLoading } = useSubjectStatus(anime?.id);
 
   useEffect(() => {
     if (anime) {
@@ -48,21 +46,7 @@ const AnimeDetailPage = () => {
     }
   }, [anime]);
 
-  useEffect(() => {
-    const run = async () => {
-      if (!anime) return;
-      try {
-        setStatusLoading(true);
-        const s = await getSubjectStatus(anime.id);
-        setStatus(s);
-      } catch {
-        setStatus(null);
-      } finally {
-        setStatusLoading(false);
-      }
-    };
-    run();
-  }, [anime]);
+  
 
   useEffect(() => {
     const el = leftPanelRef.current;
