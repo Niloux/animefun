@@ -27,12 +27,7 @@ pub async fn sub_list() -> CommandResult<Vec<SubscriptionItem>> {
     let rows = subscriptions::list().await?;
     let mut out = Vec::with_capacity(rows.len());
     for (id, added_at, notify) in rows.into_iter() {
-        let key = format!("subject:{}", id);
-        let anime = if let Some(s) = crate::cache::get(&key).await? {
-            serde_json::from_str::<SubjectResponse>(&s)?
-        } else {
-            bangumi_service::fetch_subject(id).await?
-        };
+        let anime = bangumi_service::fetch_subject(id).await?;
         out.push(SubscriptionItem { id, anime, added_at, notify: Some(notify) });
     }
     Ok(out)
@@ -68,12 +63,7 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
     let need_status = params.status_code.is_some() || sort_needs_status;
     let mut items: Vec<(SubjectResponse, Option<crate::models::bangumi::SubjectStatus>)> = Vec::new();
     for (id, _added_at, _notify) in rows.iter() {
-        let key = format!("subject:{}", id);
-        let anime = if let Some(s) = crate::cache::get(&key).await? {
-            serde_json::from_str::<SubjectResponse>(&s)?
-        } else {
-            bangumi_service::fetch_subject(*id).await?
-        };
+        let anime = bangumi_service::fetch_subject(*id).await?;
         let status = if need_status { Some(subscriptions::get_status_cached(*id).await?) } else { None };
         items.push((anime, status));
     }

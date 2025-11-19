@@ -1,14 +1,14 @@
 use once_cell::sync::OnceCell;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::cache;
 use crate::error::AppError;
+use crate::infra::time::now_secs;
 use crate::models::bangumi::{SubjectStatus, SubjectStatusCode};
 use crate::services::bangumi_service;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
 
@@ -16,13 +16,6 @@ const REFRESH_CONCURRENCY: usize = 4;
 const REFRESH_LIMIT: usize = 50;
 const REFRESH_INTERVAL_SECS: u64 = 600;
 static REFRESH_OFFSET: AtomicUsize = AtomicUsize::new(0);
-
-fn now_secs() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64
-}
 
 fn db_file_path() -> Result<PathBuf, AppError> {
     if let Some(p) = SUBS_DB_FILE.get() {

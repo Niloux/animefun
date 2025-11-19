@@ -1,17 +1,10 @@
+use once_cell::sync::OnceCell;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
-use once_cell::sync::OnceCell;
 
 use crate::error::AppError;
+use crate::infra::time::now_secs;
 use tauri::Manager;
-
-fn now_secs() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64
-}
 
 fn db_file_path() -> Result<PathBuf, AppError> {
     if let Some(p) = DB_FILE.get() {
@@ -35,15 +28,12 @@ pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
 }
 
 pub fn app_base_dir(app: &tauri::AppHandle) -> PathBuf {
-    app
-        .path()
-        .app_data_dir()
-        .unwrap_or_else(|_| {
-            let home = std::env::var("HOME")
-                .or_else(|_| std::env::var("USERPROFILE"))
-                .unwrap_or_else(|_| ".".into());
-            PathBuf::from(home).join(".animefun")
-        })
+    app.path().app_data_dir().unwrap_or_else(|_| {
+        let home = std::env::var("HOME")
+            .or_else(|_| std::env::var("USERPROFILE"))
+            .unwrap_or_else(|_| ".".into());
+        PathBuf::from(home).join(".animefun")
+    })
 }
 
 fn ensure_table(conn: &Connection) -> Result<(), AppError> {
@@ -78,7 +68,11 @@ pub async fn get(key: &str) -> Result<Option<String>, AppError> {
         if let Some(row) = rows.next()? {
             let value: String = row.get(0)?;
             let expires_at: i64 = row.get(1)?;
-            if now_secs() <= expires_at { Ok(Some(value)) } else { Ok(None) }
+            if now_secs() <= expires_at {
+                Ok(Some(value))
+            } else {
+                Ok(None)
+            }
         } else {
             Ok(None)
         }
@@ -127,7 +121,11 @@ pub async fn get_meta(key: &str) -> Result<(Option<String>, Option<String>), App
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
 }
 
-pub async fn set_meta(key: &str, etag: Option<String>, last_modified: Option<String>) -> Result<(), AppError> {
+pub async fn set_meta(
+    key: &str,
+    etag: Option<String>,
+    last_modified: Option<String>,
+) -> Result<(), AppError> {
     let key = key.to_string();
     tokio::task::spawn_blocking(move || {
         let path = db_file_path()?;
