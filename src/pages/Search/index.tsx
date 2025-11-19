@@ -208,7 +208,7 @@ const SearchPage = () => {
         ))}
 
       {/* Pagination */}
-      {!isLoading && total > limit && (
+      {submitted && !isLoading && total > limit && (
         <div className="mt-6">
           <Pagination>
             <PaginationContent>

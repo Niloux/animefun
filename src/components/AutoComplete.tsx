@@ -86,8 +86,11 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       setIsOpen(false);
     } else if (e.key === "Enter") {
       if (isComposing) return;
+      const canSubmit = query.trim().length > 0;
       setIsOpen(false);
-      onEnter?.();
+      if (canSubmit) {
+        onEnter?.();
+      }
     }
   };
 

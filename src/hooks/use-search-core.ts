@@ -80,7 +80,7 @@ export function useSearchCore<TFilters>(options: {
     total: query.data?.total ?? 0,
     limit: state.limit,
     page: state.page,
-    isLoading: query.isPending,
+    isLoading: query.isFetching,
     error: query.error ? (query.error as Error).message : null,
     filters: state.filters,
     setFilters,

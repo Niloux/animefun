@@ -22,7 +22,12 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
     initialFilters,
     limit,
     queryKeyBase: "sub-search",
-    enablePredicate: (s) => s.submitted,
+    enablePredicate: (s) => {
+      const f = s.filters;
+      const hasActiveFilters = (f.genres.length > 0) || (f.minRating > 0) || (f.maxRating < 10) || !!(f.statusCode ?? null);
+      const hasKeywords = s.keywords.trim().length > 0;
+      return hasKeywords || hasActiveFilters;
+    },
     queryFn: async ({ debouncedKeywords, filters, limit, offset }) => {
       const normalizedGenres = [...filters.genres].sort();
       const data = await querySubscriptionsQ({

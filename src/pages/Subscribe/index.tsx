@@ -36,8 +36,8 @@ const SubscribePage = () => {
     filters,
     setFilters,
     setPage,
-    submitted,
     submit,
+    hasKeywords,
   } = useSubscriptionSearch({ limit: 20 });
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
   const [listPage, setListPage] = useState<number>(1);
@@ -46,6 +46,8 @@ const SubscribePage = () => {
   const totalListPages = Math.max(1, Math.ceil(items.length / limit));
   const safeListPage = Math.min(listPage, totalListPages);
   const getVisiblePages = (current: number, totalP: number): (number | "ellipsis")[] => visiblePages(totalP, current);
+  const hasActiveFilters = (filters.genres.length > 0) || (filters.minRating > 0) || (filters.maxRating < 10) || !!(filters.statusCode ?? null);
+  const searchMode = hasKeywords || hasActiveFilters;
 
   return (
     <div className="px-4 py-0 space-y-4">
@@ -53,7 +55,7 @@ const SubscribePage = () => {
         <div className="grow">
           <AutoComplete
             query={query}
-            onQueryChange={setQuery}
+            onQueryChange={(v) => { setQuery(v); setPage(1); }}
             onEnter={() => submit()}
             onSelect={(anime) => {
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
@@ -161,15 +163,16 @@ const SubscribePage = () => {
           open={isFiltersOpen}
           onClose={() => setIsFiltersOpen(false)}
           filters={filters}
-          onFilterChange={(f) =>
-            setFilters({ ...f, statusCode: f.statusCode ?? null })
-          }
+          onFilterChange={(f) => {
+            setFilters({ ...f, statusCode: f.statusCode ?? null });
+            setPage(1);
+          }}
           onApply={() => submit()}
           showStatusFilter
         />
       )}
 
-      {submitted ? (
+      {searchMode ? (
         <div className="mb-4">
           {isLoading ? (
             <div className="flex items-center">
@@ -190,7 +193,7 @@ const SubscribePage = () => {
         </div>
       ) : null}
 
-      {submitted ? (
+      {searchMode ? (
         isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
             {Array.from({ length: 20 }).map((_, i) => (
@@ -217,7 +220,7 @@ const SubscribePage = () => {
         />
       )}
 
-      {!isLoading && submitted && total > limit && (
+      {searchMode && !isLoading && total > limit && (
         <div className="mt-6">
           <Pagination>
             <PaginationContent>
@@ -272,7 +275,7 @@ const SubscribePage = () => {
         </div>
       )}
 
-      {!submitted && items.length > limit && (
+      {!searchMode && items.length > limit && (
         <div className="mt-6">
           <Pagination>
             <PaginationContent>
