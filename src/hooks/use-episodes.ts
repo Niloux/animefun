@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { getEpisodes } from '../lib/api';
 import { PagedEpisode } from '../types/bangumi';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useToastOnError } from './use-toast-on-error';
 
 // 分页常量定义
 const PAGE_LIMIT = 18; // 每页展示 18 条（3 行 × 每行 6 条）
@@ -40,12 +40,11 @@ export const useEpisodes = (subjectId: number | undefined) => {
     placeholderData: (prev) => prev,
   });
 
-  useEffect(() => {
-    if (query.error) {
-      const msg = (query.error as Error).message;
-      toast.error(msg, { duration: 5000, action: { label: '重试', onClick: () => queryClient.refetchQueries({ queryKey: ['episodes', subjectId, pageBase, PAGE_LIMIT], exact: true }) } });
-    }
-  }, [query.error, queryClient, subjectId, pageBase]);
+  // 使用统一的错误提示钩子
+  useToastOnError({
+    error: query.error,
+    onRetry: () => queryClient.refetchQueries({ queryKey: ['episodes', subjectId, pageBase, PAGE_LIMIT], exact: true })
+  });
 
 
   // 加载下一页

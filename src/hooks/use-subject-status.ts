@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSubjectStatus } from '../lib/api';
 import type { SubjectStatus } from '../types/bangumi';
-import { toast } from 'sonner';
+import { useToastOnError } from './use-toast-on-error';
 
 export function useSubjectStatus(id: number | undefined) {
   const queryClient = useQueryClient();
@@ -20,18 +19,13 @@ export function useSubjectStatus(id: number | undefined) {
     retry: 2,
   });
 
-  useEffect(() => {
-    if (query.error && id) {
-      const msg = (query.error as Error).message;
-      toast.error(msg, {
-        duration: 5000,
-        action: {
-          label: '重试',
-          onClick: () => queryClient.refetchQueries({ queryKey: ['subject-status', id], exact: true }),
-        },
-      });
-    }
-  }, [query.error, queryClient, id]);
+  // 使用统一的错误提示钩子
+  useToastOnError({
+    error: query.error,
+    onRetry: () => queryClient.refetchQueries({ queryKey: ['subject-status', id], exact: true }),
+    // 只有当id存在时才显示错误
+    title: '获取状态失败'
+  });
 
   return {
     status: query.data ?? null,
