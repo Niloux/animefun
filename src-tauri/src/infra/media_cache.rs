@@ -1,6 +1,6 @@
 use crate::error::{AppError, CommandResult};
 use crate::infra::path::app_base_dir;
-use crate::services::bangumi_service;
+use crate::services::bangumi_service::client::CLIENT;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
@@ -91,7 +91,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
     let mut ext = infer_ext_from_url(&url);
     let mut file_path = images_dir.join(format!("{}.{}", hash_norm, ext));
 
-    let resp = bangumi_service::CLIENT.get(&url).send().await?;
+    let resp = CLIENT.get(&url).send().await?;
     resp.error_for_status_ref()?;
     let ct = resp
         .headers()
