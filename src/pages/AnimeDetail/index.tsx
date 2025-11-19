@@ -12,6 +12,7 @@ import {
   ResizableHandle,
 } from "../../components/ui/resizable";
 import EpisodesList from "../../components/EpisodesList";
+import { useEpisodes } from "../../hooks/use-episodes";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 import { useCachedImage } from "../../hooks/use-cached-image";
@@ -20,6 +21,7 @@ const AnimeDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { anime, loading, error, reload } = useAnimeDetail(id);
+  const { loading: epsLoading } = useEpisodes(id ? Number(id) : undefined);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
   const { isSubscribed, toggle } = useSubscriptions();
@@ -61,7 +63,7 @@ const AnimeDetailPage = () => {
       <div className="p-8">
         <div className="flex flex-col items-center gap-4">
           <Spinner className="size-10" />
-          <div className="text-sm text-gray-600 dark:text-gray-400">加载中</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{epsLoading ? "加载详情与剧集中" : "加载详情中"}</div>
         </div>
       </div>
     );
