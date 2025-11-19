@@ -9,6 +9,15 @@ import AutoComplete from "../../components/AutoComplete";
 import FiltersPanel from "../../components/FiltersPanel";
 import { Loader2, Filter, X } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from "../../components/ui/pagination";
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -30,6 +39,29 @@ const SubscribePage = () => {
     submit,
   } = useSubscriptionSearch({ limit: 20 });
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
+  const [listPage, setListPage] = useState<number>(1);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const totalListPages = Math.max(1, Math.ceil(items.length / limit));
+  const safeListPage = Math.min(listPage, totalListPages);
+  const getVisiblePages = (
+    current: number,
+    totalP: number
+  ): (number | "ellipsis")[] => {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalP <= 7) {
+      for (let i = 1; i <= totalP; i++) pages.push(i);
+      return pages;
+    }
+    pages.push(1);
+    if (current > 3) pages.push("ellipsis");
+    const start = Math.max(2, current - 1);
+    const end = Math.min(totalP - 1, current + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (current < totalP - 2) pages.push("ellipsis");
+    pages.push(totalP);
+    return pages;
+  };
 
   return (
     <div className="px-4 py-0 space-y-4">
@@ -196,29 +228,121 @@ const SubscribePage = () => {
       ) : items.length === 0 ? (
         <div className="text-muted-foreground">暂无订阅</div>
       ) : (
-        <AnimeGrid items={items} />
+        <AnimeGrid
+          items={items.slice((safeListPage - 1) * limit, safeListPage * limit)}
+        />
       )}
 
       {!isLoading && submitted && total > limit && (
-        <div className="mt-6 flex gap-2">
-          <Button
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => {
-              if (page > 1) setPage(page - 1);
-            }}
-          >
-            上一页
-          </Button>
-          <Button
-            variant="outline"
-            disabled={page * limit >= total}
-            onClick={() => {
-              if (page * limit < total) setPage(page + 1);
-            }}
-          >
-            下一页
-          </Button>
+        <div className="mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  className={
+                    page === 1 ? "pointer-events-none opacity-50" : undefined
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page > 1) setPage(page - 1);
+                  }}
+                />
+              </PaginationItem>
+              {getVisiblePages(page, totalPages).map((p, idx) =>
+                p === "ellipsis" ? (
+                  <PaginationItem key={`e-${idx}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      href="#"
+                      isActive={p === page}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (p !== page) setPage(p);
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  className={
+                    page >= totalPages
+                      ? "pointer-events-none opacity-50"
+                      : undefined
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (page < totalPages) setPage(page + 1);
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
+
+      {!submitted && items.length > limit && (
+        <div className="mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  className={
+                    safeListPage === 1
+                      ? "pointer-events-none opacity-50"
+                      : undefined
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (safeListPage > 1) setListPage(safeListPage - 1);
+                  }}
+                />
+              </PaginationItem>
+              {getVisiblePages(safeListPage, totalListPages).map((p, idx) =>
+                p === "ellipsis" ? (
+                  <PaginationItem key={`le-${idx}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={`lp-${p}`}>
+                    <PaginationLink
+                      href="#"
+                      isActive={p === safeListPage}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (p !== safeListPage) setListPage(p);
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  className={
+                    safeListPage >= totalListPages
+                      ? "pointer-events-none opacity-50"
+                      : undefined
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (safeListPage < totalListPages)
+                      setListPage(safeListPage + 1);
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>
