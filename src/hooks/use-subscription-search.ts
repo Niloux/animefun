@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { querySubscriptions } from "../lib/api";
+import { querySubscriptionsQ } from "../lib/api";
 import type { SearchResponse } from "@/types/gen/bangumi";
 import type { SubjectStatusCode } from "@/types/bangumi";
 import { useQuery } from "@tanstack/react-query";
@@ -56,16 +56,16 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
       },
     ],
     queryFn: async () => {
-      const data = await querySubscriptions(
-        debouncedKeywords.trim(),
-        state.filters.sort,
-        normalizedGenres,
-        state.filters.minRating,
-        state.filters.maxRating,
-        state.filters.statusCode ?? null,
-        state.limit,
+      const data = await querySubscriptionsQ({
+        keywords: debouncedKeywords.trim() || null,
+        sort: state.filters.sort || null,
+        genres: normalizedGenres,
+        min_rating: state.filters.minRating,
+        max_rating: state.filters.maxRating,
+        status_code: state.filters.statusCode ?? null,
+        limit: state.limit,
         offset,
-      );
+      });
       return data;
     },
     enabled: state.submitted,

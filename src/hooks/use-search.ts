@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { searchSubject } from "../lib/api";
+import { searchSubjectQ } from "../lib/api";
 import { useQuery } from "@tanstack/react-query";
 import type { SearchResponse } from "@/types/gen/bangumi";
 import { useDebouncedValue } from "./use-debounce";
@@ -68,19 +68,16 @@ export const useSearch = (options?: UseSearchOptions) => {
       },
     ],
     queryFn: async () => {
-      const data = await searchSubject(
-        debouncedKeywords.trim(),
-        state.subjectType,
-        state.filters.sort,
-        normalizedGenres.length > 0 ? normalizedGenres : undefined,
-        undefined,
+      const data = await searchSubjectQ({
+        keywords: debouncedKeywords.trim(),
+        subjectType: state.subjectType,
+        sort: state.filters.sort,
+        tag: normalizedGenres.length > 0 ? normalizedGenres : undefined,
         rating,
-        undefined,
-        undefined,
-        false,
-        state.limit,
-        offset
-      );
+        nsfw: false,
+        limit: state.limit,
+        offset,
+      });
       return data;
     },
     enabled: hasKeywords && state.submitted,

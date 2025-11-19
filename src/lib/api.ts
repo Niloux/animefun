@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { CalendarDay, Anime, PagedEpisode, SubjectStatus, SubjectStatusCode } from '../types/bangumi';
+import type { SearchResponse } from '@/types/gen/bangumi';
 
 /**
  * 从后端获取番剧日历数据
@@ -125,6 +126,23 @@ export async function searchSubject(
   }
 }
 
+export async function searchSubjectQ(params: {
+  keywords: string;
+  subjectType?: number[];
+  sort?: string;
+  tag?: string[];
+  airDate?: string[];
+  rating?: string[];
+  ratingCount?: string[];
+  rank?: string[];
+  nsfw?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<SearchResponse> {
+  const data = await invoke<SearchResponse>('search_subject', params);
+  return data;
+}
+
 export async function getSubscriptions(): Promise<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]> {
   const data = await invoke<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]>("sub_list");
   return Array.isArray(data) ? data : [];
@@ -161,5 +179,19 @@ export async function querySubscriptions(
       offset,
     },
   });
+  return data;
+}
+
+export async function querySubscriptionsQ(params: {
+  keywords: string | null;
+  sort: string | null;
+  genres: string[] | null;
+  min_rating: number | null;
+  max_rating: number | null;
+  status_code: SubjectStatusCode | null;
+  limit: number | null;
+  offset: number | null;
+}): Promise<SearchResponse> {
+  const data = await invoke<SearchResponse>('sub_query', { params });
   return data;
 }

@@ -18,6 +18,7 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from "../../components/ui/pagination";
+import { visiblePages } from "@/lib/pagination";
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -44,24 +45,7 @@ const SubscribePage = () => {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const totalListPages = Math.max(1, Math.ceil(items.length / limit));
   const safeListPage = Math.min(listPage, totalListPages);
-  const getVisiblePages = (
-    current: number,
-    totalP: number
-  ): (number | "ellipsis")[] => {
-    const pages: (number | "ellipsis")[] = [];
-    if (totalP <= 7) {
-      for (let i = 1; i <= totalP; i++) pages.push(i);
-      return pages;
-    }
-    pages.push(1);
-    if (current > 3) pages.push("ellipsis");
-    const start = Math.max(2, current - 1);
-    const end = Math.min(totalP - 1, current + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (current < totalP - 2) pages.push("ellipsis");
-    pages.push(totalP);
-    return pages;
-  };
+  const getVisiblePages = (current: number, totalP: number): (number | "ellipsis")[] => visiblePages(totalP, current);
 
   return (
     <div className="px-4 py-0 space-y-4">

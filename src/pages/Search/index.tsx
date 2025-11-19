@@ -17,6 +17,7 @@ import {
   PaginationNext,
   PaginationEllipsis,
 } from "../../components/ui/pagination";
+import { visiblePages } from "@/lib/pagination";
 
 const SearchPage = () => {
   const {
@@ -60,22 +61,7 @@ const SearchPage = () => {
   };
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
-  const getVisiblePages = (): (number | "ellipsis")[] => {
-    const current = page;
-    const pages: (number | "ellipsis")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-      return pages;
-    }
-    pages.push(1);
-    if (current > 3) pages.push("ellipsis");
-    const start = Math.max(2, current - 1);
-    const end = Math.min(totalPages - 1, current + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (current < totalPages - 2) pages.push("ellipsis");
-    pages.push(totalPages);
-    return pages;
-  };
+  const getVisiblePages = (): (number | "ellipsis")[] => visiblePages(totalPages, page);
 
   return (
     <div className="px-4 py-0">
