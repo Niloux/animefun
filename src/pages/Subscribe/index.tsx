@@ -47,7 +47,8 @@ const SubscribePage = () => {
   const safeListPage = Math.min(listPage, totalListPages);
   const getVisiblePages = (current: number, totalP: number): (number | "ellipsis")[] => visiblePages(totalP, current);
   const hasActiveFilters = (filters.genres.length > 0) || (filters.minRating > 0) || (filters.maxRating < 10) || !!(filters.statusCode ?? null);
-  const searchMode = hasKeywords || hasActiveFilters;
+  const hasSortActive = filters.sort !== "heat";
+  const searchMode = hasKeywords || hasActiveFilters || hasSortActive;
 
   return (
     <div className="px-4 py-0 space-y-4">
