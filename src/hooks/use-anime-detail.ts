@@ -1,8 +1,7 @@
 import { getAnimeDetail } from '../lib/api';
 import { Anime } from '../types/bangumi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { useEffect } from 'react';
+import { useToastOnError } from './use-toast-on-error';
 
 export const useAnimeDetail = (id: string | undefined) => {
   const queryClient = useQueryClient();
@@ -20,12 +19,11 @@ export const useAnimeDetail = (id: string | undefined) => {
     retry: 2,
   });
 
-  useEffect(() => {
-    if (query.error) {
-      const msg = (query.error as Error).message;
-      toast.error(msg, { duration: 5000, action: { label: '重试', onClick: () => queryClient.refetchQueries({ queryKey: ['anime', id], exact: true }) } });
-    }
-  }, [query.error, queryClient, id]);
+  // 使用统一的错误提示钩子
+  useToastOnError({
+    error: query.error,
+    onRetry: () => queryClient.refetchQueries({ queryKey: ['anime', id], exact: true })
+  });
 
   return {
     anime: query.data ?? null,

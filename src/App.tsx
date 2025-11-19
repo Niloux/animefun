@@ -1,5 +1,4 @@
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazyWithPreload } from "./hooks/use-lazy-preload";
 import { Layout } from "./components/Layout";
 import { ROUTES } from "./constants/routes";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -7,32 +6,20 @@ import "./App.css";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query";
 
-// 使用自定义的 lazyWithPreload 动态导入所有页面组件，并添加块名称便于分析
-const HomePage = lazyWithPreload(() => import("./pages/Home"));
-const SearchPage = lazyWithPreload(() => import("./pages/Search"));
-const SubscribePage = lazyWithPreload(() => import("./pages/Subscribe"));
-const ResourcesAllPage = lazyWithPreload(() => import("./pages/Resources/All"));
-const ResourcesDownloadingPage = lazyWithPreload(
-  () => import("./pages/Resources/Downloading")
-);
-const ResourcesDownloadedPage = lazyWithPreload(
-  () => import("./pages/Resources/Downloaded")
-);
-const SettingsPage = lazyWithPreload(() => import("./pages/Settings"));
-const AnimeDetailPage = lazyWithPreload(() => import("./pages/AnimeDetail"));
+// 从集中模块导入所有懒加载页面和预加载映射表
+import {
+  HomePage,
+  SearchPage,
+  SubscribePage,
+  ResourcesAllPage,
+  ResourcesDownloadingPage,
+  ResourcesDownloadedPage,
+  SettingsPage,
+  AnimeDetailPage,
+  preloadMap
+} from "./lib/lazy-pages";
 
 function App() {
-  // 创建预加载函数映射表
-  const preloadMap = {
-    [ROUTES.HOME]: HomePage.preload,
-    [ROUTES.SEARCH]: SearchPage.preload,
-    [ROUTES.SUBSCRIBE]: SubscribePage.preload,
-    [ROUTES.RESOURCES.ALL]: ResourcesAllPage.preload,
-    [ROUTES.RESOURCES.DOWNLOADING]: ResourcesDownloadingPage.preload,
-    [ROUTES.RESOURCES.DOWNLOADED]: ResourcesDownloadedPage.preload,
-    [ROUTES.SETTINGS]: SettingsPage.preload,
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <HashRouter>
