@@ -1,5 +1,16 @@
 import { useMemo } from "react";
 import { Button } from "../../components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../../components/ui/alert-dialog";
 import { AnimeGrid } from "../../components/AnimeGrid";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 import { useNavigate } from "react-router-dom";
@@ -18,9 +29,27 @@ const SubscribePage = () => {
           <Button variant="outline" onClick={() => navigate(ROUTES.SEARCH)}>
             去搜索
           </Button>
-          <Button variant="destructive" onClick={() => clear()}>
-            清空订阅
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" disabled={items.length === 0}>
+                清空订阅
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认清空订阅？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  此操作不可撤销，将移除所有订阅。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction onClick={() => clear()}>
+                  确认清空
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       {items.length === 0 ? (
