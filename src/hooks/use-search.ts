@@ -1,8 +1,5 @@
-import { useMemo, useState } from "react";
+import { useSearchCore } from "./use-search-core";
 import { searchSubjectQ } from "../lib/api";
-import { useQuery } from "@tanstack/react-query";
-import type { SearchResponse } from "@/types/gen/bangumi";
-import { useDebouncedValue } from "./use-debounce";
 
 export type SearchFilters = {
   sort: string;
@@ -17,94 +14,34 @@ type UseSearchOptions = {
   limit?: number;
 };
 
-type SearchState = {
-  keywords: string;
-  filters: SearchFilters;
-  page: number;
-  subjectType: number[];
-  limit: number;
-  submitted: boolean;
-};
-
 export const useSearch = (options?: UseSearchOptions) => {
-  const {
-    initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] },
-    subjectType = [2],
-    limit = 20,
-  } = options || {};
+  const { initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] }, subjectType = [2], limit = 20 } = options || {};
 
-  const [state, setState] = useState<SearchState>({
-    keywords: "",
-    filters: initialFilters,
-    page: 1,
-    subjectType,
+  return useSearchCore<SearchFilters>({
+    initialFilters,
     limit,
-    submitted: false,
-  });
-
-  const debouncedKeywords = useDebouncedValue(state.keywords, 400);
-  const hasKeywords = state.keywords.trim().length > 0;
-  const normalizedGenres = useMemo(() => [...state.filters.genres].sort(), [state.filters.genres]);
-  const rating = useMemo(() => {
-    if (state.filters.minRating > 0 || state.filters.maxRating < 10) {
-      return [`>=${state.filters.minRating}`, `<=${state.filters.maxRating}`];
-    }
-    return undefined;
-  }, [state.filters.minRating, state.filters.maxRating]);
-  const offset = (Math.max(1, state.page) - 1) * state.limit;
-
-  const query = useQuery<SearchResponse>({
-    queryKey: [
-      "search",
-      {
-        subjectType: state.subjectType,
-        sort: state.filters.sort,
-        genres: normalizedGenres,
-        minRating: state.filters.minRating,
-        maxRating: state.filters.maxRating,
-        keywords: debouncedKeywords.trim(),
-        page: state.page,
-        limit: state.limit,
-      },
-    ],
-    queryFn: async () => {
+    queryKeyBase: "search",
+    queryKeyExtra: { subjectType },
+    enablePredicate: (s) => s.submitted && s.keywords.trim().length > 0,
+    queryFn: async ({ debouncedKeywords, filters, limit, offset }) => {
+      const normalizedGenres = [...filters.genres].sort();
+      const rating = (filters.minRating > 0 || filters.maxRating < 10)
+        ? [
+          `>=${filters.minRating}`,
+          `<=${filters.maxRating}`,
+        ]
+        : undefined;
       const data = await searchSubjectQ({
-        keywords: debouncedKeywords.trim(),
-        subjectType: state.subjectType,
-        sort: state.filters.sort,
+        keywords: debouncedKeywords,
+        subjectType,
+        sort: filters.sort,
         tag: normalizedGenres.length > 0 ? normalizedGenres : undefined,
         rating,
         nsfw: false,
-        limit: state.limit,
+        limit,
         offset,
       });
       return data;
     },
-    enabled: hasKeywords && state.submitted,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 2,
-    placeholderData: undefined,
   });
-
-  const setQuery = (v: string) => setState((s) => ({ ...s, keywords: v, submitted: false }));
-  const setFilters = (f: SearchFilters) => setState((s) => ({ ...s, filters: f }));
-  const setPage = (p: number) => setState((s) => ({ ...s, page: p }));
-  const submit = () => setState((s) => ({ ...s, submitted: true, page: 1 }));
-
-  return {
-    query: state.keywords,
-    setQuery,
-    results: state.submitted && hasKeywords ? (query.data?.data ?? []) : [],
-    total: state.submitted && hasKeywords ? (query.data?.total ?? 0) : 0,
-    limit: state.limit,
-    page: state.page,
-    isLoading: state.submitted && hasKeywords ? query.isPending : false,
-    error: query.error ? (query.error as Error).message : null,
-    filters: state.filters,
-    setFilters,
-    setPage,
-    submitted: state.submitted,
-    submit,
-  };
 };

@@ -1,9 +1,6 @@
-import { useMemo, useState } from "react";
 import { querySubscriptionsQ } from "../lib/api";
-import type { SearchResponse } from "@/types/gen/bangumi";
 import type { SubjectStatusCode } from "@/types/bangumi";
-import { useQuery } from "@tanstack/react-query";
-import { useDebouncedValue } from "./use-debounce";
+import { useSearchCore } from "./use-search-core";
 
 export type SubscriptionSearchFilters = {
   sort: string;
@@ -18,81 +15,27 @@ type UseSubscriptionSearchOptions = {
   limit?: number;
 };
 
-type SearchState = {
-  keywords: string;
-  filters: SubscriptionSearchFilters;
-  page: number;
-  limit: number;
-  submitted: boolean;
-};
-
 export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) => {
   const { initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [], statusCode: null }, limit = 20 } = options || {};
 
-  const [state, setState] = useState<SearchState>({
-    keywords: "",
-    filters: initialFilters,
-    page: 1,
+  return useSearchCore<SubscriptionSearchFilters>({
+    initialFilters,
     limit,
-    submitted: false,
-  });
-
-  const debouncedKeywords = useDebouncedValue(state.keywords, 400);
-  const normalizedGenres = useMemo(() => [...state.filters.genres].sort(), [state.filters.genres]);
-  const offset = (Math.max(1, state.page) - 1) * state.limit;
-
-  const query = useQuery<SearchResponse>({
-    queryKey: [
-      "sub-search",
-      {
-        sort: state.filters.sort,
-        genres: normalizedGenres,
-        minRating: state.filters.minRating,
-        maxRating: state.filters.maxRating,
-        statusCode: state.filters.statusCode ?? null,
-        keywords: debouncedKeywords.trim(),
-        page: state.page,
-        limit: state.limit,
-      },
-    ],
-    queryFn: async () => {
+    queryKeyBase: "sub-search",
+    enablePredicate: (s) => s.submitted,
+    queryFn: async ({ debouncedKeywords, filters, limit, offset }) => {
+      const normalizedGenres = [...filters.genres].sort();
       const data = await querySubscriptionsQ({
-        keywords: debouncedKeywords.trim() || null,
-        sort: state.filters.sort || null,
+        keywords: debouncedKeywords || null,
+        sort: filters.sort || null,
         genres: normalizedGenres,
-        min_rating: state.filters.minRating,
-        max_rating: state.filters.maxRating,
-        status_code: state.filters.statusCode ?? null,
-        limit: state.limit,
+        min_rating: filters.minRating,
+        max_rating: filters.maxRating,
+        status_code: filters.statusCode ?? null,
+        limit,
         offset,
       });
       return data;
     },
-    enabled: state.submitted,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 2,
-    placeholderData: undefined,
   });
-
-  const setQuery = (v: string) => setState((s) => ({ ...s, keywords: v, submitted: false }));
-  const setFilters = (f: SubscriptionSearchFilters) => setState((s) => ({ ...s, filters: f, submitted: false }));
-  const setPage = (p: number) => setState((s) => ({ ...s, page: p }));
-  const submit = () => setState((s) => ({ ...s, submitted: true, page: 1 }));
-
-  return {
-    query: state.keywords,
-    setQuery,
-    results: state.submitted ? (query.data?.data ?? []) : [],
-    total: state.submitted ? (query.data?.total ?? 0) : 0,
-    limit: state.limit,
-    page: state.page,
-    isLoading: state.submitted ? query.isPending : false,
-    error: query.error ? (query.error as Error).message : null,
-    filters: state.filters,
-    setFilters,
-    setPage,
-    submitted: state.submitted,
-    submit,
-  };
 };

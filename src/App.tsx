@@ -4,7 +4,8 @@ import { Layout } from "./components/Layout";
 import { ROUTES } from "./constants/routes";
 import ErrorBoundary from "./components/ErrorBoundary";
 import "./App.css";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query";
 
 // 使用自定义的 lazyWithPreload 动态导入所有页面组件，并添加块名称便于分析
 const HomePage = lazyWithPreload(() => import("./pages/Home"));
@@ -16,16 +17,7 @@ const ResourcesDownloadedPage = lazyWithPreload(() => import("./pages/Resources/
 const SettingsPage = lazyWithPreload(() => import("./pages/Settings"));
 const AnimeDetailPage = lazyWithPreload(() => import("./pages/AnimeDetail"));
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+ 
 
 function App() {
   // 创建预加载函数映射表
