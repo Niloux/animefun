@@ -1,11 +1,22 @@
 use crate::{error::CommandResult, subscriptions, services::bangumi_service, models::bangumi::{SubjectResponse, SubjectStatusCode}};
 
+fn status_order(code: &SubjectStatusCode) -> u8 {
+    match code {
+        SubjectStatusCode::Airing => 0,
+        SubjectStatusCode::PreAir => 1,
+        SubjectStatusCode::Finished => 2,
+        SubjectStatusCode::OnHiatus => 3,
+        SubjectStatusCode::Unknown => 4,
+    }
+}
+
 #[derive(serde::Serialize, ts_rs::TS)]
 #[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct SubscriptionItem {
     pub id: u32,
     pub anime: SubjectResponse,
     #[ts(rename = "addedAt")]
+    #[ts(type = "number")]
     pub added_at: i64,
     #[ts(optional)]
     pub notify: Option<bool>,
@@ -45,7 +56,7 @@ pub struct SubQueryParams {
     pub genres: Option<Vec<String>>, 
     pub min_rating: Option<f32>,
     pub max_rating: Option<f32>,
-    pub status_codes: Option<Vec<SubjectStatusCode>>, 
+    pub status_code: Option<SubjectStatusCode>, 
     pub limit: Option<u32>,
     pub offset: Option<u32>,
 }
@@ -53,7 +64,8 @@ pub struct SubQueryParams {
 #[tauri::command]
 pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::bangumi::SearchResponse> {
     let rows = subscriptions::list().await?;
-    let need_status = params.status_codes.as_ref().map_or(false, |v| !v.is_empty());
+    let sort_needs_status = matches!(params.sort.as_deref(), Some("status"));
+    let need_status = params.status_code.is_some() || sort_needs_status;
     let mut items: Vec<(SubjectResponse, Option<crate::models::bangumi::SubjectStatus>)> = Vec::new();
     for (id, _added_at, _notify) in rows.iter() {
         let key = format!("subject:{}", id);
@@ -65,7 +77,7 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
         let status = if need_status { Some(subscriptions::get_status_cached(*id).await?) } else { None };
         items.push((anime, status));
     }
-    let mut filtered: Vec<SubjectResponse> = items
+    let mut filtered_items: Vec<(SubjectResponse, Option<crate::models::bangumi::SubjectStatus>)> = items
         .into_iter()
         .filter(|(a, st)| {
             if let Some(k) = params.keywords.as_ref() {
@@ -107,37 +119,41 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
                     if r.score > maxr { return false; }
                 }
             }
-            if let Some(codes) = params.status_codes.as_ref() {
-                if !codes.is_empty() {
-                    if let Some(s) = st.as_ref() {
-                        if !codes.contains(&s.code) { return false; }
-                    } else {
-                        return false;
-                    }
+            if let Some(code) = params.status_code.as_ref() {
+                if let Some(s) = st.as_ref() {
+                    if &s.code != code { return false; }
+                } else {
+                    return false;
                 }
             }
             true
         })
-        .map(|(a, _)| a)
         .collect();
 
     match params.sort.as_deref() {
+        Some("status") => {
+            filtered_items.sort_by(|(_, sa), (_, sb)| {
+                let oa = sa.as_ref().map(|s| status_order(&s.code)).unwrap_or(5);
+                let ob = sb.as_ref().map(|s| status_order(&s.code)).unwrap_or(5);
+                oa.cmp(&ob)
+            });
+        }
         Some("rank") => {
-            filtered.sort_by(|a, b| {
+            filtered_items.sort_by(|(a, _), (b, _)| {
                 let ar = a.rating.as_ref().and_then(|r| r.rank).unwrap_or(u32::MAX);
                 let br = b.rating.as_ref().and_then(|r| r.rank).unwrap_or(u32::MAX);
                 ar.cmp(&br)
             });
         }
         Some("score") => {
-            filtered.sort_by(|a, b| {
+            filtered_items.sort_by(|(a, _), (b, _)| {
                 let ascore = a.rating.as_ref().map(|r| r.score).unwrap_or(0.0);
                 let bscore = b.rating.as_ref().map(|r| r.score).unwrap_or(0.0);
                 bscore.partial_cmp(&ascore).unwrap_or(std::cmp::Ordering::Equal)
             });
         }
         Some("heat") => {
-            filtered.sort_by(|a, b| {
+            filtered_items.sort_by(|(a, _), (b, _)| {
                 let atotal = a.rating.as_ref().map(|r| r.total).unwrap_or(0);
                 let btotal = b.rating.as_ref().map(|r| r.total).unwrap_or(0);
                 btotal.cmp(&atotal)
@@ -146,7 +162,7 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
         Some("match") => {
             if let Some(k) = params.keywords.as_ref() {
                 let q = k.trim().to_lowercase();
-                filtered.sort_by(|a, b| {
+                filtered_items.sort_by(|(a, _), (b, _)| {
                     let n1 = a.name.to_lowercase();
                     let n2 = a.name_cn.to_lowercase();
                     let m_a = if n1.contains(&q) {2} else if n2.contains(&q) {1} else {0};
@@ -160,15 +176,11 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
         _ => {}
     }
 
-    let total = filtered.len() as u32;
+    let total = filtered_items.len() as u32;
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
     let start = offset as usize;
-    let data = if start >= filtered.len() {
-        Vec::new()
-    } else {
-        filtered.into_iter().skip(start).take(limit as usize).collect()
-    };
+    let data: Vec<SubjectResponse> = if start >= filtered_items.len() { Vec::new() } else { filtered_items.into_iter().skip(start).take(limit as usize).map(|(a, _)| a).collect() };
 
     Ok(crate::models::bangumi::SearchResponse { total, limit, offset, data })
 }

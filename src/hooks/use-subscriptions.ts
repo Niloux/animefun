@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Anime } from "../types/bangumi";
-import { invoke } from "@tauri-apps/api/core";
+import { getSubscriptions, toggleSubscription, clearSubscriptions } from "../lib/api";
 
 type SubscriptionItem = {
   id: number;
@@ -16,7 +16,7 @@ export function useSubscriptions() {
     let mounted = true;
     const load = async () => {
       try {
-        const data = await invoke<SubscriptionItem[]>("sub_list");
+        const data = await getSubscriptions();
         if (mounted) setItems(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error(e);
@@ -37,7 +37,7 @@ export function useSubscriptions() {
   const toggle = useCallback((anime: Anime) => {
     (async () => {
       try {
-        const subscribed = await invoke<boolean>("sub_toggle", { id: anime.id });
+        const subscribed = await toggleSubscription(anime.id);
         if (subscribed) {
           setItems((prev) => [{ id: anime.id, anime, addedAt: Date.now() }, ...prev.filter((x) => x.id !== anime.id)]);
         } else {
@@ -54,7 +54,7 @@ export function useSubscriptions() {
   const clear = useCallback(() => {
     (async () => {
       try {
-        await invoke<void>("sub_clear");
+        await clearSubscriptions();
         setItems([]);
       } catch (e) {
         console.error(e);

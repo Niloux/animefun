@@ -47,7 +47,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     queryFn: async () => {
       const trimmed = query.trim();
       const data = source === "subscriptions"
-        ? await querySubscriptions(trimmed, 'match', [], 0, 10, [], 20, 0)
+        ? await querySubscriptions(trimmed, 'match', [], 0, 10, null, 20, 0)
         : await searchSubject(
             trimmed,
             [2],

@@ -62,7 +62,7 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
         normalizedGenres,
         state.filters.minRating,
         state.filters.maxRating,
-        state.filters.statusCode ? [state.filters.statusCode] : [],
+        state.filters.statusCode ?? null,
         state.limit,
         offset,
       );

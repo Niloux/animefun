@@ -145,7 +145,7 @@ export async function querySubscriptions(
   genres: string[],
   minRating: number,
   maxRating: number,
-  statusCodes: SubjectStatusCode[],
+  statusCode: SubjectStatusCode | null,
   limit: number,
   offset: number,
 ): Promise<{ total: number; limit: number; offset: number; data: Anime[] }> {
@@ -156,7 +156,7 @@ export async function querySubscriptions(
       genres,
       min_rating: minRating,
       max_rating: maxRating,
-      status_codes: statusCodes,
+      status_code: statusCode,
       limit,
       offset,
     },
