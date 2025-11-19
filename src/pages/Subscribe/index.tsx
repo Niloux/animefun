@@ -79,6 +79,7 @@ const SubscribePage = () => {
             onSelect={(anime) => {
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
             }}
+            source="subscriptions"
           />
         </div>
         <Button onClick={() => submit()} disabled={isLoading}>
@@ -97,7 +98,7 @@ const SubscribePage = () => {
         </Button>
       </div>
 
-      {(filters.genres.length > 0 || filters.minRating > 0 || filters.maxRating < 10) && (
+      {(filters.genres.length > 0 || filters.minRating > 0 || filters.maxRating < 10 || (filters.statusCode ?? null)) && (
         <div className="mb-4 flex flex-wrap gap-2">
           {filters.genres.map((genre) => (
             <Badge key={genre} variant="default" className="flex items-center gap-1">
@@ -141,6 +142,28 @@ const SubscribePage = () => {
               </button>
             </Badge>
           )}
+          {(filters.statusCode ?? null) && (
+            <Badge variant="default" className="flex items-center gap-1">
+              {(filters.statusCode === "Airing")
+                ? "连载中"
+                : (filters.statusCode === "Finished")
+                ? "已完结"
+                : (filters.statusCode === "PreAir")
+                ? "未开播"
+                : (filters.statusCode === "OnHiatus")
+                ? "停更"
+                : "未知"}
+              <button
+                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                onClick={() => {
+                  setFilters({ ...filters, statusCode: null });
+                  setPage(1);
+                }}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
         </div>
       )}
 
@@ -149,8 +172,9 @@ const SubscribePage = () => {
           open={isFiltersOpen}
           onClose={() => setIsFiltersOpen(false)}
           filters={filters}
-          onFilterChange={setFilters}
+          onFilterChange={(f) => setFilters({ ...f, statusCode: f.statusCode ?? null })}
           onApply={() => submit()}
+          showStatusFilter
         />
       )}
 

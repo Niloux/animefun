@@ -117,7 +117,7 @@ async fn status_ttl_secs(code: &SubjectStatusCode) -> i64 {
     }
 }
 
-async fn get_status_cached(id: u32) -> Result<SubjectStatus, AppError> {
+pub async fn get_status_cached(id: u32) -> Result<SubjectStatus, AppError> {
     let key = format!("sub:status:{}", id);
     if let Some(s) = cache::get(&key).await? {
         let v: SubjectStatus = serde_json::from_str(&s)?;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Anime } from "../types/bangumi";
-import { searchSubject } from "../lib/api";
+import { searchSubject, querySubscriptions } from "../lib/api";
 import { scoreCandidate, matchTier } from "../lib/utils";
 import { Star } from "lucide-react";
 import { Input } from "./ui/input";
@@ -16,6 +16,7 @@ interface AutoCompleteProps {
   onSelect: (anime: Anime) => void;
   onEnter?: () => void;
   maxSuggestions?: number;
+  source?: "global" | "subscriptions";
 }
 
 const MIN_QUERY_LEN = 2;
@@ -26,6 +27,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   onSelect,
   onEnter,
   maxSuggestions = 10,
+  source = "global",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
@@ -40,22 +42,25 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       'autocomplete',
       query.trim(),
       maxSuggestions,
+      source,
     ],
     queryFn: async () => {
       const trimmed = query.trim();
-      const data = await searchSubject(
-        trimmed,
-        [2],
-        'match',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        false,
-        20,
-        0
-      );
+      const data = source === "subscriptions"
+        ? await querySubscriptions(trimmed, 'match', [], 0, 10, [], 20, 0)
+        : await searchSubject(
+            trimmed,
+            [2],
+            'match',
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            false,
+            20,
+            0
+          );
       return data;
     },
     select: (data) => {

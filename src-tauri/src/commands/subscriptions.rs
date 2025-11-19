@@ -1,4 +1,4 @@
-use crate::{error::CommandResult, subscriptions, services::bangumi_service, models::bangumi::SubjectResponse};
+use crate::{error::CommandResult, subscriptions, services::bangumi_service, models::bangumi::{SubjectResponse, SubjectStatusCode}};
 
 #[derive(serde::Serialize, ts_rs::TS)]
 #[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
@@ -45,6 +45,7 @@ pub struct SubQueryParams {
     pub genres: Option<Vec<String>>, 
     pub min_rating: Option<f32>,
     pub max_rating: Option<f32>,
+    pub status_codes: Option<Vec<SubjectStatusCode>>, 
     pub limit: Option<u32>,
     pub offset: Option<u32>,
 }
@@ -52,7 +53,8 @@ pub struct SubQueryParams {
 #[tauri::command]
 pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::bangumi::SearchResponse> {
     let rows = subscriptions::list().await?;
-    let mut items: Vec<SubjectResponse> = Vec::new();
+    let need_status = params.status_codes.as_ref().map_or(false, |v| !v.is_empty());
+    let mut items: Vec<(SubjectResponse, Option<crate::models::bangumi::SubjectStatus>)> = Vec::new();
     for (id, _added_at, _notify) in rows.iter() {
         let key = format!("subject:{}", id);
         let anime = if let Some(s) = crate::cache::get(&key).await? {
@@ -60,11 +62,12 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
         } else {
             bangumi_service::fetch_subject(*id).await?
         };
-        items.push(anime);
+        let status = if need_status { Some(subscriptions::get_status_cached(*id).await?) } else { None };
+        items.push((anime, status));
     }
     let mut filtered: Vec<SubjectResponse> = items
         .into_iter()
-        .filter(|a| {
+        .filter(|(a, st)| {
             if let Some(k) = params.keywords.as_ref() {
                 let q = k.trim().to_lowercase();
                 if !q.is_empty() {
@@ -104,8 +107,18 @@ pub async fn sub_query(params: SubQueryParams) -> CommandResult<crate::models::b
                     if r.score > maxr { return false; }
                 }
             }
+            if let Some(codes) = params.status_codes.as_ref() {
+                if !codes.is_empty() {
+                    if let Some(s) = st.as_ref() {
+                        if !codes.contains(&s.code) { return false; }
+                    } else {
+                        return false;
+                    }
+                }
+            }
             true
         })
+        .map(|(a, _)| a)
         .collect();
 
     match params.sort.as_deref() {

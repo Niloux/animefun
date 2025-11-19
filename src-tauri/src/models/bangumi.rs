@@ -237,7 +237,7 @@ pub struct InfoItem {
     pub value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS)]
+#[derive(Debug, Serialize, Deserialize, TS, PartialEq)]
 #[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub enum SubjectStatusCode {
     PreAir,

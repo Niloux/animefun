@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { CalendarDay, Anime, PagedEpisode, SubjectStatus } from '../types/bangumi';
+import { CalendarDay, Anime, PagedEpisode, SubjectStatus, SubjectStatusCode } from '../types/bangumi';
 
 /**
  * 从后端获取番剧日历数据
@@ -145,6 +145,7 @@ export async function querySubscriptions(
   genres: string[],
   minRating: number,
   maxRating: number,
+  statusCodes: SubjectStatusCode[],
   limit: number,
   offset: number,
 ): Promise<{ total: number; limit: number; offset: number; data: Anime[] }> {
@@ -155,6 +156,7 @@ export async function querySubscriptions(
       genres,
       min_rating: minRating,
       max_rating: maxRating,
+      status_codes: statusCodes,
       limit,
       offset,
     },

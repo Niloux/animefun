@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { querySubscriptions } from "../lib/api";
 import type { SearchResponse } from "@/types/gen/bangumi";
+import type { SubjectStatusCode } from "@/types/bangumi";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "./use-debounce";
 
@@ -9,6 +10,7 @@ export type SubscriptionSearchFilters = {
   minRating: number;
   maxRating: number;
   genres: string[];
+  statusCode?: SubjectStatusCode | null;
 };
 
 type UseSubscriptionSearchOptions = {
@@ -25,7 +27,7 @@ type SearchState = {
 };
 
 export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) => {
-  const { initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] }, limit = 20 } = options || {};
+  const { initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [], statusCode: null }, limit = 20 } = options || {};
 
   const [state, setState] = useState<SearchState>({
     keywords: "",
@@ -47,6 +49,7 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
         genres: normalizedGenres,
         minRating: state.filters.minRating,
         maxRating: state.filters.maxRating,
+        statusCode: state.filters.statusCode ?? null,
         keywords: debouncedKeywords.trim(),
         page: state.page,
         limit: state.limit,
@@ -59,6 +62,7 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
         normalizedGenres,
         state.filters.minRating,
         state.filters.maxRating,
+        state.filters.statusCode ? [state.filters.statusCode] : [],
         state.limit,
         offset,
       );
@@ -72,7 +76,7 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
   });
 
   const setQuery = (v: string) => setState((s) => ({ ...s, keywords: v, submitted: false }));
-  const setFilters = (f: SubscriptionSearchFilters) => setState((s) => ({ ...s, filters: f }));
+  const setFilters = (f: SubscriptionSearchFilters) => setState((s) => ({ ...s, filters: f, submitted: false }));
   const setPage = (p: number) => setState((s) => ({ ...s, page: p }));
   const submit = () => setState((s) => ({ ...s, submitted: true, page: 1 }));
 

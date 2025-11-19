@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { SubjectStatusCode } from "@/types/bangumi";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import {
@@ -30,14 +31,17 @@ interface FiltersPanelProps {
     minRating: number;
     maxRating: number;
     genres: string[];
+    statusCode?: SubjectStatusCode | null;
   };
   onFilterChange: (filters: {
     sort: string;
     minRating: number;
     maxRating: number;
     genres: string[];
+    statusCode?: SubjectStatusCode | null;
   }) => void;
   onApply: () => void;
+  showStatusFilter?: boolean;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -46,6 +50,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   filters,
   onFilterChange,
   onApply,
+  showStatusFilter = false,
 }) => {
   const [tagInput, setTagInput] = useState("");
   const animeGenres = [
@@ -103,7 +108,13 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   };
 
   const handleReset = () => {
-    onFilterChange({ sort: "heat", minRating: 0, maxRating: 10, genres: [] });
+    onFilterChange({
+      sort: "heat",
+      minRating: 0,
+      maxRating: 10,
+      genres: [],
+      statusCode: null,
+    });
   };
 
   return (
@@ -218,6 +229,32 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               </div>
             </ScrollArea>
           </div>
+
+          {showStatusFilter && (
+            <div className="space-y-2">
+              <Label>连载状态</Label>
+              <Select
+                value={filters.statusCode ?? undefined}
+                onValueChange={(v) =>
+                  onFilterChange({
+                    ...filters,
+                    statusCode: v as SubjectStatusCode,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full border-border">
+                  <SelectValue placeholder="选择状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Airing">连载中</SelectItem>
+                  <SelectItem value="Finished">已完结</SelectItem>
+                  <SelectItem value="PreAir">未开播</SelectItem>
+                  <SelectItem value="OnHiatus">停更</SelectItem>
+                  <SelectItem value="Unknown">未知</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <SheetFooter>
           <div className="flex gap-2">
