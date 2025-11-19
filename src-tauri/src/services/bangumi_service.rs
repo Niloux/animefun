@@ -224,11 +224,14 @@ fn parse_date(s: &str) -> Option<NaiveDate> {
 }
 
 fn latest_episode_airdate(episodes: &[Episode]) -> Option<String> {
-    let ep = episodes.iter().max_by(|a, b| {
-        a.sort
-            .partial_cmp(&b.sort)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
+    let ep = episodes
+        .iter()
+        .filter(|e| e.item_type == 0)
+        .max_by(|a, b| {
+            a.sort
+                .partial_cmp(&b.sort)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     ep.map(|e| e.airdate.clone()).filter(|d| !d.is_empty())
 }
 

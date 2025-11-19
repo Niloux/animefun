@@ -169,6 +169,7 @@ const AnimeDetailPage = () => {
                         ? "outline"
                         : "outline"
                     }
+                    title={status.reason}
                   >
                     {status.code === "Airing"
                       ? "连载中"
