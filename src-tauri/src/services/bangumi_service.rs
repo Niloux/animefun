@@ -14,6 +14,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 
 const BGM_API_HOST: &str = "https://api.bgm.tv";
+const USER_AGENT: &str = "animefun/0.1";
+const HTTP_TIMEOUT_SECS: u64 = 10;
+const RECENT_WINDOW_DAYS: u64 = 21;
 
 pub(crate) static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     let mut headers = reqwest::header::HeaderMap::new();
@@ -22,9 +25,9 @@ pub(crate) static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
         reqwest::header::HeaderValue::from_static("gzip, deflate"),
     );
     reqwest::Client::builder()
-        .user_agent("animefun/0.1")
+        .user_agent(USER_AGENT)
         .default_headers(headers)
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(HTTP_TIMEOUT_SECS))
         .gzip(true)
         .deflate(true)
         .build()
@@ -332,9 +335,8 @@ pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
     }
 
     let today = Utc::now().date_naive();
-    let window_days = 21u64;
     let window_start = today
-        .checked_sub_days(Days::new(window_days))
+        .checked_sub_days(Days::new(RECENT_WINDOW_DAYS))
         .unwrap_or(today);
 
     let first_air = first_air_date.as_ref().and_then(|d| parse_date(d));
