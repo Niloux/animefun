@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use crate::error::AppError;
 use crate::infra::path::default_app_dir;
 use crate::infra::time::now_secs;
+use tracing::{debug, info};
 
 fn db_file_path() -> Result<PathBuf, AppError> {
     if let Some(p) = DB_FILE.get() {
@@ -57,9 +58,11 @@ pub async fn get(key: &str) -> Result<Option<String>, AppError> {
             let value: String = row.get(0)?;
             let expires_at: i64 = row.get(1)?;
             if now_secs() <= expires_at {
+                debug!("cache hit");
                 Ok(Some(value))
             } else {
                 let _ = conn.execute("DELETE FROM cache WHERE key = ?1", params![key]);
+                debug!("cache expired and deleted");
                 Ok(None)
             }
         } else {
@@ -84,6 +87,7 @@ pub async fn set(key: &str, value: String, ttl_secs: i64) -> Result<(), AppError
             params![key, value, now, expires],
         )?;
         let _ = conn.execute("DELETE FROM cache WHERE expires_at < ?1", params![now]);
+        info!("cache upsert and cleanup");
         Ok(())
     })
     .await

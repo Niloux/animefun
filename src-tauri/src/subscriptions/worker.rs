@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
+use tracing::{info, warn};
 
 use super::status::get_status_cached;
 use super::store::list;
@@ -17,11 +18,13 @@ pub fn spawn_refresh_worker() {
             let rows = match list().await {
                 Ok(v) => v,
                 Err(_) => {
+                    warn!("subscriptions list failed");
                     sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
                     continue;
                 }
             };
             if rows.is_empty() {
+                info!("no subscriptions, sleeping");
                 sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
                 continue;
             }
@@ -41,6 +44,7 @@ pub fn spawn_refresh_worker() {
                 let sem_clone = Arc::clone(&sem);
                 handles.push(tokio::spawn(async move {
                     if let Ok(_permit) = sem_clone.acquire_owned().await {
+                        info!(id, "refresh status");
                         let _ = get_status_cached(id).await;
                     }
                 }));

@@ -4,6 +4,7 @@ use crate::models::bangumi::{CalendarResponse, PagedEpisode, SearchResponse, Sub
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
+use tracing::{debug, info};
 
 use super::client::{CLIENT, BGM_API_HOST};
 
@@ -12,6 +13,7 @@ where
     T: Serialize + DeserializeOwned,
 {
     if let Ok(Some(cached_data)) = cache::get(key).await {
+        debug!(key, "cache hit");
         if let Ok(parsed) = serde_json::from_str::<T>(&cached_data) {
             return Ok(parsed);
         }
@@ -25,6 +27,7 @@ where
         req = req.header(IF_MODIFIED_SINCE, lm);
     }
     let resp = req.send().await?;
+    debug!(key, status=%resp.status().as_u16(), "http response");
     if resp.status() == StatusCode::NOT_MODIFIED {
         let cached_data = cache::get(key)
             .await?
@@ -34,6 +37,7 @@ where
     resp.error_for_status_ref()?;
     let headers = resp.headers().clone();
     let data = resp.json::<T>().await?;
+    info!(key, "cache update");
     if let Ok(s) = serde_json::to_string(&data) {
         let _ = cache::set(key, s, cache_duration_secs.try_into().unwrap()).await;
     }

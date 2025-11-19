@@ -3,6 +3,7 @@ use crate::infra::path::app_base_dir;
 use crate::services::bangumi_service::client::CLIENT;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
+use tracing::{debug, info};
 
 const IMAGE_TTL_SECS: i64 = 90 * 24 * 3600;
 
@@ -85,6 +86,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
     let hash_norm = sha256_hex(&norm);
 
     if let Some(p) = try_existing(&images_dir, &hash_norm).await? {
+        debug!(path=%p, "image cache hit");
         return Ok(p);
     }
 
@@ -105,6 +107,7 @@ pub async fn cache_image(app: tauri::AppHandle, url: String) -> CommandResult<St
     }
     let bytes = resp.bytes().await?;
     tokio::fs::write(&file_path, &bytes).await?;
+    info!(path=%file_path.to_string_lossy(), "image cached");
 
     Ok(file_path.to_string_lossy().to_string())
 }

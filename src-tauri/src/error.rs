@@ -19,14 +19,27 @@ pub enum AppError {
 // 现在它返回一个结构化的错误，而不是一个无用的字符串
 pub type CommandResult<T> = std::result::Result<T, AppError>;
 
-// 实现 Serialize 以便错误可以被发送到前端
+impl AppError {
+    pub fn code(&self) -> &'static str {
+        match self {
+            AppError::Reqwest(_) => "reqwest",
+            AppError::Io(_) => "io",
+            AppError::Sqlite(_) => "sqlite",
+            AppError::CacheMissAfter304(_) => "cache_miss_after_304",
+            AppError::SerdeJson(_) => "serde_json",
+        }
+    }
+}
+
 impl serde::Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        // 目前为简化仍以字符串序列化，但它源自结构化错误。
-        // 未来可改为带错误码与消息的 JSON 对象。
-        serializer.serialize_str(self.to_string().as_ref())
+        use serde::ser::SerializeStruct;
+        let mut st = serializer.serialize_struct("AppError", 2)?;
+        st.serialize_field("code", self.code())?;
+        st.serialize_field("message", &self.to_string())?;
+        st.end()
     }
 }

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use crate::error::AppError;
 use crate::infra::path::default_app_dir;
 use crate::infra::time::now_secs;
+use tracing::info;
 
 static SUBS_DB_FILE: OnceCell<PathBuf> = OnceCell::new();
 
@@ -72,6 +73,7 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
                 "DELETE FROM subscriptions WHERE subject_id = ?1",
                 params![id as i64],
             )?;
+            info!(id, "unsubscribe");
             Ok(false)
         } else {
             let now = now_secs();
@@ -80,6 +82,7 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
                 "INSERT INTO subscriptions(subject_id, added_at, notify) VALUES(?1, ?2, ?3)",
                 params![id as i64, now, notify_i],
             )?;
+            info!(id, notify=%(notify.unwrap_or(false)), "subscribe");
             Ok(true)
         }
     })

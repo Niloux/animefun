@@ -12,6 +12,7 @@ mod subscriptions;
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            crate::infra::log::init();
             let base = crate::infra::path::app_base_dir(&app.handle());
             cache::init(base).map_err(|e| e.to_string())?;
             let base2 = crate::infra::path::app_base_dir(&app.handle());
