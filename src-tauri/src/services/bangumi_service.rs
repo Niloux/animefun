@@ -2,12 +2,16 @@
 
 use crate::cache;
 use crate::error::AppError;
-use crate::models::bangumi::{CalendarResponse, PagedEpisode, SearchResponse, SubjectResponse};
+use crate::models::bangumi::{
+    CalendarResponse, Episode, PagedEpisode, SearchResponse, SubjectResponse, SubjectStatus,
+    SubjectStatusCode,
+};
+use chrono::{Days, NaiveDate, Utc};
 use once_cell::sync::Lazy;
-use std::time::Duration;
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::{RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
+use std::time::Duration;
 
 const BGM_API_HOST: &str = "https://api.bgm.tv";
 
@@ -64,7 +68,9 @@ where
     if resp.status() == StatusCode::NOT_MODIFIED {
         // 服务端确认缓存仍然有效，必须从缓存读取。
         // 若读取失败，则为缓存错误，不应重新拉取。
-        let cached_data = cache::get(key).await?.ok_or_else(|| AppError::CacheMissAfter304(key.to_string()))?;
+        let cached_data = cache::get(key)
+            .await?
+            .ok_or_else(|| AppError::CacheMissAfter304(key.to_string()))?;
         return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
     }
 
@@ -213,6 +219,118 @@ pub async fn fetch_episodes(
     fetch_api(&key, req_builder, 3600).await
 }
 
+fn parse_date(s: &str) -> Option<NaiveDate> {
+    NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()
+}
+
+fn latest_episode_airdate(episodes: &[Episode]) -> Option<String> {
+    let ep = episodes.iter().max_by(|a, b| {
+        a.sort
+            .partial_cmp(&b.sort)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    ep.map(|e| e.airdate.clone()).filter(|d| !d.is_empty())
+}
+
+pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
+    let subject = fetch_subject(id).await?;
+    let calendar = fetch_calendar().await?;
+
+    let calendar_on_air = calendar
+        .iter()
+        .any(|day| day.items.iter().any(|item| item.id == id));
+
+    let first_air_date: Option<String> = subject.date.clone();
+    let expected_eps: Option<u32> = subject.eps;
+    let mut current_eps: Option<u32> = subject.total_episodes;
+
+    let mut latest_airdate: Option<String> = None;
+
+    let initial_eps = fetch_episodes(id, None, Some(200), Some(0)).await?;
+    if current_eps.is_none() {
+        current_eps = Some(initial_eps.total);
+    }
+    if initial_eps.total > 0 {
+        let limit = initial_eps.limit;
+        let total = initial_eps.total;
+        let offset_last = if total <= limit { 0 } else { total - limit };
+        let last_page = if offset_last == 0 {
+            initial_eps
+        } else {
+            fetch_episodes(id, None, Some(limit), Some(offset_last)).await?
+        };
+        latest_airdate = latest_episode_airdate(&last_page.data);
+    }
+
+    let today = Utc::now().date_naive();
+    let window_days = 21u64;
+    let window_start = today
+        .checked_sub_days(Days::new(window_days))
+        .unwrap_or(today);
+
+    let first_air = first_air_date.as_ref().and_then(|d| parse_date(d));
+    let latest_air = latest_airdate.as_ref().and_then(|d| parse_date(d));
+
+    let finished = match (expected_eps, current_eps) {
+        (Some(exp), Some(cur)) if exp > 0 && cur >= exp => true,
+        _ => false,
+    };
+
+    let code = if let Some(fa) = first_air {
+        if fa > today {
+            SubjectStatusCode::PreAir
+        } else if calendar_on_air {
+            SubjectStatusCode::Airing
+        } else if finished {
+            SubjectStatusCode::Finished
+        } else if let Some(la) = latest_air {
+            if la >= window_start {
+                SubjectStatusCode::Airing
+            } else {
+                SubjectStatusCode::OnHiatus
+            }
+        } else {
+            SubjectStatusCode::Unknown
+        }
+    } else if calendar_on_air {
+        SubjectStatusCode::Airing
+    } else if finished {
+        SubjectStatusCode::Finished
+    } else if let Some(la) = latest_air {
+        if la >= window_start {
+            SubjectStatusCode::Airing
+        } else {
+            SubjectStatusCode::OnHiatus
+        }
+    } else {
+        SubjectStatusCode::Unknown
+    };
+
+    let reason = match code {
+        SubjectStatusCode::PreAir => "未开播".to_string(),
+        SubjectStatusCode::Airing => {
+            if calendar_on_air {
+                "当周日历在播".to_string()
+            } else {
+                "最近三周有更新".to_string()
+            }
+        }
+        SubjectStatusCode::Finished => "集数达成".to_string(),
+        SubjectStatusCode::OnHiatus => "超过三周未更新".to_string(),
+        SubjectStatusCode::Unknown => "信息不足".to_string(),
+    };
+
+    Ok(SubjectStatus {
+        code,
+        first_air_date,
+        latest_airdate,
+        expected_eps,
+        current_eps,
+        calendar_on_air,
+        reason,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,5 +372,17 @@ mod tests {
         let res = fetch_episodes(876, None, Some(100), Some(0)).await.unwrap();
         assert!(res.limit >= 1);
         assert!(res.data.len() as u32 <= res.limit);
+    }
+
+    #[tokio::test]
+    async fn test_calc_subject_status_returns_any_code() {
+        let res = calc_subject_status(12381).await.unwrap();
+        match res.code {
+            SubjectStatusCode::PreAir
+            | SubjectStatusCode::Airing
+            | SubjectStatusCode::Finished
+            | SubjectStatusCode::OnHiatus
+            | SubjectStatusCode::Unknown => {}
+        }
     }
 }

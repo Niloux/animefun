@@ -236,3 +236,29 @@ pub struct InfoItem {
     pub key: String,
     pub value: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+pub enum SubjectStatusCode {
+    PreAir,
+    Airing,
+    Finished,
+    OnHiatus,
+    Unknown,
+}
+
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
+pub struct SubjectStatus {
+    pub code: SubjectStatusCode,
+    #[ts(optional)]
+    pub first_air_date: Option<String>,
+    #[ts(optional)]
+    pub latest_airdate: Option<String>,
+    #[ts(optional)]
+    pub expected_eps: Option<u32>,
+    #[ts(optional)]
+    pub current_eps: Option<u32>,
+    pub calendar_on_air: bool,
+    pub reason: String,
+}

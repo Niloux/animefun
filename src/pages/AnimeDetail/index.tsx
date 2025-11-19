@@ -16,6 +16,9 @@ import { useEpisodes } from "../../hooks/use-episodes";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 import { useCachedImage } from "../../hooks/use-cached-image";
+import { Badge } from "../../components/ui/badge";
+import { getSubjectStatus } from "../../lib/api";
+import type { SubjectStatus } from "../../types/bangumi";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -33,6 +36,8 @@ const AnimeDetailPage = () => {
       "https://lain.bgm.tv/img/no_icon_subject.png"
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
+  const [status, setStatus] = useState<SubjectStatus | null>(null);
+  const [statusLoading, setStatusLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (anime) {
@@ -41,6 +46,22 @@ const AnimeDetailPage = () => {
         document.title = nextTitle;
       }
     }
+  }, [anime]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!anime) return;
+      try {
+        setStatusLoading(true);
+        const s = await getSubjectStatus(anime.id);
+        setStatus(s);
+      } catch {
+        setStatus(null);
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+    run();
   }, [anime]);
 
   useEffect(() => {
@@ -146,6 +167,38 @@ const AnimeDetailPage = () => {
               <div className="flex items-center gap-2">
                 <Film className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span>{anime.eps || anime.total_episodes || 0} 话</span>
+              </div>
+              <Separator orientation="vertical" />
+              <div className="flex items-center gap-2">
+                {statusLoading ? (
+                  <Badge variant="outline">状态加载中</Badge>
+                ) : status ? (
+                  <Badge
+                    variant={
+                      status.code === "Airing"
+                        ? "default"
+                        : status.code === "Finished"
+                        ? "secondary"
+                        : status.code === "OnHiatus"
+                        ? "destructive"
+                        : status.code === "PreAir"
+                        ? "outline"
+                        : "outline"
+                    }
+                  >
+                    {status.code === "Airing"
+                      ? "连载中"
+                      : status.code === "Finished"
+                      ? "已完结"
+                      : status.code === "OnHiatus"
+                      ? "停更"
+                      : status.code === "PreAir"
+                      ? "未开播"
+                      : "未知"}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">状态不可用</Badge>
+                )}
               </div>
             </div>
 

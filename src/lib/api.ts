@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { CalendarDay, Anime, PagedEpisode } from '../types/bangumi';
+import { CalendarDay, Anime, PagedEpisode, SubjectStatus } from '../types/bangumi';
 
 /**
  * 从后端获取番剧日历数据
@@ -59,6 +59,16 @@ export async function getEpisodes(
   } catch (error) {
     console.error("调用 'get_episodes' 失败:", error);
     throw new Error(`获取剧集列表失败 (Subject ID: ${subjectId})`);
+  }
+}
+
+export async function getSubjectStatus(id: number): Promise<SubjectStatus> {
+  try {
+    const data = await invoke<SubjectStatus>('get_subject_status', { id });
+    return data;
+  } catch (error) {
+    console.error("调用 'get_subject_status' 失败:", error);
+    throw new Error(`获取番剧状态失败 (ID: ${id})`);
   }
 }
 

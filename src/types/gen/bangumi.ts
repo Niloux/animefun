@@ -24,6 +24,10 @@ export type SubjectCollection = { wish: number, collect: number, doing: number, 
 
 export type SubjectRating = { rank?: number, total: number, count: { [key in string]?: number }, score: number, };
 
+export type SubjectStatus = { code: SubjectStatusCode, first_air_date?: string, latest_airdate?: string, expected_eps?: number, current_eps?: number, calendar_on_air: boolean, reason: string, };
+
+export type SubjectStatusCode = "PreAir" | "Airing" | "Finished" | "OnHiatus" | "Unknown";
+
 export type SubjectTag = { name: string, count: number, };
 
 export type Weekday = { en: string, cn: string, ja: string, id: number, };

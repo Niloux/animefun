@@ -20,6 +20,7 @@ pub fn run() {
             commands::calendar::get_calendar,
             commands::episodes::get_episodes,
             commands::subject::get_subject,
+            commands::subject::get_subject_status,
             commands::search::search_subject,
             commands::cache::cache_image,
         ])

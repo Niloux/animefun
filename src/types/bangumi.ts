@@ -5,6 +5,8 @@ import type {
   Weekday,
   CalendarItem as GenCalendarItem,
   InfoItem as GenInfoItem,
+  SubjectStatus as GenSubjectStatus,
+  SubjectStatusCode as GenSubjectStatusCode,
 } from "./gen/bangumi";
 
 export type InfoBoxItem = GenInfoItem;
@@ -27,3 +29,6 @@ export type CalendarDay = {
   weekday: Weekday;
   items: CalendarItem[];
 };
+
+export type SubjectStatus = GenSubjectStatus;
+export type SubjectStatusCode = GenSubjectStatusCode;
