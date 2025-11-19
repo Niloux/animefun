@@ -2,20 +2,10 @@ use once_cell::sync::OnceCell;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
-use crate::cache;
 use crate::error::AppError;
 use crate::infra::time::now_secs;
-use crate::models::bangumi::{SubjectStatus, SubjectStatusCode};
-use crate::services::bangumi_service;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-use tokio::sync::Semaphore;
-use tokio::time::{sleep, Duration};
 
-const REFRESH_CONCURRENCY: usize = 4;
-const REFRESH_LIMIT: usize = 50;
-const REFRESH_INTERVAL_SECS: u64 = 600;
-static REFRESH_OFFSET: AtomicUsize = AtomicUsize::new(0);
+static SUBS_DB_FILE: OnceCell<PathBuf> = OnceCell::new();
 
 fn db_file_path() -> Result<PathBuf, AppError> {
     if let Some(p) = SUBS_DB_FILE.get() {
@@ -109,74 +99,4 @@ pub async fn clear() -> Result<(), AppError> {
     })
     .await
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
-}
-
-static SUBS_DB_FILE: OnceCell<PathBuf> = OnceCell::new();
-
-fn status_ttl_secs(code: &SubjectStatusCode) -> i64 {
-    match code {
-        SubjectStatusCode::Airing => 6 * 3600,
-        SubjectStatusCode::PreAir => 24 * 3600,
-        SubjectStatusCode::Finished => 7 * 24 * 3600,
-        SubjectStatusCode::OnHiatus => 24 * 3600,
-        SubjectStatusCode::Unknown => 24 * 3600,
-    }
-}
-
-pub async fn get_status_cached(id: u32) -> Result<SubjectStatus, AppError> {
-    let key = format!("sub:status:{}", id);
-    if let Some(s) = cache::get(&key).await? {
-        let v: SubjectStatus = serde_json::from_str(&s)?;
-        return Ok(v);
-    }
-    let v = bangumi_service::calc_subject_status(id).await?;
-    if let Ok(s) = serde_json::to_string(&v) {
-        let ttl = status_ttl_secs(&v.code);
-        let _ = cache::set(&key, s, ttl).await;
-    }
-    Ok(v)
-}
-
-pub fn spawn_refresh_worker() {
-    tauri::async_runtime::spawn(async move {
-        loop {
-            let rows = match list().await {
-                Ok(v) => v,
-                Err(_) => {
-                    sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
-                    continue;
-                }
-            };
-            if rows.is_empty() {
-                sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
-                continue;
-            }
-            let sem = Arc::new(Semaphore::new(REFRESH_CONCURRENCY));
-            let mut handles = Vec::new();
-            let total = rows.len();
-            let start = REFRESH_OFFSET.load(Ordering::Relaxed) % total;
-            let end = std::cmp::min(total, start + REFRESH_LIMIT);
-            let mut slice: Vec<(u32, i64, bool)> = rows[start..end].to_vec();
-            if slice.len() < REFRESH_LIMIT {
-                let remain = REFRESH_LIMIT - slice.len();
-                let extra_end = std::cmp::min(remain, total);
-                slice.extend_from_slice(&rows[..extra_end]);
-            }
-            let processed = slice.len();
-            for (id, _added_at, _notify) in slice.into_iter() {
-                let sem_clone = Arc::clone(&sem);
-                handles.push(tokio::spawn(async move {
-                    if let Ok(_permit) = sem_clone.acquire_owned().await {
-                        let _ = get_status_cached(id).await;
-                    }
-                }));
-            }
-            for h in handles {
-                let _ = h.await;
-            }
-            let next = (start + processed) % total;
-            REFRESH_OFFSET.store(next, Ordering::Relaxed);
-            sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
-        }
-    });
 }
