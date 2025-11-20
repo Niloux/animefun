@@ -42,7 +42,10 @@ export function matchTier(q: string, a: Anime): number {
 
 export function sortAnimeList(arr: Anime[], sort: string): Anime[] {
   const byScore = (a: Anime) => a.rating?.score ?? 0;
-  const byRank = (a: Anime) => a.rating?.rank ?? Number.POSITIVE_INFINITY;
+  const byRank = (a: Anime) => {
+    const r = a.rating?.rank ?? 0;
+    return r > 0 ? r : Number.POSITIVE_INFINITY;
+  };
   const byHeat = (a: Anime) => {
     const pop = (a.collection?.doing ?? 0) + (a.collection?.collect ?? 0);
     const votes = a.rating?.total ?? 0;

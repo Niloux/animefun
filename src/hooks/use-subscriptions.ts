@@ -34,19 +34,19 @@ export function useSubscriptions() {
     [items]
   );
 
-  const toggle = useCallback((anime: Anime) => {
-    (async () => {
-      try {
-        const subscribed = await toggleSubscription(anime.id);
-        if (subscribed) {
-          setItems((prev) => [{ id: anime.id, anime, addedAt: Date.now() }, ...prev.filter((x) => x.id !== anime.id)]);
-        } else {
-          setItems((prev) => prev.filter((x) => x.id !== anime.id));
-        }
-      } catch (e) {
-        console.error(e);
+  const toggle = useCallback(async (anime: Anime): Promise<boolean> => {
+    try {
+      const subscribed = await toggleSubscription(anime.id);
+      if (subscribed) {
+        setItems((prev) => [{ id: anime.id, anime, addedAt: Date.now() }, ...prev.filter((x) => x.id !== anime.id)]);
+      } else {
+        setItems((prev) => prev.filter((x) => x.id !== anime.id));
       }
-    })();
+      return subscribed;
+    } catch (e) {
+      console.error(e);
+      throw e as Error;
+    }
   }, []);
 
   const list = useMemo(() => items.map((x) => x.anime), [items]);
