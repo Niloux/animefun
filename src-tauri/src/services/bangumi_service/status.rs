@@ -85,12 +85,7 @@ fn status_reason(code: &SubjectStatusCode, calendar_on_air: bool) -> String {
 }
 
 pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
-    let (subject_res, calendar_res, initial_eps_res) = tokio::join!(
-        fetch_subject(id),
-        fetch_calendar(),
-        // 直接按最大数取，减少超长篇动画的剧集请求次数
-        fetch_episodes(id, None, Some(1000), Some(0)),
-    );
+    let (subject_res, calendar_res) = tokio::join!(fetch_subject(id), fetch_calendar(),);
     let subject = subject_res?;
     let calendar = calendar_res?;
     let calendar_on_air = calendar
@@ -100,26 +95,35 @@ pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
     let expected_eps: Option<u32> = subject.eps;
     let mut current_eps: Option<u32> = subject.total_episodes;
     let mut latest_airdate: Option<String> = None;
-    let initial_eps = initial_eps_res?;
-    if current_eps.is_none() {
-        current_eps = Some(initial_eps.total);
-    }
-    if initial_eps.total > 0 {
-        let limit = initial_eps.limit.max(1);
-        let total = initial_eps.total;
-        let offset_last = ((total.saturating_sub(1)) / limit) * limit;
-        let last_page = if offset_last == initial_eps.offset {
-            initial_eps
-        } else {
-            fetch_episodes(id, None, Some(limit), Some(offset_last)).await?
-        };
-        latest_airdate = latest_episode_airdate(&last_page.data);
-    }
+
     let today = Utc::now().date_naive();
     let window_start = today
         .checked_sub_days(Days::new(RECENT_WINDOW_DAYS))
         .unwrap_or(today);
     let first_air = first_air_date.as_ref().and_then(|d| parse_date(d));
+
+    let pre_air = matches!(first_air, Some(fa) if fa > today);
+    if !pre_air && !calendar_on_air {
+        if current_eps.is_none() && expected_eps.is_some() {
+            let first_page = fetch_episodes(id, Some(0), Some(1), Some(0)).await?;
+            current_eps = Some(first_page.total);
+        }
+        let finished = is_finished(expected_eps, current_eps);
+        if !finished {
+            let total_norm = if let Some(n) = current_eps {
+                n
+            } else {
+                let fp = fetch_episodes(id, Some(0), Some(1), Some(0)).await?;
+                fp.total
+            };
+            if total_norm > 0 {
+                let offset_last = total_norm.saturating_sub(1);
+                let last_page = fetch_episodes(id, Some(0), Some(1), Some(offset_last)).await?;
+                latest_airdate = latest_episode_airdate(&last_page.data);
+            }
+        }
+    }
+
     let latest_air = latest_airdate.as_ref().and_then(|d| parse_date(d));
     let finished = is_finished(expected_eps, current_eps);
     let code = determine_code(
