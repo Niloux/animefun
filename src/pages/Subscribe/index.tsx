@@ -19,6 +19,7 @@ import {
   PaginationEllipsis,
 } from "../../components/ui/pagination";
 import { visiblePages } from "@/lib/pagination";
+import type { Anime } from "@/types/bangumi";
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const SubscribePage = () => {
     setPage,
     submit,
     hasKeywords,
+    submitted,
   } = useSubscriptionSearch({ limit: 20 });
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
   const [listPage, setListPage] = useState<number>(1);
@@ -45,10 +47,43 @@ const SubscribePage = () => {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const totalListPages = Math.max(1, Math.ceil(items.length / limit));
   const safeListPage = Math.min(listPage, totalListPages);
-  const getVisiblePages = (current: number, totalP: number): (number | "ellipsis")[] => visiblePages(totalP, current);
-  const hasActiveFilters = (filters.genres.length > 0) || (filters.minRating > 0) || (filters.maxRating < 10) || !!(filters.statusCode ?? null);
-  const hasSortActive = filters.sort !== "heat";
-  const searchMode = hasKeywords || hasActiveFilters || hasSortActive;
+  const getVisiblePages = (
+    current: number,
+    totalP: number
+  ): (number | "ellipsis")[] => visiblePages(totalP, current);
+  const hasActiveFilters =
+    filters.genres.length > 0 ||
+    filters.minRating > 0 ||
+    filters.maxRating < 10 ||
+    !!(filters.statusCode ?? null);
+  const searchMode = submitted && (hasKeywords || hasActiveFilters);
+
+  const sortSubscriptions = (arr: Anime[], sort: string): Anime[] => {
+    const byScore = (a: Anime) => a.rating?.score ?? 0;
+    const byRank = (a: Anime) => a.rating?.rank ?? Number.POSITIVE_INFINITY;
+    const byHeat = (a: Anime) => {
+      const pop = (a.collection?.doing ?? 0) + (a.collection?.collect ?? 0);
+      const votes = a.rating?.total ?? 0;
+      return pop > 0 ? pop : votes;
+    };
+    const listCopy = [...arr];
+    switch (sort) {
+      case "score":
+        return listCopy.sort((a, b) => byScore(b) - byScore(a));
+      case "rank":
+        return listCopy.sort((a, b) => byRank(a) - byRank(b));
+      case "heat":
+        return listCopy.sort((a, b) => byHeat(b) - byHeat(a));
+      case "match":
+        return listCopy.sort((a, b) => byScore(b) - byScore(a));
+      default:
+        return listCopy;
+    }
+  };
+  const sortedItems = useMemo(
+    () => sortSubscriptions(items, filters.sort),
+    [items, filters.sort]
+  );
 
   return (
     <div className="px-4 py-0 space-y-4">
@@ -56,7 +91,10 @@ const SubscribePage = () => {
         <div className="grow">
           <AutoComplete
             query={query}
-            onQueryChange={(v) => { setQuery(v); setPage(1); }}
+            onQueryChange={(v) => {
+              setQuery(v);
+              setPage(1);
+            }}
             onEnter={() => submit()}
             onSelect={(anime) => {
               navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
@@ -197,7 +235,7 @@ const SubscribePage = () => {
       {searchMode ? (
         isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-            {Array.from({ length: 20 }).map((_, i) => (
+            {Array.from({ length: limit }).map((_, i) => (
               <div
                 key={i}
                 className="bg-card rounded-xl shadow-md overflow-hidden border border-border/60"
@@ -217,7 +255,10 @@ const SubscribePage = () => {
         <div className="text-muted-foreground">暂无订阅</div>
       ) : (
         <AnimeGrid
-          items={items.slice((safeListPage - 1) * limit, safeListPage * limit)}
+          items={sortedItems.slice(
+            (safeListPage - 1) * limit,
+            safeListPage * limit
+          )}
         />
       )}
 

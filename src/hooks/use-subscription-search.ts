@@ -26,7 +26,7 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
       const f = s.filters;
       const hasActiveFilters = (f.genres.length > 0) || (f.minRating > 0) || (f.maxRating < 10) || !!(f.statusCode ?? null);
       const hasKeywords = s.keywords.trim().length > 0;
-      return hasKeywords || hasActiveFilters;
+      return s.submitted && (hasKeywords || hasActiveFilters);
     },
     queryFn: async ({ debouncedKeywords, filters, limit, offset }) => {
       const normalizedGenres = [...filters.genres].sort();
