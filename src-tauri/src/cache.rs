@@ -80,7 +80,8 @@ pub async fn set(key: &str, value: String, ttl_secs: i64) -> Result<(), AppError
         let conn = Connection::open(path)?;
         ensure_table(&conn)?;
         let now = now_secs();
-        let expires = now + ttl_secs;
+        let ttl = if ttl_secs <= 0 { 1 } else { ttl_secs };
+        let expires = now + ttl;
         conn.execute(
             "INSERT INTO cache(key, value, updated_at, expires_at) VALUES(?1, ?2, ?3, ?4)
              ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, expires_at=excluded.expires_at",
