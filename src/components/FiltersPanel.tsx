@@ -42,6 +42,7 @@ interface FiltersPanelProps {
   }) => void;
   onApply: () => void;
   showStatusFilter?: boolean;
+  hasKeywords?: boolean;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -51,6 +52,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   onFilterChange,
   onApply,
   showStatusFilter = false,
+  hasKeywords = false,
 }) => {
   const [tagInput, setTagInput] = useState("");
   const animeGenres = [
@@ -91,7 +93,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   };
 
   const handleSortChange = (value: string) => {
-    onFilterChange({ ...filters, sort: value });
+    const v = !hasKeywords && value === "match" ? "heat" : value;
+    onFilterChange({ ...filters, sort: v });
   };
 
   const handleMinRatingChange = (value: string) => {
@@ -129,7 +132,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         <div className="p-4 space-y-6">
           <div className="space-y-2">
             <Label>排序方式</Label>
-            <Select value={filters.sort} onValueChange={handleSortChange}>
+            <Select
+              value={!hasKeywords && filters.sort === "match" ? "heat" : filters.sort}
+              onValueChange={handleSortChange}
+            >
               <SelectTrigger className="w-full border-border">
                 <SelectValue placeholder="选择排序" />
               </SelectTrigger>
@@ -137,7 +143,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 <SelectItem value="heat">热度</SelectItem>
                 <SelectItem value="rank">排名</SelectItem>
                 <SelectItem value="score">评分</SelectItem>
-                <SelectItem value="match">匹配度</SelectItem>
+                {hasKeywords && <SelectItem value="match">匹配度</SelectItem>}
               </SelectContent>
             </Select>
           </div>

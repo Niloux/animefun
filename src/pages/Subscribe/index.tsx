@@ -19,7 +19,7 @@ import {
   PaginationEllipsis,
 } from "../../components/ui/pagination";
 import { visiblePages } from "@/lib/pagination";
-import type { Anime } from "@/types/bangumi";
+import { sortAnimeList } from "@/lib/utils";
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -58,30 +58,8 @@ const SubscribePage = () => {
     !!(filters.statusCode ?? null);
   const searchMode = submitted && (hasKeywords || hasActiveFilters);
 
-  const sortSubscriptions = (arr: Anime[], sort: string): Anime[] => {
-    const byScore = (a: Anime) => a.rating?.score ?? 0;
-    const byRank = (a: Anime) => a.rating?.rank ?? Number.POSITIVE_INFINITY;
-    const byHeat = (a: Anime) => {
-      const pop = (a.collection?.doing ?? 0) + (a.collection?.collect ?? 0);
-      const votes = a.rating?.total ?? 0;
-      return pop > 0 ? pop : votes;
-    };
-    const listCopy = [...arr];
-    switch (sort) {
-      case "score":
-        return listCopy.sort((a, b) => byScore(b) - byScore(a));
-      case "rank":
-        return listCopy.sort((a, b) => byRank(a) - byRank(b));
-      case "heat":
-        return listCopy.sort((a, b) => byHeat(b) - byHeat(a));
-      case "match":
-        return listCopy.sort((a, b) => byScore(b) - byScore(a));
-      default:
-        return listCopy;
-    }
-  };
   const sortedItems = useMemo(
-    () => sortSubscriptions(items, filters.sort),
+    () => sortAnimeList(items, filters.sort),
     [items, filters.sort]
   );
 
@@ -208,6 +186,7 @@ const SubscribePage = () => {
           }}
           onApply={() => submit()}
           showStatusFilter
+          hasKeywords={hasKeywords}
         />
       )}
 

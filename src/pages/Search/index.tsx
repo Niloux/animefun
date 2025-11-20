@@ -172,6 +172,7 @@ const SearchPage = () => {
         filters={filters}
         onFilterChange={handleFilterChange}
         onApply={handleApplyFilters}
+        hasKeywords={query.trim().length > 0}
       />
 
       {/* Overlay */}
