@@ -27,7 +27,7 @@ const AnimeDetailPage = () => {
   const { loading: epsLoading } = useEpisodes(id ? Number(id) : undefined);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
-  const { isSubscribed, toggle } = useSubscriptions();
+  const { isSubscribed, toggle } = useSubscriptions({ mode: "ids" });
   const rawImgSrc = anime
     ? anime.images?.large ||
       anime.images?.common ||

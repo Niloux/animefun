@@ -32,7 +32,9 @@ pub fn run() {
             commands::search::search_subject,
             commands::cache::cache_image,
             commands::subscriptions::sub_list,
+            commands::subscriptions::sub_list_ids,
             commands::subscriptions::sub_toggle,
+            commands::subscriptions::sub_has,
             commands::subscriptions::sub_clear,
             commands::subscriptions::sub_query,
         ])

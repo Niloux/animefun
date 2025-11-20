@@ -148,6 +148,16 @@ export async function getSubscriptions(): Promise<{ id: number; anime: Anime; ad
   return Array.isArray(data) ? data : [];
 }
 
+export async function getSubscriptionIds(): Promise<number[]> {
+  const data = await invoke<number[]>("sub_list_ids");
+  return Array.isArray(data) ? data : [];
+}
+
+export async function hasSubscription(id: number): Promise<boolean> {
+  const res = await invoke<boolean>("sub_has", { id });
+  return !!res;
+}
+
 export async function toggleSubscription(id: number): Promise<boolean> {
   const res = await invoke<boolean>("sub_toggle", { id });
   return !!res;

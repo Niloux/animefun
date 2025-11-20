@@ -61,6 +61,38 @@ pub async fn list() -> Result<Vec<(u32, i64, bool)>, AppError> {
     .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
 }
 
+pub async fn list_ids() -> Result<Vec<u32>, AppError> {
+    tokio::task::spawn_blocking(move || {
+        let path = db_file_path()?;
+        let conn = Connection::open(path)?;
+        ensure_table(&conn)?;
+        let mut stmt =
+            conn.prepare("SELECT subject_id FROM subscriptions ORDER BY added_at DESC")?;
+        let mut rows = stmt.query([])?;
+        let mut out: Vec<u32> = Vec::new();
+        while let Some(row) = rows.next()? {
+            let id: u32 = row.get::<_, i64>(0)? as u32;
+            out.push(id);
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+}
+
+pub async fn has(id: u32) -> Result<bool, AppError> {
+    tokio::task::spawn_blocking(move || {
+        let path = db_file_path()?;
+        let conn = Connection::open(path)?;
+        ensure_table(&conn)?;
+        let mut stmt = conn.prepare("SELECT 1 FROM subscriptions WHERE subject_id = ?1")?;
+        let exists = stmt.exists(params![id as i64])?;
+        Ok(exists)
+    })
+    .await
+    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+}
+
 pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
     tokio::task::spawn_blocking(move || {
         let path = db_file_path()?;
