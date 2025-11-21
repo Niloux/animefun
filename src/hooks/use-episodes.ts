@@ -5,10 +5,13 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useToastOnError } from './use-toast-on-error';
 
 // 分页常量定义
-const PAGE_LIMIT = 18; // 每页展示 18 条（3 行 × 每行 6 条）
+const PAGE_LIMIT = 18;
+const UI_LIMIT = 6;
+const SUBS_PER_BASE = PAGE_LIMIT / UI_LIMIT;
 
 export const useEpisodes = (subjectId: number | undefined) => {
   const [pageBase, setPageBase] = useState(0);
+  const [subIndex, setSubIndex] = useState(0);
   const queryClient = useQueryClient();
 
   const query = useInfiniteQuery<PagedEpisode>({
@@ -47,26 +50,14 @@ export const useEpisodes = (subjectId: number | undefined) => {
   });
 
 
-  // 加载下一页
-  const loadNextPage = useCallback(() => {
-    if (query.hasNextPage && !query.isFetching) {
-      query.fetchNextPage();
-    }
-  }, [query]);
-
-  // 加载上一页
-  const loadPreviousPage = useCallback(() => {
-    if (pageBase > 0 && !query.isFetching) {
-      setPageBase((p) => Math.max(0, p - 1));
-    }
-  }, [pageBase, query.isFetching]);
-
-  // 跳转到指定页
   const jumpToPage = useCallback((page: number) => {
     const lastTotal = query.data?.pages?.[query.data.pages.length - 1]?.total ?? 0;
-    const tp = Math.ceil(lastTotal / PAGE_LIMIT);
+    const tp = Math.ceil(lastTotal / UI_LIMIT);
     if (page >= 0 && page < tp && !query.isFetching) {
-      setPageBase(page);
+      const targetBase = Math.floor(page / SUBS_PER_BASE);
+      const targetSub = page % SUBS_PER_BASE;
+      setSubIndex(targetSub);
+      setPageBase(targetBase);
     }
   }, [query.data, query.isFetching]);
 
@@ -76,20 +67,36 @@ export const useEpisodes = (subjectId: number | undefined) => {
   }, [query]);
 
 
-  const flatEpisodes = (query.data?.pages ?? []).flatMap((p) => p.data ?? []);
   const last = query.data?.pages?.[query.data.pages.length - 1];
   const totalEpisodes = last?.total ?? 0;
-  const totalPages = Math.ceil(totalEpisodes / PAGE_LIMIT);
-  const currentPage = pageBase + Math.max(0, (query.data?.pages?.length ?? 1) - 1);
+  const totalPages = Math.ceil(totalEpisodes / UI_LIMIT);
+  const currentPage = Math.min(totalPages - 1, pageBase * SUBS_PER_BASE + subIndex);
+  const start = subIndex * UI_LIMIT;
+  const end = start + UI_LIMIT;
+  const pageEpisodes = (last?.data ?? []).slice(start, end);
+
+  const loadNextPage = useCallback(() => {
+    const next = currentPage + 1;
+    if (next < totalPages && !query.isFetching) {
+      jumpToPage(next);
+    }
+  }, [currentPage, totalPages, query.isFetching, jumpToPage]);
+
+  const loadPreviousPage = useCallback(() => {
+    const prev = currentPage - 1;
+    if (prev >= 0 && !query.isFetching) {
+      jumpToPage(prev);
+    }
+  }, [currentPage, query.isFetching, jumpToPage]);
 
   return {
-    episodes: flatEpisodes,
+    episodes: pageEpisodes,
     loading: query.isFetching,
     error: query.error ? (query.error as Error).message : null,
     currentPage,
     totalPages,
     totalEpisodes,
-    hasMore: !!query.hasNextPage,
+    hasMore: currentPage + 1 < totalPages,
     loadNextPage,
     loadPreviousPage,
     jumpToPage,

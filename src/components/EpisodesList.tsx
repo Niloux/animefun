@@ -1,61 +1,48 @@
-import React, { useRef, useEffect, useMemo } from 'react';
-import { Eye, Clock, ChevronDown } from 'lucide-react';
-import { Button } from './ui/button';
-import { Spinner } from './ui/spinner';
+import React, { useMemo } from "react";
+import { Eye, Clock, ChevronDown } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from "./ui/pagination";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu';
-import { useEpisodes } from '../hooks/use-episodes';
+} from "./ui/dropdown-menu";
+import { useEpisodes } from "../hooks/use-episodes";
+import { visiblePages } from "../lib/pagination";
 
 interface EpisodesListProps {
   subjectId: number;
 }
 
 const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
-  const { episodes, loading, error, hasMore, loadNextPage, reload, currentPage, totalPages, jumpToPage } = useEpisodes(subjectId);
-  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
-
-  
+  const {
+    episodes,
+    loading,
+    error,
+    reload,
+    currentPage,
+    totalPages,
+    totalEpisodes,
+    jumpToPage,
+  } = useEpisodes(subjectId);
 
   // 发生错误时重新加载
   const handleReload = () => {
     reload();
   };
-
-  // 无限滚动：滚动到底部时加载更多
-  useEffect(() => {
-    if (!hasMore || loading) return;
-
-    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
-      return;
-    }
-
-    const observer = new window.IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && hasMore && !loading) {
-            loadNextPage();
-          }
-        });
-      },
-      { threshold: 0.25 }
-    );
-
-    const triggerElement = loadMoreTriggerRef.current;
-    if (triggerElement) {
-      observer.observe(triggerElement);
-    }
-
-    // 组件卸载时清理观察器
-    return () => {
-      if (triggerElement) {
-        observer.unobserve(triggerElement);
-      }
-    };
-  }, [hasMore, loading, loadNextPage]);
+  const pages = useMemo(
+    () => visiblePages(Math.max(1, totalPages), currentPage + 1),
+    [totalPages, currentPage]
+  );
 
   // 生成快速跳页的页码项
   const pageItems = useMemo(() => {
@@ -65,7 +52,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
         <DropdownMenuItem
           key={i}
           onSelect={() => jumpToPage(i)}
-          className={`cursor-pointer ${currentPage === i ? 'bg-primary/10' : ''}`}
+          className={`cursor-pointer ${currentPage === i ? "bg-primary/10" : ""}`}
         >
           <div className="flex items-center justify-between w-full">
             <span>第 {i + 1} 页</span>
@@ -85,8 +72,12 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
       <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">剧集列表</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">已加载 {episodes.length} 话</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              剧集列表
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              共 {totalEpisodes} 话
+            </p>
           </div>
 
           {/* 快速跳页下拉菜单 */}
@@ -118,7 +109,12 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
       {error && (
         <div className="px-6 py-4 text-red-600 dark:text-red-400">
           <p>{error}</p>
-          <Button variant="outline" size="sm" onClick={handleReload} className="mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReload}
+            className="mt-2"
+          >
             重试
           </Button>
         </div>
@@ -145,7 +141,9 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
                       <span className="inline-flex items-center justify-center w-10 h-10 bg-blue-500 text-white text-sm font-bold rounded-lg">
                         {episode.ep?.toFixed(0)}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{episode.airdate}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {episode.airdate}
+                      </span>
                     </div>
 
                     {/* 剧集标题 */}
@@ -154,7 +152,9 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
                         {episode.name_cn || episode.name}
                       </p>
                       {episode.name !== episode.name_cn && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">{episode.name}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
+                          {episode.name}
+                        </p>
                       )}
                     </div>
 
@@ -162,11 +162,18 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
                     <div className="pt-3 mt-auto border-t border-gray-100 dark:border-slate-700 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                         <Eye className="w-3 h-3" aria-hidden="true" />
-                        <span>{episode.comment_str || episode.comment.toLocaleString()}</span>
+                        <span>
+                          {episode.comment_str ||
+                            episode.comment.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                         <Clock className="w-3 h-3" aria-hidden="true" />
-                        <span>{episode.duration_display || episode.duration || 'N/A'}</span>
+                        <span>
+                          {episode.duration_display ||
+                            episode.duration ||
+                            "N/A"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -174,18 +181,44 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
               ))}
             </div>
 
-            {/* 无限滚动触发器 */}
-            {hasMore && (
-              <div ref={loadMoreTriggerRef} className="text-center py-4">
-                <Spinner className="w-5 h-5 mx-auto" />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">加载更多剧集...</p>
-              </div>
-            )}
-
-            {!hasMore && episodes.length > 0 && (
-              <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
-                已加载全部剧集
-              </div>
+            {totalPages > 1 && (
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => jumpToPage(Math.max(0, currentPage - 1))}
+                      aria-disabled={currentPage === 0 || loading}
+                    />
+                  </PaginationItem>
+                  {pages.map((p, idx) =>
+                    p === "ellipsis" ? (
+                      <PaginationItem key={`e-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          isActive={p === currentPage + 1}
+                          onClick={() => jumpToPage(p - 1)}
+                          aria-disabled={loading}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => {
+                        if (currentPage + 1 < totalPages) {
+                          jumpToPage(currentPage + 1);
+                        }
+                      }}
+                      aria-disabled={currentPage + 1 >= totalPages || loading}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             )}
           </>
         ) : !loading && episodes.length === 0 ? (
