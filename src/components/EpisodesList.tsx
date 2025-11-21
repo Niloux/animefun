@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Eye, Clock, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -18,12 +18,30 @@ import {
 } from "./ui/dropdown-menu";
 import { useEpisodes } from "../hooks/use-episodes";
 import { visiblePages } from "../lib/pagination";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerClose,
+} from "./ui/drawer";
+import { ScrollArea } from "./ui/scroll-area";
+import type {
+  MikanResourceItem,
+  MikanResourcesResponse,
+} from "../types/gen/mikan";
 
 interface EpisodesListProps {
   subjectId: number;
+  resources?: MikanResourcesResponse | null;
 }
 
-const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
+const EpisodesList: React.FC<EpisodesListProps> = ({
+  subjectId,
+  resources,
+}) => {
   const {
     episodes,
     loading,
@@ -34,6 +52,52 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
     totalEpisodes,
     jumpToPage,
   } = useEpisodes(subjectId);
+
+  const [open, setOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const selectedEpisode = useMemo(
+    () => episodes.find((e) => e.id === selectedId) || null,
+    [episodes, selectedId]
+  );
+
+  const episodeNo = selectedEpisode
+    ? (selectedEpisode.sort ?? selectedEpisode.ep)
+    : null;
+
+  const rangeHit = useCallback((range?: string, no?: number) => {
+    if (!range || typeof no !== "number") return false;
+    const m = range.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
+    if (m) {
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      return no >= a && no <= b;
+    }
+    const n = range.match(/(\d{1,3})/);
+    if (n) {
+      const v = parseInt(n[1], 10);
+      return no === v;
+    }
+    return false;
+  }, []);
+
+  const matchedItems = useMemo<MikanResourceItem[]>(() => {
+    if (!resources?.mapped || !resources.items || !episodeNo) return [];
+    return resources.items.filter((it) => {
+      if (typeof it.episode === "number") return it.episode === episodeNo;
+      return rangeHit(it.episode_range, episodeNo);
+    });
+  }, [resources, episodeNo, rangeHit]);
+
+  const grouped = useMemo(() => {
+    const m = new Map<string, MikanResourceItem[]>();
+    for (const it of matchedItems) {
+      const g = it.group || "未知字幕组";
+      const arr = m.get(g) || [];
+      arr.push(it);
+      m.set(g, arr);
+    }
+    return Array.from(m.entries()).map(([group, items]) => ({ group, items }));
+  }, [matchedItems]);
 
   // 发生错误时重新加载
   const handleReload = () => {
@@ -134,12 +198,24 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
                 <div
                   key={episode.id}
                   className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer p-4 flex flex-col h-40"
+                  onClick={() => {
+                    setSelectedId(episode.id);
+                    setOpen(true);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setSelectedId(episode.id);
+                      setOpen(true);
+                    }
+                  }}
                 >
                   <div className="relative flex flex-col h-full">
                     {/* 集数与日期 */}
                     <div className="flex items-center justify-between mb-3">
                       <span className="inline-flex items-center justify-center w-10 h-10 bg-blue-500 text-white text-sm font-bold rounded-lg">
-                        {episode.ep?.toFixed(0)}
+                        {episode.sort.toFixed(0)}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {episode.airdate}
@@ -235,6 +311,114 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
           </div>
         ) : null}
       </div>
+
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-2xl">
+            <DrawerHeader>
+              <DrawerTitle>
+                {selectedEpisode ? `第 ${episodeNo} 话资源` : "资源"}
+              </DrawerTitle>
+              <DrawerDescription>
+                {selectedEpisode
+                  ? selectedEpisode.name_cn || selectedEpisode.name
+                  : ""}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4 pt-0">
+              {resources && !resources.mapped ? (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  未命中
+                </div>
+              ) : matchedItems.length === 0 ? (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  暂无资源
+                </div>
+              ) : (
+                <ScrollArea className="h-[50vh]">
+                  <div className="space-y-4">
+                    {grouped.map((g) => (
+                      <div key={g.group} className="border rounded-md">
+                        <div className="px-3 py-2 font-semibold text-sm">
+                          {g.group}
+                        </div>
+                        <div className="divide-y">
+                          {g.items.map((it, idx) => (
+                            <div key={idx} className="p-3 space-y-2">
+                              <div className="text-sm font-medium">
+                                {it.title}
+                              </div>
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                {it.page_url && (
+                                  <a
+                                    href={it.page_url}
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    页面
+                                  </a>
+                                )}
+                                {it.torrent_url && (
+                                  <a
+                                    href={it.torrent_url}
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    种子
+                                  </a>
+                                )}
+                                {it.magnet && (
+                                  <button
+                                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                                    onClick={() =>
+                                      navigator.clipboard?.writeText(
+                                        it.magnet as string
+                                      )
+                                    }
+                                  >
+                                    复制磁力
+                                  </button>
+                                )}
+                                {it.pub_date && (
+                                  <span className="text-muted-foreground">
+                                    {it.pub_date}
+                                  </span>
+                                )}
+                                {typeof it.resolution === "number" && (
+                                  <span className="text-muted-foreground">
+                                    {it.resolution}p
+                                  </span>
+                                )}
+                                {it.subtitle_lang && (
+                                  <span className="text-muted-foreground">
+                                    {it.subtitle_lang}
+                                  </span>
+                                )}
+                                {it.subtitle_type && (
+                                  <span className="text-muted-foreground">
+                                    {it.subtitle_type}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant="outline">关闭</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
