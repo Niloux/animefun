@@ -255,7 +255,7 @@ fn leading_group(text: &str) -> Option<String> {
 
 fn any_group(text: &str) -> Option<String> {
     let t = text;
-    let pairs = [('[', ']'), ('(', ')'), ('{', '}'), ('【', '】')];
+    let _pairs = [('[', ']'), ('(', ')'), ('{', '}'), ('【', '】')];
     for (i, ch) in t.char_indices() {
         let right = match ch {
             '[' => Some(']'),

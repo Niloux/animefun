@@ -13,13 +13,13 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             crate::infra::log::init();
-            let base = crate::infra::path::app_base_dir(&app.handle());
+            let base = crate::infra::path::app_base_dir(app.handle());
             cache::init(base).map_err(|e| e.to_string())?;
-            let base2 = crate::infra::path::app_base_dir(&app.handle());
+            let base2 = crate::infra::path::app_base_dir(app.handle());
             subscriptions::init(base2).map_err(|e| e.to_string())?;
-            let base3 = crate::infra::path::app_base_dir(&app.handle());
+            let base3 = crate::infra::path::app_base_dir(app.handle());
             crate::services::mikan_service::init(base3).map_err(|e| e.to_string())?;
-            let _ = tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
+            tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),
             ));
             subscriptions::spawn_refresh_worker();

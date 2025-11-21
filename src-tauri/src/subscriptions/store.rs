@@ -58,7 +58,7 @@ pub async fn list() -> Result<Vec<(u32, i64, bool)>, AppError> {
         Ok(out)
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    .map_err(|_| std::io::Error::other("join"))?
 }
 
 pub async fn list_ids() -> Result<Vec<u32>, AppError> {
@@ -77,7 +77,7 @@ pub async fn list_ids() -> Result<Vec<u32>, AppError> {
         Ok(out)
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    .map_err(|_| std::io::Error::other("join"))?
 }
 
 pub async fn has(id: u32) -> Result<bool, AppError> {
@@ -90,7 +90,7 @@ pub async fn has(id: u32) -> Result<bool, AppError> {
         Ok(exists)
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    .map_err(|_| std::io::Error::other("join"))?
 }
 
 pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
@@ -119,7 +119,7 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
         }
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    .map_err(|_| std::io::Error::other("join"))?
 }
 
 pub async fn clear() -> Result<(), AppError> {
@@ -131,7 +131,7 @@ pub async fn clear() -> Result<(), AppError> {
         Ok(())
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    .map_err(|_| std::io::Error::other("join"))?
 }
 
 #[cfg(test)]

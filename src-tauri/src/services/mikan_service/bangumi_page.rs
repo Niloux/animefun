@@ -35,13 +35,10 @@ fn parse_subject_id(href: &str) -> Option<u32> {
     for dom in ["bgm.tv", "bangumi.tv", "chii.in"] {
         let p1 = format!("{}/subject/", dom);
         let p2 = format!("//{}/subject/", dom);
-        let pos_opt = if let Some(pos) = href.find(&p1) {
-            Some(pos + p1.len())
-        } else if let Some(pos2) = href.find(&p2) {
-            Some(pos2 + p2.len())
-        } else {
-            None
-        };
+        let pos_opt = href
+            .find(&p1)
+            .map(|pos| pos + p1.len())
+            .or_else(|| href.find(&p2).map(|pos2| pos2 + p2.len()));
         if let Some(start) = pos_opt {
             let s = &href[start..];
             let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
