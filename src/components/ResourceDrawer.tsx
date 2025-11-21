@@ -15,7 +15,6 @@ import {
   SelectItem,
   SelectValue,
 } from "./ui/select";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
@@ -165,20 +164,6 @@ export function ResourceDrawer({
                     清除筛选
                   </Button>
                 )}
-
-                {(groupFilter || resFilter || sublangFilter) && (
-                  <div className="flex flex-wrap items-center gap-1">
-                    {groupFilter && (
-                      <Badge variant="secondary">{groupFilter}</Badge>
-                    )}
-                    {resFilter && (
-                      <Badge variant="secondary">{resFilter}p</Badge>
-                    )}
-                    {sublangFilter && (
-                      <Badge variant="secondary">{sublangFilter}</Badge>
-                    )}
-                  </div>
-                )}
               </div>
             )}
             {resources && !mapped ? (
@@ -224,23 +209,6 @@ export function ResourceDrawer({
                                   种子
                                 </a>
                               )}
-                              {it.magnet && (
-                                <button
-                                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                                  onClick={() =>
-                                    navigator.clipboard?.writeText(
-                                      it.magnet as string
-                                    )
-                                  }
-                                >
-                                  复制磁力
-                                </button>
-                              )}
-                              {it.pub_date && (
-                                <span className="text-muted-foreground">
-                                  {it.pub_date}
-                                </span>
-                              )}
                               {typeof it.resolution === "number" && (
                                 <span className="text-muted-foreground">
                                   {it.resolution}p
@@ -249,11 +217,6 @@ export function ResourceDrawer({
                               {it.subtitle_lang && (
                                 <span className="text-muted-foreground">
                                   {it.subtitle_lang}
-                                </span>
-                              )}
-                              {it.subtitle_type && (
-                                <span className="text-muted-foreground">
-                                  {it.subtitle_type}
                                 </span>
                               )}
                             </div>
