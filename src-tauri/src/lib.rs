@@ -23,6 +23,7 @@ pub fn run() {
                 app.handle().clone(),
             ));
             subscriptions::spawn_refresh_worker();
+            crate::services::mikan_service::spawn_preheat_worker();
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())

@@ -1,8 +1,13 @@
 use crate::error::AppError;
 use crate::models::mikan::{MikanResourceItem, MikanResourcesResponse};
 use crate::services::bangumi_service;
+use crate::subscriptions;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
+use tokio::time::{sleep, Duration};
+use tracing::{info, warn};
 
 const MAX_CONCURRENCY: usize = 5;
 
@@ -75,6 +80,79 @@ pub async fn get_mikan_resources(subject_id: u32) -> Result<MikanResourcesRespon
             items: Vec::new(),
         })
     }
+}
+
+const PREHEAT_CONCURRENCY: usize = 4;
+const PREHEAT_LIMIT: usize = 30;
+const PREHEAT_INTERVAL_SECS: u64 = 900;
+static PREHEAT_OFFSET: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+pub fn spawn_preheat_worker() {
+    info!("mikan preheat worker scheduled");
+    tauri::async_runtime::spawn(async move {
+        info!("mikan preheat worker started");
+        loop {
+            let rows = match subscriptions::list().await {
+                Ok(v) => v,
+                Err(_) => {
+                    warn!("subscriptions list failed for mikan preheat");
+                    sleep(Duration::from_secs(PREHEAT_INTERVAL_SECS)).await;
+                    continue;
+                }
+            };
+            if rows.is_empty() {
+                info!("no subscriptions, sleeping for mikan preheat");
+                sleep(Duration::from_secs(PREHEAT_INTERVAL_SECS)).await;
+                continue;
+            }
+            let sem = Arc::new(Semaphore::new(PREHEAT_CONCURRENCY));
+            let mut handles = Vec::new();
+            let total = rows.len();
+            let start = PREHEAT_OFFSET.load(std::sync::atomic::Ordering::Relaxed) % total;
+            let end = std::cmp::min(total, start + PREHEAT_LIMIT);
+            let mut slice: Vec<(u32, i64, bool)> = rows[start..end].to_vec();
+            if slice.len() < PREHEAT_LIMIT {
+                let remain = PREHEAT_LIMIT - slice.len();
+                let extra_end = std::cmp::min(remain, total);
+                slice.extend_from_slice(&rows[..extra_end]);
+            }
+            let processed = slice.len();
+            info!(
+                total,
+                start,
+                limit = PREHEAT_LIMIT,
+                processed,
+                "mikan preheat tick"
+            );
+            for (subject_id, _added_at, _notify) in slice.into_iter() {
+                let sem_clone = Arc::clone(&sem);
+                handles.push(tokio::spawn(async move {
+                    if let Ok(_permit) = sem_clone.acquire_owned().await {
+                        if let Ok(Some(mid)) = map_store::get(subject_id).await {
+                            let key = format!("mikan:rss:{}", mid);
+                            match crate::cache::get(&key).await {
+                                Ok(Some(_)) => {
+                                    info!(subject_id, mid, "mikan preheat skip: cached");
+                                }
+                                _ => {
+                                    info!(subject_id, mid, "mikan preheat fetch");
+                                    let _ = rss::fetch_bangumi_rss(mid).await;
+                                }
+                            }
+                        } else {
+                            info!(subject_id, "mikan preheat skip: no mapping");
+                        }
+                    }
+                }));
+            }
+            for h in handles {
+                let _ = h.await;
+            }
+            let next = (start + processed) % total;
+            PREHEAT_OFFSET.store(next, std::sync::atomic::Ordering::Relaxed);
+            sleep(Duration::from_secs(PREHEAT_INTERVAL_SECS)).await;
+        }
+    });
 }
 
 pub mod bangumi_page;
