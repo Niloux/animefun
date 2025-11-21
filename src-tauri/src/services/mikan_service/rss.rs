@@ -6,21 +6,81 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::StatusCode;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{watch, Mutex};
 use tracing::{info, warn};
 
 const RSS_TTL_SECS: i64 = 6 * 3600;
 
-static INFLIGHT: Lazy<Mutex<HashSet<u32>>> = Lazy::new(|| Mutex::new(HashSet::new()));
-static NOTIFIES: Lazy<Mutex<HashMap<u32, Arc<Notify>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static TASKS: Lazy<Mutex<HashMap<u32, watch::Sender<Option<String>>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+enum Claim {
+    Owner(watch::Sender<Option<String>>),
+    Subscriber(watch::Receiver<Option<String>>),
+}
+
+async fn claim_or_subscribe(id: u32) -> Claim {
+    let mut m = TASKS.lock().await;
+    if let Some(tx) = m.get(&id) {
+        Claim::Subscriber(tx.subscribe())
+    } else {
+        let (tx, _rx) = watch::channel(None);
+        m.insert(id, tx.clone());
+        Claim::Owner(tx)
+    }
+}
+
+fn extract_meta(headers: &reqwest::header::HeaderMap) -> (Option<String>, Option<String>) {
+    let new_etag = headers
+        .get(ETAG)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let new_lm = headers
+        .get(LAST_MODIFIED)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    (new_etag, new_lm)
+}
+
+async fn cache_body_and_meta(key: &str, body: String, headers: &reqwest::header::HeaderMap) {
+    let _ = cache::set(key, body.clone(), RSS_TTL_SECS).await;
+    let (new_etag, new_lm) = extract_meta(headers);
+    let _ = cache::set_meta(key, new_etag, new_lm).await;
+}
+
+async fn fetch_plain_and_cache(url: &str, key: &str) -> String {
+    match CLIENT.get(url).send().await {
+        Ok(resp) => {
+            if let Err(e) = resp.error_for_status_ref() {
+                warn!(error = %e, url = %url, "mikan rss non-OK status");
+                String::new()
+            } else {
+                let headers = resp.headers().clone();
+                match resp.text().await {
+                    Ok(body) => {
+                        cache_body_and_meta(key, body.clone(), &headers).await;
+                        body
+                    }
+                    Err(e) => {
+                        warn!(error = %e, url = %url, "mikan rss read body error");
+                        String::new()
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            warn!(error = %e, url = %url, "mikan rss request error");
+            String::new()
+        }
+    }
+}
 
 pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, AppError> {
     let key = format!("mikan:rss:{}", mikan_id);
-    let xml = match cache::get(&key).await? {
+    let xml: String = match cache::get(&key).await? {
         Some(x) => {
             info!(bangumi_id = mikan_id, key = %key, xml_len = x.len(), source = "cache", "mikan rss xml ready");
             x
@@ -35,228 +95,77 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             if let Some(lm) = last_modified {
                 req = req.header(IF_MODIFIED_SINCE, lm);
             }
-            let mut inserted = false;
-            let notify_opt = {
-                let mut infl = INFLIGHT.lock().await;
-                if infl.contains(&mikan_id) {
-                    let mut nf = NOTIFIES.lock().await;
-                    Some(
-                        nf.entry(mikan_id)
-                            .or_insert_with(|| Arc::new(Notify::new()))
-                            .clone(),
-                    )
-                } else {
-                    infl.insert(mikan_id);
-                    inserted = true;
-                    let mut nf = NOTIFIES.lock().await;
-                    let _ = nf
-                        .entry(mikan_id)
-                        .or_insert_with(|| Arc::new(Notify::new()))
-                        .clone();
-                    None
-                }
-            };
-            if let Some(n) = notify_opt {
-                n.notified().await;
-                if let Some(x) = cache::get(&key).await? {
-                    info!(
-                        bangumi_id = mikan_id,
-                        status = 304,
-                        xml_len = x.len(),
-                        source = "cache",
-                        "mikan rss xml ready after inflight"
-                    );
-                    x
-                } else {
+            match claim_or_subscribe(mikan_id).await {
+                Claim::Subscriber(mut rx) => loop {
+                    if let Some(v) = rx.borrow().clone() {
+                        break v;
+                    }
+                    if rx.changed().await.is_err() {
+                        break String::new();
+                    }
+                },
+                Claim::Owner(tx) => {
                     let net_start = Instant::now();
+                    let mut out = String::new();
                     match req.send().await {
                         Ok(resp) => {
-                            if resp.status() != StatusCode::OK {
-                                warn!(
-                                    status = resp.status().as_u16(),
-                                    bangumi_id = mikan_id,
-                                    "mikan rss non-OK status"
-                                );
-                                return Ok(Vec::new());
-                            }
-                            let headers = resp.headers().clone();
-                            match resp.text().await {
-                                Ok(x) => {
-                                    let _ = cache::set(&key, x.clone(), RSS_TTL_SECS).await;
-                                    let new_etag = headers
-                                        .get(ETAG)
-                                        .and_then(|v| v.to_str().ok())
-                                        .map(|s| s.to_string());
-                                    let new_lm = headers
-                                        .get(LAST_MODIFIED)
-                                        .and_then(|v| v.to_str().ok())
-                                        .map(|s| s.to_string());
-                                    let _ = cache::set_meta(&key, new_etag, new_lm).await;
+                            if resp.status() == StatusCode::NOT_MODIFIED {
+                                if let Some(x) = cache::get(&key).await? {
                                     info!(
                                         bangumi_id = mikan_id,
-                                        status = 200,
+                                        status = 304,
                                         net_ms = net_start.elapsed().as_millis(),
                                         xml_len = x.len(),
-                                        "mikan rss fetched and cached (inflight wait)"
+                                        "mikan rss served from cache after 304"
                                     );
-                                    x
-                                }
-                                Err(e) => {
-                                    warn!(error = %e, bangumi_id = mikan_id, "mikan rss read body error");
-                                    return Ok(Vec::new());
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            warn!(error = %e, bangumi_id = mikan_id, "mikan rss request error");
-                            return Ok(Vec::new());
-                        }
-                    }
-                }
-            } else {
-                let net_start = Instant::now();
-                match req.send().await {
-                    Ok(resp) => {
-                        if resp.status() == StatusCode::NOT_MODIFIED {
-                            if let Some(x) = cache::get(&key).await? {
-                                info!(
-                                    bangumi_id = mikan_id,
-                                    status = 304,
-                                    net_ms = net_start.elapsed().as_millis(),
-                                    xml_len = x.len(),
-                                    "mikan rss served from cache after 304"
-                                );
-                                if inserted {
-                                    let mut infl = INFLIGHT.lock().await;
-                                    infl.remove(&mikan_id);
-                                    let mut nf = NOTIFIES.lock().await;
-                                    if let Some(n) = nf.remove(&mikan_id) {
-                                        n.notify_waiters();
-                                    }
-                                }
-                                x
-                            } else {
-                                let resp2 = CLIENT.get(&url).send().await;
-                                match resp2 {
-                                    Ok(r2) => {
-                                        let headers = r2.headers().clone();
-                                        r2.error_for_status_ref()?;
-                                        let x = r2.text().await.unwrap_or_default();
-                                        let _ = cache::set(&key, x.clone(), RSS_TTL_SECS).await;
-                                        let new_etag = headers
-                                            .get(ETAG)
-                                            .and_then(|v| v.to_str().ok())
-                                            .map(|s| s.to_string());
-                                        let new_lm = headers
-                                            .get(LAST_MODIFIED)
-                                            .and_then(|v| v.to_str().ok())
-                                            .map(|s| s.to_string());
-                                        let _ = cache::set_meta(&key, new_etag, new_lm).await;
+                                    out = x;
+                                } else {
+                                    let body = fetch_plain_and_cache(&url, &key).await;
+                                    if !body.is_empty() {
                                         info!(
                                             bangumi_id = mikan_id,
                                             status = 200,
                                             net_ms = net_start.elapsed().as_millis(),
-                                            xml_len = x.len(),
+                                            xml_len = body.len(),
                                             "mikan rss fetched after 304 miss"
                                         );
-                                        if inserted {
-                                            let mut infl = INFLIGHT.lock().await;
-                                            infl.remove(&mikan_id);
-                                            let mut nf = NOTIFIES.lock().await;
-                                            if let Some(n) = nf.remove(&mikan_id) {
-                                                n.notify_waiters();
-                                            }
-                                        }
-                                        x
+                                    }
+                                    out = body;
+                                }
+                            } else if resp.status() == StatusCode::OK {
+                                let headers = resp.headers().clone();
+                                match resp.text().await {
+                                    Ok(body) => {
+                                        cache_body_and_meta(&key, body.clone(), &headers).await;
+                                        info!(
+                                            bangumi_id = mikan_id,
+                                            status = 200,
+                                            net_ms = net_start.elapsed().as_millis(),
+                                            xml_len = body.len(),
+                                            "mikan rss fetched and cached"
+                                        );
+                                        out = body;
                                     }
                                     Err(e) => {
-                                        warn!(error = %e, bangumi_id = mikan_id, "mikan rss request fallback error");
-                                        if inserted {
-                                            let mut infl = INFLIGHT.lock().await;
-                                            infl.remove(&mikan_id);
-                                            let mut nf = NOTIFIES.lock().await;
-                                            if let Some(n) = nf.remove(&mikan_id) {
-                                                n.notify_waiters();
-                                            }
-                                        }
-                                        return Ok(Vec::new());
+                                        warn!(error = %e, bangumi_id = mikan_id, "mikan rss read body error");
                                     }
                                 }
-                            }
-                        } else {
-                            if resp.status() != StatusCode::OK {
+                            } else {
                                 warn!(
                                     status = resp.status().as_u16(),
                                     bangumi_id = mikan_id,
                                     "mikan rss non-OK status"
                                 );
-                                if inserted {
-                                    let mut infl = INFLIGHT.lock().await;
-                                    infl.remove(&mikan_id);
-                                    let mut nf = NOTIFIES.lock().await;
-                                    if let Some(n) = nf.remove(&mikan_id) {
-                                        n.notify_waiters();
-                                    }
-                                }
-                                return Ok(Vec::new());
-                            }
-                            let headers = resp.headers().clone();
-                            match resp.text().await {
-                                Ok(x) => {
-                                    let _ = cache::set(&key, x.clone(), RSS_TTL_SECS).await;
-                                    let new_etag = headers
-                                        .get(ETAG)
-                                        .and_then(|v| v.to_str().ok())
-                                        .map(|s| s.to_string());
-                                    let new_lm = headers
-                                        .get(LAST_MODIFIED)
-                                        .and_then(|v| v.to_str().ok())
-                                        .map(|s| s.to_string());
-                                    let _ = cache::set_meta(&key, new_etag, new_lm).await;
-                                    info!(
-                                        bangumi_id = mikan_id,
-                                        status = 200,
-                                        net_ms = net_start.elapsed().as_millis(),
-                                        xml_len = x.len(),
-                                        "mikan rss fetched and cached"
-                                    );
-                                    if inserted {
-                                        let mut infl = INFLIGHT.lock().await;
-                                        infl.remove(&mikan_id);
-                                        let mut nf = NOTIFIES.lock().await;
-                                        if let Some(n) = nf.remove(&mikan_id) {
-                                            n.notify_waiters();
-                                        }
-                                    }
-                                    x
-                                }
-                                Err(e) => {
-                                    warn!(error = %e, bangumi_id = mikan_id, "mikan rss read body error");
-                                    if inserted {
-                                        let mut infl = INFLIGHT.lock().await;
-                                        infl.remove(&mikan_id);
-                                        let mut nf = NOTIFIES.lock().await;
-                                        if let Some(n) = nf.remove(&mikan_id) {
-                                            n.notify_waiters();
-                                        }
-                                    }
-                                    return Ok(Vec::new());
-                                }
                             }
                         }
-                    }
-                    Err(e) => {
-                        warn!(error = %e, bangumi_id = mikan_id, "mikan rss request error");
-                        if inserted {
-                            let mut infl = INFLIGHT.lock().await;
-                            infl.remove(&mikan_id);
-                            let mut nf = NOTIFIES.lock().await;
-                            if let Some(n) = nf.remove(&mikan_id) {
-                                n.notify_waiters();
-                            }
+                        Err(e) => {
+                            warn!(error = %e, bangumi_id = mikan_id, "mikan rss request error");
                         }
-                        return Ok(Vec::new());
                     }
+                    let _ = tx.send(Some(out.clone()));
+                    let mut m = TASKS.lock().await;
+                    m.remove(&mikan_id);
+                    out
                 }
             }
         }

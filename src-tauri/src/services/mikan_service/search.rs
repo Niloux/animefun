@@ -3,6 +3,7 @@ use crate::error::AppError;
 use crate::services::bangumi_service::client::CLIENT;
 use reqwest::StatusCode;
 use scraper::{Html, Selector};
+use std::collections::HashSet;
 
 const SEARCH_TTL_SECS: i64 = 6 * 3600;
 
@@ -43,7 +44,7 @@ fn extract_bangumi_id_from_href(href: &str) -> Option<u32> {
 pub fn extract_bangumi_ids_from_search_page(html: &str) -> Vec<u32> {
     let doc = Html::parse_document(html);
     let sel_all = Selector::parse("a").unwrap();
-    let mut ids: Vec<u32> = Vec::new();
+    let mut ids: HashSet<u32> = HashSet::new();
     let mut related_containers: Vec<scraper::ElementRef> = Vec::new();
     let sel_div = Selector::parse("div, section, ul").unwrap();
     for el in doc.select(&sel_div) {
@@ -63,25 +64,68 @@ pub fn extract_bangumi_ids_from_search_page(html: &str) -> Vec<u32> {
             for a in container.select(&sel_all) {
                 if let Some(href) = a.value().attr("href") {
                     if let Some(id) = extract_bangumi_id_from_href(href) {
-                        if !ids.contains(&id) {
-                            ids.push(id);
-                        }
+                        ids.insert(id);
                     }
                 }
             }
         }
         if !ids.is_empty() {
-            return ids;
+            return ids.into_iter().collect();
         }
     }
     for a in doc.select(&sel_all) {
         if let Some(href) = a.value().attr("href") {
             if let Some(id) = extract_bangumi_id_from_href(href) {
-                if !ids.contains(&id) {
-                    ids.push(id);
-                }
+                ids.insert(id);
             }
         }
     }
-    ids
+    ids.into_iter().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_ids_related_priority() {
+        let html = r#"
+        <div>
+            <a href="/Home/Bangumi/12">x</a>
+            <a href="/Home/Bangumi/34">y</a>
+        </div>
+        <section>
+            相关推荐
+            <a href="/Home/Bangumi/56">z</a>
+            <a href="/Home/Bangumi/78">w</a>
+        </section>
+        "#;
+        let ids = extract_bangumi_ids_from_search_page(html);
+        assert_eq!(ids.len(), 2);
+        assert!(ids.contains(&56));
+        assert!(ids.contains(&78));
+    }
+
+    #[test]
+    fn test_extract_ids_global_fallback() {
+        let html = r#"
+        <div>
+            <a href="/Home/Bangumi/99">x</a>
+            <a href="/Home/Bangumi/99">y</a>
+        </div>
+        "#;
+        let ids = extract_bangumi_ids_from_search_page(html);
+        assert_eq!(ids, vec![99]);
+    }
+
+    #[test]
+    fn test_extract_id_from_href() {
+        assert_eq!(extract_bangumi_id_from_href("/Home/Bangumi/123"), Some(123));
+        assert_eq!(
+            extract_bangumi_id_from_href("/Home/Bangumi/123?x=1"),
+            Some(123)
+        );
+        assert_eq!(extract_bangumi_id_from_href("/Home/Bangumi/"), None);
+        assert_eq!(extract_bangumi_id_from_href("/Other/123"), None);
+    }
 }

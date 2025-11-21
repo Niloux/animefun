@@ -32,31 +32,10 @@ pub async fn ensure_mapping(subject_id: u32) -> Result<Option<u32>, AppError> {
     if candidates.is_empty() {
         return Ok(None);
     }
-    let mut js: JoinSet<(u32, Result<Option<u32>, AppError>)> = JoinSet::new();
-    let mut idx = 0usize;
-    let max_concurrency = MAX_CONCURRENCY;
-    while idx < candidates.len() && js.len() < max_concurrency {
-        let bid = candidates[idx];
-        idx += 1;
-        js.spawn(async move { (bid, bangumi_page::resolve_subject_explicit(bid).await) });
-    }
-    while let Some(res) = js.join_next().await {
-        match res {
-            Ok((bid, sid_res)) => {
-                if let Ok(Some(sid)) = sid_res {
-                    if sid == subject_id {
-                        map_store::upsert(subject_id, bid, 1.0, "explicit", false).await?;
-                        return Ok(Some(bid));
-                    }
-                }
-            }
-            Err(_) => {}
-        }
-        if idx < candidates.len() {
-            let bid2 = candidates[idx];
-            idx += 1;
-            js.spawn(async move { (bid2, bangumi_page::resolve_subject_explicit(bid2).await) });
-        }
+    let res = resolve_candidates(subject_id, candidates, MAX_CONCURRENCY).await?;
+    if let Some(bid) = res {
+        map_store::upsert(subject_id, bid, 1.0, "explicit", false).await?;
+        return Ok(Some(bid));
     }
     Ok(None)
 }
@@ -106,7 +85,7 @@ pub fn spawn_preheat_worker() {
                 continue;
             }
             let sem = Arc::new(Semaphore::new(PREHEAT_CONCURRENCY));
-            let mut handles = Vec::new();
+            let mut js: JoinSet<()> = JoinSet::new();
             let total = rows.len();
             let start = PREHEAT_OFFSET.load(std::sync::atomic::Ordering::Relaxed) % total;
             let end = std::cmp::min(total, start + PREHEAT_LIMIT);
@@ -126,7 +105,7 @@ pub fn spawn_preheat_worker() {
             );
             for (subject_id, _added_at, _notify) in slice.into_iter() {
                 let sem_clone = Arc::clone(&sem);
-                handles.push(tokio::spawn(async move {
+                js.spawn(async move {
                     if let Ok(_permit) = sem_clone.acquire_owned().await {
                         if let Ok(Some(mid)) = map_store::get(subject_id).await {
                             let key = format!("mikan:rss:{}", mid);
@@ -143,16 +122,46 @@ pub fn spawn_preheat_worker() {
                             info!(subject_id, "mikan preheat skip: no mapping");
                         }
                     }
-                }));
+                });
             }
-            for h in handles {
-                let _ = h.await;
-            }
+            while js.join_next().await.is_some() {}
             let next = (start + processed) % total;
             PREHEAT_OFFSET.store(next, std::sync::atomic::Ordering::Relaxed);
             sleep(Duration::from_secs(PREHEAT_INTERVAL_SECS)).await;
         }
     });
+}
+
+async fn resolve_candidates(
+    subject_id: u32,
+    candidates: Vec<u32>,
+    max: usize,
+) -> Result<Option<u32>, AppError> {
+    let mut js: JoinSet<(u32, Result<Option<u32>, AppError>)> = JoinSet::new();
+    let mut idx = 0usize;
+    while idx < candidates.len() && js.len() < max {
+        let bid = candidates[idx];
+        idx += 1;
+        js.spawn(async move { (bid, bangumi_page::resolve_subject_explicit(bid).await) });
+    }
+    while let Some(res) = js.join_next().await {
+        match res {
+            Ok((bid, sid_res)) => {
+                if let Ok(Some(sid)) = sid_res {
+                    if sid == subject_id {
+                        return Ok(Some(bid));
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+        if idx < candidates.len() {
+            let bid2 = candidates[idx];
+            idx += 1;
+            js.spawn(async move { (bid2, bangumi_page::resolve_subject_explicit(bid2).await) });
+        }
+    }
+    Ok(None)
 }
 
 pub mod bangumi_page;

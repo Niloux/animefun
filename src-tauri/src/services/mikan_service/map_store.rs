@@ -58,7 +58,7 @@ pub async fn get(subject_id: u32) -> Result<Option<u32>, AppError> {
         }
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    .map_err(|_| std::io::Error::other("join"))?
 }
 
 pub async fn upsert(
@@ -84,5 +84,7 @@ pub async fn upsert(
             params![sid, mid, conf, src, lck, now],
         )?;
         Ok(())
-    }).await.map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "join"))?
+    })
+    .await
+    .map_err(|_| std::io::Error::other("join"))?
 }
