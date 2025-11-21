@@ -1,7 +1,6 @@
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
@@ -20,8 +19,7 @@ import { useCachedImage } from "../../hooks/use-cached-image";
 import { Badge } from "../../components/ui/badge";
 import { useSubjectStatus } from "../../hooks/use-subject-status";
 import { SubscribeButton } from "../../components/SubscribeButton";
-import { getMikanResources } from "../../lib/api";
-import type { MikanResourcesResponse } from "../../types/gen/mikan";
+import { useMikanResources } from "../../hooks/use-mikan-resources";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -42,18 +40,7 @@ const AnimeDetailPage = () => {
   const { status, loading: statusLoading } = useSubjectStatus(
     id ? Number(id) : undefined
   );
-  const mikanQuery = useQuery<MikanResourcesResponse | null>({
-    queryKey: ["mikan", id],
-    enabled: !!id,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 1,
-    queryFn: async () => {
-      if (!id) return null;
-      const data = await getMikanResources(Number(id));
-      return data;
-    },
-  });
+  const mikan = useMikanResources(id ? Number(id) : undefined);
 
   useEffect(() => {
     if (anime) {
@@ -278,10 +265,7 @@ const AnimeDetailPage = () => {
 
         {/* 剧集列表 */}
         <div className="mt-8">
-          <EpisodesList
-            subjectId={anime.id}
-            resources={mikanQuery.data ?? null}
-          />
+          <EpisodesList subjectId={anime.id} resources={mikan.data ?? null} />
         </div>
       </div>
     </div>

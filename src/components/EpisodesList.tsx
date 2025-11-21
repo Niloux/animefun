@@ -28,55 +28,9 @@ import {
   DrawerClose,
 } from "./ui/drawer";
 import { ScrollArea } from "./ui/scroll-area";
-import type {
-  MikanResourceItem,
-  MikanResourcesResponse,
-} from "../types/gen/mikan";
+import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
-
-function episodeNoOf(e: BEpisode | null): number | null {
-  if (!e) return null;
-  return e.sort ?? e.ep ?? null;
-}
-
-function matchRange(range: string | undefined, no: number): boolean {
-  if (!range || typeof no !== "number") return false;
-  const m = range.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
-  if (m) {
-    const a = parseInt(m[1], 10);
-    const b = parseInt(m[2], 10);
-    return no >= a && no <= b;
-  }
-  const n = range.match(/(\d{1,3})/);
-  if (n) {
-    const v = parseInt(n[1], 10);
-    return no === v;
-  }
-  return false;
-}
-
-function filterItemsByEpisode(
-  items: MikanResourceItem[],
-  no: number
-): MikanResourceItem[] {
-  return items.filter((it) => {
-    if (typeof it.episode === "number") return it.episode === no;
-    return matchRange(it.episode_range, no);
-  });
-}
-
-function groupByGroup(
-  items: MikanResourceItem[]
-): { group: string; items: MikanResourceItem[] }[] {
-  const m = new Map<string, MikanResourceItem[]>();
-  for (const it of items) {
-    const g = it.group || "未知字幕组";
-    const arr = m.get(g) || [];
-    arr.push(it);
-    m.set(g, arr);
-  }
-  return Array.from(m.entries()).map(([group, items]) => ({ group, items }));
-}
+import { useEpisodeResources } from "../hooks/use-episode-resources";
 
 function EpisodeCard({
   episode,
@@ -142,12 +96,10 @@ function ResourceDrawer({
   episode: BEpisode | null;
   resources?: MikanResourcesResponse | null;
 }) {
-  const epNo = episodeNoOf(episode);
-  const matched = useMemo(() => {
-    if (!resources?.mapped || !resources.items || !epNo) return [];
-    return filterItemsByEpisode(resources.items, epNo);
-  }, [resources, epNo]);
-  const grouped = useMemo(() => groupByGroup(matched), [matched]);
+  const { epNo, matched, grouped, mapped } = useEpisodeResources(
+    resources ?? null,
+    episode ?? null
+  );
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -160,7 +112,7 @@ function ResourceDrawer({
             </DrawerDescription>
           </DrawerHeader>
           <div className="p-4 pt-0">
-            {resources && !resources.mapped ? (
+            {resources && !mapped ? (
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 未命中
               </div>
