@@ -78,15 +78,15 @@ async fn fetch_plain_and_cache(url: &str, key: &str) -> String {
     }
 }
 
-pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, AppError> {
-    let key = format!("mikan:rss:{}", mikan_id);
+pub async fn fetch_rss(mid: u32) -> Result<Vec<MikanResourceItem>, AppError> {
+    let key = format!("mikan:rss:{}", mid);
     let xml: String = match cache::get(&key).await? {
         Some(x) => {
-            info!(bangumi_id = mikan_id, key = %key, xml_len = x.len(), source = "cache", "mikan rss xml ready");
+            info!(bangumi_id = mid, key = %key, xml_len = x.len(), source = "cache", "mikan rss xml ready");
             x
         }
         None => {
-            let url = format!("https://mikanani.me/RSS/Bangumi?bangumiId={}", mikan_id);
+            let url = format!("https://mikanani.me/RSS/Bangumi?bangumiId={}", mid);
             let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
             let mut req = CLIENT.get(&url);
             if let Some(e) = etag {
@@ -95,7 +95,7 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             if let Some(lm) = last_modified {
                 req = req.header(IF_MODIFIED_SINCE, lm);
             }
-            match claim_or_subscribe(mikan_id).await {
+            match claim_or_subscribe(mid).await {
                 Claim::Subscriber(mut rx) => loop {
                     if let Some(v) = rx.borrow().clone() {
                         break v;
@@ -112,7 +112,7 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
                             if resp.status() == StatusCode::NOT_MODIFIED {
                                 if let Some(x) = cache::get(&key).await? {
                                     info!(
-                                        bangumi_id = mikan_id,
+                                        bangumi_id = mid,
                                         status = 304,
                                         net_ms = net_start.elapsed().as_millis(),
                                         xml_len = x.len(),
@@ -123,7 +123,7 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
                                     let body = fetch_plain_and_cache(&url, &key).await;
                                     if !body.is_empty() {
                                         info!(
-                                            bangumi_id = mikan_id,
+                                            bangumi_id = mid,
                                             status = 200,
                                             net_ms = net_start.elapsed().as_millis(),
                                             xml_len = body.len(),
@@ -138,7 +138,7 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
                                     Ok(body) => {
                                         cache_body_and_meta(&key, body.clone(), &headers).await;
                                         info!(
-                                            bangumi_id = mikan_id,
+                                            bangumi_id = mid,
                                             status = 200,
                                             net_ms = net_start.elapsed().as_millis(),
                                             xml_len = body.len(),
@@ -147,24 +147,24 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
                                         out = body;
                                     }
                                     Err(e) => {
-                                        warn!(error = %e, bangumi_id = mikan_id, "mikan rss read body error");
+                                        warn!(error = %e, bangumi_id = mid, "mikan rss read body error");
                                     }
                                 }
                             } else {
                                 warn!(
                                     status = resp.status().as_u16(),
-                                    bangumi_id = mikan_id,
+                                    bangumi_id = mid,
                                     "mikan rss non-OK status"
                                 );
                             }
                         }
                         Err(e) => {
-                            warn!(error = %e, bangumi_id = mikan_id, "mikan rss request error");
+                            warn!(error = %e, bangumi_id = mid, "mikan rss request error");
                         }
                     }
                     let _ = tx.send(Some(out.clone()));
                     let mut m = TASKS.lock().await;
-                    m.remove(&mikan_id);
+                    m.remove(&mid);
                     out
                 }
             }
@@ -174,12 +174,12 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
     let ch = match rss::Channel::from_str(&xml) {
         Ok(c) => c,
         Err(e) => {
-            warn!(error = %e, bangumi_id = mikan_id, "mikan rss parse error");
+            warn!(error = %e, bangumi_id = mid, "mikan rss parse error");
             return Ok(Vec::new());
         }
     };
     info!(
-        bangumi_id = mikan_id,
+        bangumi_id = mid,
         parse_ms = parse_start.elapsed().as_millis(),
         "mikan rss xml parsed"
     );
@@ -222,7 +222,7 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
         });
     }
     info!(
-        bangumi_id = mikan_id,
+        bangumi_id = mid,
         items = out.len(),
         build_ms = build_start.elapsed().as_millis(),
         "mikan rss items built"
@@ -230,30 +230,58 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
     Ok(out)
 }
 
-static RE_GROUP_LEADING: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"^[\[{\(【]([^\]】\)\}]{1,40})[\]】\)\}]\s*").ok());
-static RE_GROUP_ANY: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"[\[{\(【]([^\]】\)\}]{1,40})[\]】\)\}]").ok());
-
-fn parse_group(title: &str) -> Option<String> {
-    let t = title.trim();
-    if let Some(re) = RE_GROUP_LEADING.as_ref() {
-        if let Some(c) = re.captures(t) {
-            let g = c.get(1)?.as_str().trim();
-            if !g.is_empty() {
-                return Some(g.to_string());
-            }
-        }
-    }
-    if let Some(re) = RE_GROUP_ANY.as_ref() {
-        if let Some(c) = re.captures(t) {
-            let g = c.get(1)?.as_str().trim();
-            if !g.is_empty() {
+fn leading_group(text: &str) -> Option<String> {
+    let t = text.trim();
+    let pair = match t.chars().next() {
+        Some('[') => Some(('[', ']')),
+        Some('(') => Some(('(', ')')),
+        Some('{') => Some(('{', '}')),
+        Some('【') => Some(('【', '】')),
+        _ => None,
+    }?;
+    let start = t.chars().next()?.len_utf8();
+    let right = pair.1;
+    if let Some(rel_end) = t[start..].find(right) {
+        let end = start + rel_end;
+        if end > start {
+            let g = t[start..end].trim();
+            if !g.is_empty() && g.len() <= 40 {
                 return Some(g.to_string());
             }
         }
     }
     None
+}
+
+fn any_group(text: &str) -> Option<String> {
+    let t = text;
+    let pairs = [('[', ']'), ('(', ')'), ('{', '}'), ('【', '】')];
+    for (i, ch) in t.char_indices() {
+        let right = match ch {
+            '[' => Some(']'),
+            '(' => Some(')'),
+            '{' => Some('}'),
+            '【' => Some('】'),
+            _ => None,
+        };
+        if let Some(r) = right {
+            let start = i + ch.len_utf8();
+            if let Some(rel_end) = t[start..].find(r) {
+                let end = start + rel_end;
+                if end > start {
+                    let g = t[start..end].trim();
+                    if !g.is_empty() && g.len() <= 40 {
+                        return Some(g.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn parse_group(title: &str) -> Option<String> {
+    leading_group(title).or_else(|| any_group(title))
 }
 
 static RE_RANGE: Lazy<Option<Regex>> = Lazy::new(|| {
@@ -264,7 +292,7 @@ static RE_EP: Lazy<Option<Regex>> =
 static RE_BRACKET_NUM: Lazy<Option<Regex>> =
     Lazy::new(|| Regex::new(r"(?i)[\[(（]\s*(\d{1,3})\s*[\])）]").ok());
 static RE_DASH_NUM: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"(?i)[\s\-]\s*(\d{1,3})\b(?!p)\b").ok());
+    Lazy::new(|| Regex::new(r"(?i)[\s\-]\s*(\d{1,3})\b").ok());
 
 fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
     let t = title;
@@ -291,8 +319,14 @@ fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
         }
     }
     if let Some(re) = RE_DASH_NUM.as_ref() {
-        if let Some(c) = re.captures(t) {
-            let s = c.get(1).unwrap().as_str();
+        for c in re.captures_iter(t) {
+            let m = c.get(1).unwrap();
+            let s = m.as_str();
+            let end = m.end();
+            let next = t[end..].chars().next();
+            if matches!(next, Some('p') | Some('P')) {
+                continue;
+            }
             if let Ok(n) = s.parse::<u32>() {
                 return (Some(n), None);
             }

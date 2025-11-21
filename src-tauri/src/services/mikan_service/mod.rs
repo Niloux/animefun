@@ -15,26 +15,29 @@ pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     map_store::init(base_dir)
 }
 
-pub async fn ensure_mapping(subject_id: u32) -> Result<Option<u32>, AppError> {
-    if let Some(mid) = map_store::get(subject_id).await? {
+fn normalize_name(name: String, alt: String) -> String {
+    if alt.trim().is_empty() {
+        name
+    } else {
+        let s = alt.trim().to_string();
+        let trims: [char; 8] = ['。', '.', '!', '！', '?', '？', '·', '•'];
+        s.trim_end_matches(&trims[..]).to_string()
+    }
+}
+
+pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
+    if let Some(mid) = map_store::get(sid).await? {
         return Ok(Some(mid));
     }
-    let subject = bangumi_service::api::fetch_subject(subject_id).await?;
-    let name = if subject.name_cn.trim().is_empty() {
-        subject.name
-    } else {
-        let mut s = subject.name_cn.trim().to_string();
-        let trims: [char; 8] = ['。', '.', '!', '！', '?', '？', '·', '•'];
-        s = s.trim_end_matches(&trims[..]).to_string();
-        s
-    };
-    let candidates = search::search_bangumi_candidates_by_name(&name).await?;
+    let subject = bangumi_service::api::fetch_subject(sid).await?;
+    let name = normalize_name(subject.name, subject.name_cn);
+    let candidates = search::search_candidates(&name).await?;
     if candidates.is_empty() {
         return Ok(None);
     }
-    let res = resolve_candidates(subject_id, candidates, MAX_CONCURRENCY).await?;
+    let res = resolve_candidates(sid, candidates, MAX_CONCURRENCY).await?;
     if let Some(bid) = res {
-        map_store::upsert(subject_id, bid, 1.0, "explicit", false).await?;
+        map_store::upsert(sid, bid, 1.0, "explicit", false).await?;
         return Ok(Some(bid));
     }
     Ok(None)
@@ -43,10 +46,10 @@ pub async fn ensure_mapping(subject_id: u32) -> Result<Option<u32>, AppError> {
 pub async fn get_mikan_resources(subject_id: u32) -> Result<MikanResourcesResponse, AppError> {
     let mut mid = map_store::get(subject_id).await?;
     if mid.is_none() {
-        mid = ensure_mapping(subject_id).await?;
+        mid = ensure_map(subject_id).await?;
     }
     if let Some(mikan_id) = mid {
-        let items: Vec<MikanResourceItem> = rss::fetch_bangumi_rss(mikan_id).await?;
+        let items: Vec<MikanResourceItem> = rss::fetch_rss(mikan_id).await?;
         Ok(MikanResourcesResponse {
             mapped: true,
             mikan_bangumi_id: Some(mikan_id),
@@ -103,23 +106,23 @@ pub fn spawn_preheat_worker() {
                 processed,
                 "mikan preheat tick"
             );
-            for (subject_id, _added_at, _notify) in slice.into_iter() {
+            for (sid, _added_at, _notify) in slice.into_iter() {
                 let sem_clone = Arc::clone(&sem);
                 js.spawn(async move {
                     if let Ok(_permit) = sem_clone.acquire_owned().await {
-                        if let Ok(Some(mid)) = map_store::get(subject_id).await {
+                        if let Ok(Some(mid)) = map_store::get(sid).await {
                             let key = format!("mikan:rss:{}", mid);
                             match crate::cache::get(&key).await {
                                 Ok(Some(_)) => {
-                                    info!(subject_id, mid, "mikan preheat skip: cached");
+                                    info!(subject_id = sid, mid, "mikan preheat skip: cached");
                                 }
                                 _ => {
-                                    info!(subject_id, mid, "mikan preheat fetch");
-                                    let _ = rss::fetch_bangumi_rss(mid).await;
+                                    info!(subject_id = sid, mid, "mikan preheat fetch");
+                                    let _ = rss::fetch_rss(mid).await;
                                 }
                             }
                         } else {
-                            info!(subject_id, "mikan preheat skip: no mapping");
+                            info!(subject_id = sid, "mikan preheat skip: no mapping");
                         }
                     }
                 });
@@ -133,7 +136,7 @@ pub fn spawn_preheat_worker() {
 }
 
 async fn resolve_candidates(
-    subject_id: u32,
+    sid: u32,
     candidates: Vec<u32>,
     max: usize,
 ) -> Result<Option<u32>, AppError> {
@@ -142,13 +145,13 @@ async fn resolve_candidates(
     while idx < candidates.len() && js.len() < max {
         let bid = candidates[idx];
         idx += 1;
-        js.spawn(async move { (bid, bangumi_page::resolve_subject_explicit(bid).await) });
+        js.spawn(async move { (bid, bangumi_page::resolve_subject(bid).await) });
     }
     while let Some(res) = js.join_next().await {
         match res {
             Ok((bid, sid_res)) => {
-                if let Ok(Some(sid)) = sid_res {
-                    if sid == subject_id {
+                if let Ok(Some(s)) = sid_res {
+                    if s == sid {
                         return Ok(Some(bid));
                     }
                 }
@@ -158,7 +161,7 @@ async fn resolve_candidates(
         if idx < candidates.len() {
             let bid2 = candidates[idx];
             idx += 1;
-            js.spawn(async move { (bid2, bangumi_page::resolve_subject_explicit(bid2).await) });
+            js.spawn(async move { (bid2, bangumi_page::resolve_subject(bid2).await) });
         }
     }
     Ok(None)

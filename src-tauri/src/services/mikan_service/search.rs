@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 const SEARCH_TTL_SECS: i64 = 6 * 3600;
 
-pub async fn search_bangumi_candidates_by_name(name: &str) -> Result<Vec<u32>, AppError> {
+pub async fn search_candidates(name: &str) -> Result<Vec<u32>, AppError> {
     let key = format!("mikan:search:{}", name);
     let html = match cache::get(&key).await? {
         Some(h) => h,
@@ -22,10 +22,10 @@ pub async fn search_bangumi_candidates_by_name(name: &str) -> Result<Vec<u32>, A
             h
         }
     };
-    Ok(extract_bangumi_ids_from_search_page(&html))
+    Ok(parse_bangumi_ids(&html))
 }
 
-fn extract_bangumi_id_from_href(href: &str) -> Option<u32> {
+fn parse_bangumi_id(href: &str) -> Option<u32> {
     let p = "/Home/Bangumi/";
     if let Some(pos) = href.find(p) {
         let s = &href[pos + p.len()..];
@@ -41,7 +41,7 @@ fn extract_bangumi_id_from_href(href: &str) -> Option<u32> {
     }
 }
 
-pub fn extract_bangumi_ids_from_search_page(html: &str) -> Vec<u32> {
+pub fn parse_bangumi_ids(html: &str) -> Vec<u32> {
     let doc = Html::parse_document(html);
     let sel_all = Selector::parse("a").unwrap();
     let mut ids: HashSet<u32> = HashSet::new();
@@ -63,7 +63,7 @@ pub fn extract_bangumi_ids_from_search_page(html: &str) -> Vec<u32> {
         for container in related_containers {
             for a in container.select(&sel_all) {
                 if let Some(href) = a.value().attr("href") {
-                    if let Some(id) = extract_bangumi_id_from_href(href) {
+                    if let Some(id) = parse_bangumi_id(href) {
                         ids.insert(id);
                     }
                 }
@@ -75,7 +75,7 @@ pub fn extract_bangumi_ids_from_search_page(html: &str) -> Vec<u32> {
     }
     for a in doc.select(&sel_all) {
         if let Some(href) = a.value().attr("href") {
-            if let Some(id) = extract_bangumi_id_from_href(href) {
+            if let Some(id) = parse_bangumi_id(href) {
                 ids.insert(id);
             }
         }
@@ -100,7 +100,7 @@ mod tests {
             <a href="/Home/Bangumi/78">w</a>
         </section>
         "#;
-        let ids = extract_bangumi_ids_from_search_page(html);
+        let ids = parse_bangumi_ids(html);
         assert_eq!(ids.len(), 2);
         assert!(ids.contains(&56));
         assert!(ids.contains(&78));
@@ -114,18 +114,15 @@ mod tests {
             <a href="/Home/Bangumi/99">y</a>
         </div>
         "#;
-        let ids = extract_bangumi_ids_from_search_page(html);
+        let ids = parse_bangumi_ids(html);
         assert_eq!(ids, vec![99]);
     }
 
     #[test]
     fn test_extract_id_from_href() {
-        assert_eq!(extract_bangumi_id_from_href("/Home/Bangumi/123"), Some(123));
-        assert_eq!(
-            extract_bangumi_id_from_href("/Home/Bangumi/123?x=1"),
-            Some(123)
-        );
-        assert_eq!(extract_bangumi_id_from_href("/Home/Bangumi/"), None);
-        assert_eq!(extract_bangumi_id_from_href("/Other/123"), None);
+        assert_eq!(parse_bangumi_id("/Home/Bangumi/123"), Some(123));
+        assert_eq!(parse_bangumi_id("/Home/Bangumi/123?x=1"), Some(123));
+        assert_eq!(parse_bangumi_id("/Home/Bangumi/"), None);
+        assert_eq!(parse_bangumi_id("/Other/123"), None);
     }
 }

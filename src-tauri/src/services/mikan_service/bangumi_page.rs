@@ -6,7 +6,7 @@ use scraper::{Html, Selector};
 
 const PAGE_TTL_SECS: i64 = 24 * 3600;
 
-pub async fn resolve_subject_explicit(bangumi_id: u32) -> Result<Option<u32>, AppError> {
+pub async fn resolve_subject(bangumi_id: u32) -> Result<Option<u32>, AppError> {
     let key = format!("mikan:bangumi:{}", bangumi_id);
     let html = match cache::get(&key).await? {
         Some(h) => h,
@@ -23,7 +23,7 @@ pub async fn resolve_subject_explicit(bangumi_id: u32) -> Result<Option<u32>, Ap
     let sel = Selector::parse("a").unwrap();
     for a in doc.select(&sel) {
         if let Some(href) = a.value().attr("href") {
-            if let Some(id) = extract_subject_id_from_href(href) {
+            if let Some(id) = parse_subject_id(href) {
                 return Ok(Some(id));
             }
         }
@@ -31,7 +31,7 @@ pub async fn resolve_subject_explicit(bangumi_id: u32) -> Result<Option<u32>, Ap
     Ok(None)
 }
 
-fn extract_subject_id_from_href(href: &str) -> Option<u32> {
+fn parse_subject_id(href: &str) -> Option<u32> {
     for dom in ["bgm.tv", "bangumi.tv", "chii.in"] {
         let p1 = format!("{}/subject/", dom);
         let p2 = format!("//{}/subject/", dom);
