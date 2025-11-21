@@ -133,7 +133,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
               {episodes.map((episode) => (
                 <div
                   key={episode.id}
-                  className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer p-4 flex flex-col"
+                  className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer p-4 flex flex-col h-40"
                 >
                   <div className="relative flex flex-col h-full">
                     {/* 集数与日期 */}
@@ -179,6 +179,14 @@ const EpisodesList: React.FC<EpisodesListProps> = ({ subjectId }) => {
                   </div>
                 </div>
               ))}
+              {Array.from({ length: Math.max(0, 6 - episodes.length) }).map(
+                (_, idx) => (
+                  <div
+                    key={`ph-${idx}`}
+                    className="invisible pointer-events-none relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 h-40"
+                  />
+                )
+              )}
             </div>
 
             {totalPages > 1 && (
