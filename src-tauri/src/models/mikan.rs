@@ -16,6 +16,16 @@ pub struct MikanResourceItem {
     pub size_bytes: Option<u64>,
     #[ts(optional)]
     pub group: Option<String>,
+    #[ts(optional)]
+    pub episode: Option<u32>,
+    #[ts(optional)]
+    pub episode_range: Option<String>,
+    #[ts(optional)]
+    pub resolution: Option<u16>,
+    #[ts(optional)]
+    pub subtitle_lang: Option<String>,
+    #[ts(optional)]
+    pub subtitle_type: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]

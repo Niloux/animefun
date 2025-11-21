@@ -2,6 +2,9 @@ use crate::cache;
 use crate::error::AppError;
 use crate::models::mikan::MikanResourceItem;
 use crate::services::bangumi_service::client::CLIENT;
+use once_cell::sync::Lazy;
+use regex::Regex;
+use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::StatusCode;
 use std::str::FromStr;
 use tracing::warn;
@@ -14,24 +17,72 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
         Some(x) => x,
         None => {
             let url = format!("https://mikanani.me/RSS/Bangumi?bangumiId={}", mikan_id);
-            match CLIENT.get(&url).send().await {
+            let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
+            let mut req = CLIENT.get(&url);
+            if let Some(e) = etag {
+                req = req.header(IF_NONE_MATCH, e);
+            }
+            if let Some(lm) = last_modified {
+                req = req.header(IF_MODIFIED_SINCE, lm);
+            }
+            match req.send().await {
                 Ok(resp) => {
-                    if resp.status() != StatusCode::OK {
-                        warn!(
-                            status = resp.status().as_u16(),
-                            bangumi_id = mikan_id,
-                            "mikan rss non-OK status"
-                        );
-                        return Ok(Vec::new());
-                    }
-                    match resp.text().await {
-                        Ok(x) => {
-                            let _ = cache::set(&key, x.clone(), RSS_TTL_SECS).await;
+                    if resp.status() == StatusCode::NOT_MODIFIED {
+                        if let Some(x) = cache::get(&key).await? {
                             x
+                        } else {
+                            let resp2 = CLIENT.get(&url).send().await;
+                            match resp2 {
+                                Ok(r2) => {
+                                    let headers = r2.headers().clone();
+                                    r2.error_for_status_ref()?;
+                                    let x = r2.text().await.unwrap_or_default();
+                                    let _ = cache::set(&key, x.clone(), RSS_TTL_SECS).await;
+                                    let new_etag = headers
+                                        .get(ETAG)
+                                        .and_then(|v| v.to_str().ok())
+                                        .map(|s| s.to_string());
+                                    let new_lm = headers
+                                        .get(LAST_MODIFIED)
+                                        .and_then(|v| v.to_str().ok())
+                                        .map(|s| s.to_string());
+                                    let _ = cache::set_meta(&key, new_etag, new_lm).await;
+                                    x
+                                }
+                                Err(e) => {
+                                    warn!(error = %e, bangumi_id = mikan_id, "mikan rss request fallback error");
+                                    return Ok(Vec::new());
+                                }
+                            }
                         }
-                        Err(e) => {
-                            warn!(error = %e, bangumi_id = mikan_id, "mikan rss read body error");
+                    } else {
+                        if resp.status() != StatusCode::OK {
+                            warn!(
+                                status = resp.status().as_u16(),
+                                bangumi_id = mikan_id,
+                                "mikan rss non-OK status"
+                            );
                             return Ok(Vec::new());
+                        }
+                        let headers = resp.headers().clone();
+                        match resp.text().await {
+                            Ok(x) => {
+                                let _ = cache::set(&key, x.clone(), RSS_TTL_SECS).await;
+                                let new_etag = headers
+                                    .get(ETAG)
+                                    .and_then(|v| v.to_str().ok())
+                                    .map(|s| s.to_string());
+                                let new_lm = headers
+                                    .get(LAST_MODIFIED)
+                                    .and_then(|v| v.to_str().ok())
+                                    .map(|s| s.to_string());
+                                let _ = cache::set_meta(&key, new_etag, new_lm).await;
+                                x
+                            }
+                            Err(e) => {
+                                warn!(error = %e, bangumi_id = mikan_id, "mikan rss read body error");
+                                return Ok(Vec::new());
+                            }
                         }
                     }
                 }
@@ -63,6 +114,14 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             }
         }
         let pub_date = it.pub_date().map(|s| s.to_string());
+        let desc = it.description().map(|s| s.to_string());
+
+        let group = parse_group(&title);
+        let (episode, episode_range) = parse_episode_info(&title);
+        let resolution =
+            parse_resolution(&title).or_else(|| desc.as_deref().and_then(parse_resolution));
+        let (subtitle_lang, subtitle_type) = parse_subtitle(&title, desc.as_deref());
+
         out.push(MikanResourceItem {
             title,
             page_url,
@@ -70,8 +129,195 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             magnet: None,
             pub_date,
             size_bytes,
-            group: None,
+            group,
+            episode,
+            episode_range,
+            resolution,
+            subtitle_lang,
+            subtitle_type,
         });
     }
     Ok(out)
+}
+
+static RE_GROUP_LEADING: Lazy<Option<Regex>> =
+    Lazy::new(|| Regex::new(r"^[\[{\(【]([^\]】\)\}]{1,40})[\]】\)\}]\s*").ok());
+static RE_GROUP_ANY: Lazy<Option<Regex>> =
+    Lazy::new(|| Regex::new(r"[\[{\(【]([^\]】\)\}]{1,40})[\]】\)\}]").ok());
+
+fn parse_group(title: &str) -> Option<String> {
+    let t = title.trim();
+    if let Some(re) = RE_GROUP_LEADING.as_ref() {
+        if let Some(c) = re.captures(t) {
+            let g = c.get(1)?.as_str().trim();
+            if !g.is_empty() {
+                return Some(g.to_string());
+            }
+        }
+    }
+    if let Some(re) = RE_GROUP_ANY.as_ref() {
+        if let Some(c) = re.captures(t) {
+            let g = c.get(1)?.as_str().trim();
+            if !g.is_empty() {
+                return Some(g.to_string());
+            }
+        }
+    }
+    None
+}
+
+static RE_RANGE: Lazy<Option<Regex>> = Lazy::new(|| {
+    Regex::new(r"(?i)\b(\d{1,3})\s*-\s*(\d{1,3})(?:\s*[\[(（]?(?:全集|END|完)[\])）]?)?").ok()
+});
+static RE_EP: Lazy<Option<Regex>> =
+    Lazy::new(|| Regex::new(r"(?i)(?:EP|E|第)\s*(\d{1,3})(?:\s*(?:话|話|集))?\b").ok());
+static RE_BRACKET_NUM: Lazy<Option<Regex>> =
+    Lazy::new(|| Regex::new(r"(?i)[\[(（]\s*(\d{1,3})\s*[\])）]").ok());
+static RE_DASH_NUM: Lazy<Option<Regex>> =
+    Lazy::new(|| Regex::new(r"(?i)[\s\-]\s*(\d{1,3})\b(?!p)\b").ok());
+
+fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
+    let t = title;
+    if let Some(re) = RE_RANGE.as_ref() {
+        if let Some(c) = re.captures(t) {
+            let s = c.get(1).map(|m| m.as_str()).unwrap_or("");
+            let e = c.get(2).map(|m| m.as_str()).unwrap_or("");
+            let er = format!("{}-{}", s, e);
+            return (None, Some(er));
+        }
+    }
+    if let Some(re) = RE_EP.as_ref() {
+        if let Some(c) = re.captures(t) {
+            if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
+                return (Some(n), None);
+            }
+        }
+    }
+    if let Some(re) = RE_BRACKET_NUM.as_ref() {
+        if let Some(c) = re.captures(t) {
+            if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
+                return (Some(n), None);
+            }
+        }
+    }
+    if let Some(re) = RE_DASH_NUM.as_ref() {
+        if let Some(c) = re.captures(t) {
+            let s = c.get(1).unwrap().as_str();
+            if let Ok(n) = s.parse::<u32>() {
+                return (Some(n), None);
+            }
+        }
+    }
+    (None, None)
+}
+
+static RE_RES_P: Lazy<Option<Regex>> =
+    Lazy::new(|| Regex::new(r"(?i)\b(2160|1080|720|480)\s*[pP]\b").ok());
+static RE_4K: Lazy<Option<Regex>> = Lazy::new(|| Regex::new(r"(?i)\b4\s*K\b").ok());
+
+fn parse_resolution(text: &str) -> Option<u16> {
+    let t = text;
+    if let Some(re) = RE_RES_P.as_ref() {
+        if let Some(c) = re.captures(t) {
+            return c.get(1)?.as_str().parse::<u16>().ok();
+        }
+    }
+    if let Some(re4k) = RE_4K.as_ref() {
+        if re4k.is_match(t) {
+            return Some(2160);
+        }
+    }
+    None
+}
+
+fn parse_subtitle(title: &str, desc: Option<&str>) -> (Option<String>, Option<String>) {
+    fn from_text(t: &str) -> (Option<String>, Option<String>) {
+        let mut lang: Option<String> = None;
+        let mut typ: Option<String> = None;
+        let s = t.to_lowercase();
+        if s.contains("简繁日") {
+            lang = Some("简繁日".to_string())
+        } else if s.contains("简日") {
+            lang = Some("简日".to_string());
+        } else if s.contains("简繁") || s.contains("chs&cht") || s.contains("chs+cht") {
+            lang = Some("简繁".to_string());
+        } else if s.contains("简体") || s.contains("chs") || s.contains("gb") {
+            lang = Some("简体".to_string());
+        } else if s.contains("繁体") || s.contains("cht") || s.contains("big5") {
+            lang = Some("繁体".to_string());
+        } else if s.contains("繁日") {
+            lang = Some("繁日".to_string());
+        }
+        if s.contains("外挂") || s.contains("external") {
+            typ = Some("外挂".to_string());
+        } else if s.contains("内封")
+            || s.contains("内嵌")
+            || s.contains("内置")
+            || s.contains("softsub")
+        {
+            typ = Some("内封".to_string());
+        } else if s.contains("硬字幕") || s.contains("hardsub") {
+            typ = Some("硬字幕".to_string());
+        }
+        (lang, typ)
+    }
+    let (l1, t1) = from_text(title);
+    let (l2, t2) = desc.map(from_text).unwrap_or((None, None));
+    let lang = l1.or(l2);
+    let typ = t1.or(t2);
+    (lang, typ)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_group_brackets() {
+        let t = "【动漫国字幕组】★01月新番[恋上换装娃娃 / 更衣人偶坠入爱河][01-12(全集)][1080P][简繁外挂][MKV]";
+        assert_eq!(parse_group(t).as_deref(), Some("动漫国字幕组"));
+    }
+
+    #[test]
+    fn test_parse_group_square() {
+        let t =
+            "[H-Enc] 更衣人偶坠入爱河 / Sono Bisque Doll wa Koi wo Suru (BDRip 1080p HEVC FLAC)";
+        assert_eq!(parse_group(t).as_deref(), Some("H-Enc"));
+    }
+
+    #[test]
+    fn test_parse_episode_range() {
+        let t = "【动漫国字幕组】恋上换装娃娃 [01-12(全集)] 1080P 简繁外挂";
+        let (ep, range) = parse_episode_info(t);
+        assert!(ep.is_none());
+        assert_eq!(range.as_deref(), Some("01-12"));
+    }
+
+    #[test]
+    fn test_parse_episode_single() {
+        let t = "[Lilith-Raws] 更衣人偶坠入爱河 - 第07话 1080p";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(7));
+        assert!(range.is_none());
+    }
+
+    #[test]
+    fn test_parse_resolution() {
+        let t = "[ANi] 更衣人偶坠入爱河 1080P";
+        assert_eq!(parse_resolution(t), Some(1080));
+        let t2 = "更衣人偶坠入爱河 4K WEB-DL";
+        assert_eq!(parse_resolution(t2), Some(2160));
+    }
+
+    #[test]
+    fn test_parse_subtitle() {
+        let t = "【动漫国字幕组】恋上换装娃娃 [01-12(全集)] 1080P 简繁外挂";
+        let (lang, typ) = parse_subtitle(t, None);
+        assert_eq!(lang.as_deref(), Some("简繁"));
+        assert_eq!(typ.as_deref(), Some("外挂"));
+        let d = Some("字幕：繁体 内封");
+        let (lang2, typ2) = parse_subtitle("title", d);
+        assert_eq!(lang2.as_deref(), Some("繁体"));
+        assert_eq!(typ2.as_deref(), Some("内封"));
+    }
 }
