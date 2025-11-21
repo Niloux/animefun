@@ -17,6 +17,8 @@ pub fn run() {
             cache::init(base).map_err(|e| e.to_string())?;
             let base2 = crate::infra::path::app_base_dir(&app.handle());
             subscriptions::init(base2).map_err(|e| e.to_string())?;
+            let base3 = crate::infra::path::app_base_dir(&app.handle());
+            crate::services::mikan_service::init(base3).map_err(|e| e.to_string())?;
             let _ = tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),
             ));
@@ -37,6 +39,7 @@ pub fn run() {
             commands::subscriptions::sub_has,
             commands::subscriptions::sub_clear,
             commands::subscriptions::sub_query,
+            commands::mikan::get_mikan_resources,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -37,3 +37,5 @@ chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 ts-rs = "11.1"
+scraper = "0.18"
+rss = "2.0"
