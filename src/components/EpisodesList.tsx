@@ -21,7 +21,7 @@ import { visiblePages } from "../lib/pagination";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
 import { EpisodeCard } from "./EpisodeCard";
-import { ResourceDrawer } from "./ResourceDrawer";
+import { ResourceDialog } from "./ResourceDialog";
 
 interface EpisodesListProps {
   subjectId: number;
@@ -212,7 +212,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
         ) : null}
       </div>
 
-      <ResourceDrawer
+      <ResourceDialog
         open={open}
         onOpenChange={setOpen}
         episode={selectedEpisode as BEpisode | null}

@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerClose,
-} from "./ui/drawer";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
 import {
   Select,
@@ -20,7 +19,7 @@ import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
 
-export function ResourceDrawer({
+export function ResourceDialog({
   open,
   onOpenChange,
   episode,
@@ -81,17 +80,18 @@ export function ResourceDrawer({
   }, [matched, groupFilter, resFilter, sublangFilter]);
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl" showCloseButton={false}>
         <div className="mx-auto w-full max-w-2xl">
-          <DrawerHeader>
-            <DrawerTitle>
+          <DialogHeader className="py-4 gap-1">
+            <DialogTitle>
               {episode
                 ? `第 ${epNo} 话 ${episode.name_cn || episode.name}`
                 : ""}
-            </DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4 pt-0">
+            </DialogTitle>
+            <DialogDescription>共 {matched.length} 条资源</DialogDescription>
+          </DialogHeader>
+          <div className="pt-0">
             {matched.length > 0 && (
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Select
@@ -229,13 +229,8 @@ export function ResourceDrawer({
               </ScrollArea>
             )}
           </div>
-          <DrawerFooter>
-            <DrawerClose asChild>
-              <Button variant="outline">关闭</Button>
-            </DrawerClose>
-          </DrawerFooter>
         </div>
-      </DrawerContent>
-    </Drawer>
+      </DialogContent>
+    </Dialog>
   );
 }
