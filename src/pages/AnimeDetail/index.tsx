@@ -1,6 +1,7 @@
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
@@ -19,6 +20,8 @@ import { useCachedImage } from "../../hooks/use-cached-image";
 import { Badge } from "../../components/ui/badge";
 import { useSubjectStatus } from "../../hooks/use-subject-status";
 import { SubscribeButton } from "../../components/SubscribeButton";
+import { getMikanResources } from "../../lib/api";
+import type { MikanResourcesResponse } from "../../types/gen/mikan";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -39,6 +42,18 @@ const AnimeDetailPage = () => {
   const { status, loading: statusLoading } = useSubjectStatus(
     id ? Number(id) : undefined
   );
+  const mikanQuery = useQuery<MikanResourcesResponse | null>({
+    queryKey: ["mikan", id],
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+    queryFn: async () => {
+      if (!id) return null;
+      const data = await getMikanResources(Number(id));
+      return data;
+    },
+  });
 
   useEffect(() => {
     if (anime) {
@@ -264,6 +279,56 @@ const AnimeDetailPage = () => {
         {/* 剧集列表 */}
         <div className="mt-8">
           <EpisodesList subjectId={anime.id} />
+        </div>
+
+        <div className="mt-8">
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-md border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Mikan 资源</h2>
+              <Button variant="outline" onClick={() => mikanQuery.refetch()} disabled={mikanQuery.isPending}>
+                {mikanQuery.isPending ? "拉取中" : "刷新资源"}
+              </Button>
+            </div>
+            {mikanQuery.error && (
+              <div className="text-sm text-red-600 dark:text-red-400 mb-2">拉取失败</div>
+            )}
+            {!mikanQuery.data && mikanQuery.isPending && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">加载中</div>
+            )}
+            {mikanQuery.data && !mikanQuery.data.mapped && (
+              <div className="text-sm text-gray-600 dark:text-gray-400">未命中</div>
+            )}
+            {mikanQuery.data && mikanQuery.data.mapped && (
+              <div className="space-y-3">
+                <div className="text-sm text-gray-600 dark:text-gray-400">共 {mikanQuery.data.items.length} 条</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {mikanQuery.data.items.map((it, idx) => (
+                    <div key={idx} className="border rounded-md p-3">
+                      <div className="text-sm font-semibold line-clamp-2 mb-1">{it.title}</div>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        {it.page_url && (
+                          <a href={it.page_url} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noreferrer">
+                            页面
+                          </a>
+                        )}
+                        {it.torrent_url && (
+                          <a href={it.torrent_url} className="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noreferrer">
+                            种子
+                          </a>
+                        )}
+                        {it.magnet && (
+                          <span className="text-muted-foreground">磁力</span>
+                        )}
+                        {it.pub_date && (
+                          <span className="text-muted-foreground">{it.pub_date}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

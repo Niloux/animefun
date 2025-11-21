@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { CalendarDay, Anime, PagedEpisode, SubjectStatus, SubjectStatusCode } from '../types/bangumi';
+import type { MikanResourcesResponse } from '@/types/gen/mikan';
 import type { SearchResponse } from '@/types/gen/bangumi';
 
 /**
@@ -123,6 +124,16 @@ export async function searchSubject(
   } catch (error) {
     console.error("调用 'search_subject' 失败:", error);
     throw new Error(`搜索番剧失败: ${keywords}`);
+  }
+}
+
+export async function getMikanResources(subjectId: number): Promise<MikanResourcesResponse> {
+  try {
+    const data = await invoke<MikanResourcesResponse>('get_mikan_resources', { subjectId });
+    return data;
+  } catch (error) {
+    console.error("调用 'get_mikan_resources' 失败:", error);
+    throw new Error(`获取 Mikan 资源失败 (Subject ID: ${subjectId})`);
   }
 }
 
