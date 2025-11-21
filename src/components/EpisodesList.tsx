@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState } from "react";
 import { Eye, Clock, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -32,6 +32,229 @@ import type {
   MikanResourceItem,
   MikanResourcesResponse,
 } from "../types/gen/mikan";
+import type { Episode as BEpisode } from "../types/bangumi";
+
+function episodeNoOf(e: BEpisode | null): number | null {
+  if (!e) return null;
+  return e.sort ?? e.ep ?? null;
+}
+
+function matchRange(range: string | undefined, no: number): boolean {
+  if (!range || typeof no !== "number") return false;
+  const m = range.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
+  if (m) {
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    return no >= a && no <= b;
+  }
+  const n = range.match(/(\d{1,3})/);
+  if (n) {
+    const v = parseInt(n[1], 10);
+    return no === v;
+  }
+  return false;
+}
+
+function filterItemsByEpisode(
+  items: MikanResourceItem[],
+  no: number
+): MikanResourceItem[] {
+  return items.filter((it) => {
+    if (typeof it.episode === "number") return it.episode === no;
+    return matchRange(it.episode_range, no);
+  });
+}
+
+function groupByGroup(
+  items: MikanResourceItem[]
+): { group: string; items: MikanResourceItem[] }[] {
+  const m = new Map<string, MikanResourceItem[]>();
+  for (const it of items) {
+    const g = it.group || "未知字幕组";
+    const arr = m.get(g) || [];
+    arr.push(it);
+    m.set(g, arr);
+  }
+  return Array.from(m.entries()).map(([group, items]) => ({ group, items }));
+}
+
+function EpisodeCard({
+  episode,
+  onOpen,
+}: {
+  episode: BEpisode;
+  onOpen: (id: number) => void;
+}) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer p-4 flex flex-col h-40"
+      onClick={() => onOpen(episode.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onOpen(episode.id);
+      }}
+    >
+      <div className="relative flex flex-col h-full">
+        <div className="flex items-center justify-between mb-3">
+          <span className="inline-flex items-center justify-center w-10 h-10 bg-blue-500 text-white text-sm font-bold rounded-lg">
+            {episode.sort.toFixed(0)}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {episode.airdate}
+          </span>
+        </div>
+        <div className="flex-1 mb-auto">
+          <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
+            {episode.name_cn || episode.name}
+          </p>
+          {episode.name !== episode.name_cn && (
+            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
+              {episode.name}
+            </p>
+          )}
+        </div>
+        <div className="pt-3 mt-auto border-t border-gray-100 dark:border-slate-700 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+            <Eye className="w-3 h-3" aria-hidden="true" />
+            <span>
+              {episode.comment_str || episode.comment.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+            <Clock className="w-3 h-3" aria-hidden="true" />
+            <span>{episode.duration_display || episode.duration || "N/A"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResourceDrawer({
+  open,
+  onOpenChange,
+  episode,
+  resources,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  episode: BEpisode | null;
+  resources?: MikanResourcesResponse | null;
+}) {
+  const epNo = episodeNoOf(episode);
+  const matched = useMemo(() => {
+    if (!resources?.mapped || !resources.items || !epNo) return [];
+    return filterItemsByEpisode(resources.items, epNo);
+  }, [resources, epNo]);
+  const grouped = useMemo(() => groupByGroup(matched), [matched]);
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-2xl">
+          <DrawerHeader>
+            <DrawerTitle>{episode ? `第 ${epNo} 话资源` : "资源"}</DrawerTitle>
+            <DrawerDescription>
+              {episode ? episode.name_cn || episode.name : ""}
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="p-4 pt-0">
+            {resources && !resources.mapped ? (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                未命中
+              </div>
+            ) : matched.length === 0 ? (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                暂无资源
+              </div>
+            ) : (
+              <ScrollArea className="h-[50vh]">
+                <div className="space-y-4">
+                  {grouped.map((g) => (
+                    <div key={g.group} className="border rounded-md">
+                      <div className="px-3 py-2 font-semibold text-sm">
+                        {g.group}
+                      </div>
+                      <div className="divide-y">
+                        {g.items.map((it, idx) => (
+                          <div key={idx} className="p-3 space-y-2">
+                            <div className="text-sm font-medium">
+                              {it.title}
+                            </div>
+                            <div className="flex flex-wrap gap-2 text-xs">
+                              {it.page_url && (
+                                <a
+                                  href={it.page_url}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  页面
+                                </a>
+                              )}
+                              {it.torrent_url && (
+                                <a
+                                  href={it.torrent_url}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  种子
+                                </a>
+                              )}
+                              {it.magnet && (
+                                <button
+                                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                                  onClick={() =>
+                                    navigator.clipboard?.writeText(
+                                      it.magnet as string
+                                    )
+                                  }
+                                >
+                                  复制磁力
+                                </button>
+                              )}
+                              {it.pub_date && (
+                                <span className="text-muted-foreground">
+                                  {it.pub_date}
+                                </span>
+                              )}
+                              {typeof it.resolution === "number" && (
+                                <span className="text-muted-foreground">
+                                  {it.resolution}p
+                                </span>
+                              )}
+                              {it.subtitle_lang && (
+                                <span className="text-muted-foreground">
+                                  {it.subtitle_lang}
+                                </span>
+                              )}
+                              {it.subtitle_type && (
+                                <span className="text-muted-foreground">
+                                  {it.subtitle_type}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+          <DrawerFooter>
+            <DrawerClose asChild>
+              <Button variant="outline">关闭</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
 
 interface EpisodesListProps {
   subjectId: number;
@@ -59,45 +282,6 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
     () => episodes.find((e) => e.id === selectedId) || null,
     [episodes, selectedId]
   );
-
-  const episodeNo = selectedEpisode
-    ? (selectedEpisode.sort ?? selectedEpisode.ep)
-    : null;
-
-  const rangeHit = useCallback((range?: string, no?: number) => {
-    if (!range || typeof no !== "number") return false;
-    const m = range.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
-    if (m) {
-      const a = parseInt(m[1], 10);
-      const b = parseInt(m[2], 10);
-      return no >= a && no <= b;
-    }
-    const n = range.match(/(\d{1,3})/);
-    if (n) {
-      const v = parseInt(n[1], 10);
-      return no === v;
-    }
-    return false;
-  }, []);
-
-  const matchedItems = useMemo<MikanResourceItem[]>(() => {
-    if (!resources?.mapped || !resources.items || !episodeNo) return [];
-    return resources.items.filter((it) => {
-      if (typeof it.episode === "number") return it.episode === episodeNo;
-      return rangeHit(it.episode_range, episodeNo);
-    });
-  }, [resources, episodeNo, rangeHit]);
-
-  const grouped = useMemo(() => {
-    const m = new Map<string, MikanResourceItem[]>();
-    for (const it of matchedItems) {
-      const g = it.group || "未知字幕组";
-      const arr = m.get(g) || [];
-      arr.push(it);
-      m.set(g, arr);
-    }
-    return Array.from(m.entries()).map(([group, items]) => ({ group, items }));
-  }, [matchedItems]);
 
   // 发生错误时重新加载
   const handleReload = () => {
@@ -195,65 +379,14 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
           <>
             <div className="grid grid-cols-3 gap-4 mb-4">
               {episodes.map((episode) => (
-                <div
+                <EpisodeCard
                   key={episode.id}
-                  className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-500 transition-colors cursor-pointer p-4 flex flex-col h-40"
-                  onClick={() => {
-                    setSelectedId(episode.id);
+                  episode={episode as BEpisode}
+                  onOpen={(id) => {
+                    setSelectedId(id);
                     setOpen(true);
                   }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setSelectedId(episode.id);
-                      setOpen(true);
-                    }
-                  }}
-                >
-                  <div className="relative flex flex-col h-full">
-                    {/* 集数与日期 */}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="inline-flex items-center justify-center w-10 h-10 bg-blue-500 text-white text-sm font-bold rounded-lg">
-                        {episode.sort.toFixed(0)}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {episode.airdate}
-                      </span>
-                    </div>
-
-                    {/* 剧集标题 */}
-                    <div className="flex-1 mb-auto">
-                      <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
-                        {episode.name_cn || episode.name}
-                      </p>
-                      {episode.name !== episode.name_cn && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
-                          {episode.name}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* 元信息 */}
-                    <div className="pt-3 mt-auto border-t border-gray-100 dark:border-slate-700 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                        <Eye className="w-3 h-3" aria-hidden="true" />
-                        <span>
-                          {episode.comment_str ||
-                            episode.comment.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                        <Clock className="w-3 h-3" aria-hidden="true" />
-                        <span>
-                          {episode.duration_display ||
-                            episode.duration ||
-                            "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                />
               ))}
               {Array.from({ length: Math.max(0, 6 - episodes.length) }).map(
                 (_, idx) => (
@@ -312,113 +445,12 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
         ) : null}
       </div>
 
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent>
-          <div className="mx-auto w-full max-w-2xl">
-            <DrawerHeader>
-              <DrawerTitle>
-                {selectedEpisode ? `第 ${episodeNo} 话资源` : "资源"}
-              </DrawerTitle>
-              <DrawerDescription>
-                {selectedEpisode
-                  ? selectedEpisode.name_cn || selectedEpisode.name
-                  : ""}
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="p-4 pt-0">
-              {resources && !resources.mapped ? (
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  未命中
-                </div>
-              ) : matchedItems.length === 0 ? (
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  暂无资源
-                </div>
-              ) : (
-                <ScrollArea className="h-[50vh]">
-                  <div className="space-y-4">
-                    {grouped.map((g) => (
-                      <div key={g.group} className="border rounded-md">
-                        <div className="px-3 py-2 font-semibold text-sm">
-                          {g.group}
-                        </div>
-                        <div className="divide-y">
-                          {g.items.map((it, idx) => (
-                            <div key={idx} className="p-3 space-y-2">
-                              <div className="text-sm font-medium">
-                                {it.title}
-                              </div>
-                              <div className="flex flex-wrap gap-2 text-xs">
-                                {it.page_url && (
-                                  <a
-                                    href={it.page_url}
-                                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    页面
-                                  </a>
-                                )}
-                                {it.torrent_url && (
-                                  <a
-                                    href={it.torrent_url}
-                                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                  >
-                                    种子
-                                  </a>
-                                )}
-                                {it.magnet && (
-                                  <button
-                                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                                    onClick={() =>
-                                      navigator.clipboard?.writeText(
-                                        it.magnet as string
-                                      )
-                                    }
-                                  >
-                                    复制磁力
-                                  </button>
-                                )}
-                                {it.pub_date && (
-                                  <span className="text-muted-foreground">
-                                    {it.pub_date}
-                                  </span>
-                                )}
-                                {typeof it.resolution === "number" && (
-                                  <span className="text-muted-foreground">
-                                    {it.resolution}p
-                                  </span>
-                                )}
-                                {it.subtitle_lang && (
-                                  <span className="text-muted-foreground">
-                                    {it.subtitle_lang}
-                                  </span>
-                                )}
-                                {it.subtitle_type && (
-                                  <span className="text-muted-foreground">
-                                    {it.subtitle_type}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </div>
-            <DrawerFooter>
-              <DrawerClose asChild>
-                <Button variant="outline">关闭</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <ResourceDrawer
+        open={open}
+        onOpenChange={setOpen}
+        episode={selectedEpisode as BEpisode | null}
+        resources={resources ?? null}
+      />
     </div>
   );
 };
