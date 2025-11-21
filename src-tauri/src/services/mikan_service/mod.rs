@@ -4,7 +4,7 @@ use crate::services::bangumi_service;
 use std::path::PathBuf;
 use tokio::task::JoinSet;
 
-const MAX_CONCURRENCY: usize = 3;
+const MAX_CONCURRENCY: usize = 5;
 
 pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     map_store::init(base_dir)
