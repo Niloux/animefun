@@ -7,14 +7,18 @@ use regex::Regex;
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use reqwest::StatusCode;
 use std::str::FromStr;
-use tracing::warn;
+use std::time::Instant;
+use tracing::{info, warn};
 
 const RSS_TTL_SECS: i64 = 6 * 3600;
 
 pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, AppError> {
     let key = format!("mikan:rss:{}", mikan_id);
     let xml = match cache::get(&key).await? {
-        Some(x) => x,
+        Some(x) => {
+            info!(bangumi_id = mikan_id, key = %key, xml_len = x.len(), source = "cache", "mikan rss xml ready");
+            x
+        }
         None => {
             let url = format!("https://mikanani.me/RSS/Bangumi?bangumiId={}", mikan_id);
             let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
@@ -25,10 +29,18 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             if let Some(lm) = last_modified {
                 req = req.header(IF_MODIFIED_SINCE, lm);
             }
+            let net_start = Instant::now();
             match req.send().await {
                 Ok(resp) => {
                     if resp.status() == StatusCode::NOT_MODIFIED {
                         if let Some(x) = cache::get(&key).await? {
+                            info!(
+                                bangumi_id = mikan_id,
+                                status = 304,
+                                net_ms = net_start.elapsed().as_millis(),
+                                xml_len = x.len(),
+                                "mikan rss served from cache after 304"
+                            );
                             x
                         } else {
                             let resp2 = CLIENT.get(&url).send().await;
@@ -47,6 +59,13 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
                                         .and_then(|v| v.to_str().ok())
                                         .map(|s| s.to_string());
                                     let _ = cache::set_meta(&key, new_etag, new_lm).await;
+                                    info!(
+                                        bangumi_id = mikan_id,
+                                        status = 200,
+                                        net_ms = net_start.elapsed().as_millis(),
+                                        xml_len = x.len(),
+                                        "mikan rss fetched after 304 miss"
+                                    );
                                     x
                                 }
                                 Err(e) => {
@@ -77,6 +96,13 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
                                     .and_then(|v| v.to_str().ok())
                                     .map(|s| s.to_string());
                                 let _ = cache::set_meta(&key, new_etag, new_lm).await;
+                                info!(
+                                    bangumi_id = mikan_id,
+                                    status = 200,
+                                    net_ms = net_start.elapsed().as_millis(),
+                                    xml_len = x.len(),
+                                    "mikan rss fetched and cached"
+                                );
                                 x
                             }
                             Err(e) => {
@@ -93,6 +119,7 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             }
         }
     };
+    let parse_start = Instant::now();
     let ch = match rss::Channel::from_str(&xml) {
         Ok(c) => c,
         Err(e) => {
@@ -100,7 +127,13 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             return Ok(Vec::new());
         }
     };
+    info!(
+        bangumi_id = mikan_id,
+        parse_ms = parse_start.elapsed().as_millis(),
+        "mikan rss xml parsed"
+    );
     let mut out: Vec<MikanResourceItem> = Vec::new();
+    let build_start = Instant::now();
     for it in ch.items() {
         let title = it.title().unwrap_or("").to_string();
         let page_url = it.link().unwrap_or("").to_string();
@@ -137,6 +170,12 @@ pub async fn fetch_bangumi_rss(mikan_id: u32) -> Result<Vec<MikanResourceItem>, 
             subtitle_type,
         });
     }
+    info!(
+        bangumi_id = mikan_id,
+        items = out.len(),
+        build_ms = build_start.elapsed().as_millis(),
+        "mikan rss items built"
+    );
     Ok(out)
 }
 
