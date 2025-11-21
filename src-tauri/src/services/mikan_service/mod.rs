@@ -18,7 +18,10 @@ pub async fn ensure_mapping(subject_id: u32) -> Result<Option<u32>, AppError> {
     let name = if subject.name_cn.trim().is_empty() {
         subject.name
     } else {
-        subject.name_cn
+        let mut s = subject.name_cn.trim().to_string();
+        let trims: [char; 8] = ['。', '.', '!', '！', '?', '？', '·', '•'];
+        s = s.trim_end_matches(&trims[..]).to_string();
+        s
     };
     let candidates = search::search_bangumi_candidates_by_name(&name).await?;
     if candidates.is_empty() {
