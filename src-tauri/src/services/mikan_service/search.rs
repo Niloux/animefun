@@ -1,5 +1,6 @@
 use crate::cache;
 use crate::error::AppError;
+use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
 use reqwest::StatusCode;
 use scraper::{Html, Selector};
@@ -12,7 +13,7 @@ pub async fn search_candidates(name: &str) -> Result<Vec<u32>, AppError> {
     let html = match cache::get(&key).await? {
         Some(h) => h,
         None => {
-            let url = "https://mikanani.me/Home/Search";
+            let url = format!("{}/Home/Search", MIKAN_HOST);
             let resp = CLIENT.get(url).query(&[("searchstr", name)]).send().await?;
             if resp.status() != StatusCode::OK {
                 resp.error_for_status_ref()?;

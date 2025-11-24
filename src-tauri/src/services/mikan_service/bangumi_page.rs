@@ -1,5 +1,6 @@
-use crate::error::AppError;
 use crate::cache;
+use crate::error::AppError;
+use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
 use reqwest::StatusCode;
 use scraper::{Html, Selector};
@@ -11,9 +12,11 @@ pub async fn resolve_subject(bangumi_id: u32) -> Result<Option<u32>, AppError> {
     let html = match cache::get(&key).await? {
         Some(h) => h,
         None => {
-            let url = format!("https://mikanani.me/Home/Bangumi/{}", bangumi_id);
+            let url = format!("{}/Home/Bangumi/{}", MIKAN_HOST, bangumi_id);
             let resp = CLIENT.get(&url).send().await?;
-            if resp.status() != StatusCode::OK { resp.error_for_status_ref()?; }
+            if resp.status() != StatusCode::OK {
+                resp.error_for_status_ref()?;
+            }
             let h = resp.text().await?;
             let _ = cache::set(&key, h.clone(), PAGE_TTL_SECS).await;
             h
@@ -43,8 +46,12 @@ fn parse_subject_id(href: &str) -> Option<u32> {
             let s = &href[start..];
             let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
             let id_str = &s[..end];
-            if id_str.is_empty() { continue; }
-            if let Ok(id) = id_str.parse::<u32>() { return Some(id); }
+            if id_str.is_empty() {
+                continue;
+            }
+            if let Ok(id) = id_str.parse::<u32>() {
+                return Some(id);
+            }
         }
     }
     None

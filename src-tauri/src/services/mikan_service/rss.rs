@@ -1,7 +1,8 @@
 use crate::cache;
 use crate::error::AppError;
-use crate::models::mikan::MikanResourceItem;
+use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
+use crate::models::mikan::MikanResourceItem;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
@@ -100,15 +101,23 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
             x
         }
         _ => {
-            let url = format!("https://mikanani.me/RSS/Bangumi?bangumiId={}", mid);
+            let url = format!("{}/RSS/Bangumi?bangumiId={}", MIKAN_HOST, mid);
             let (etag, last_modified) = cache::get_meta(&key).await.unwrap_or((None, None));
             let mut req = CLIENT.get(&url);
-            if let Some(e) = etag { req = req.header(IF_NONE_MATCH, e); }
-            if let Some(lm) = last_modified { req = req.header(IF_MODIFIED_SINCE, lm); }
+            if let Some(e) = etag {
+                req = req.header(IF_NONE_MATCH, e);
+            }
+            if let Some(lm) = last_modified {
+                req = req.header(IF_MODIFIED_SINCE, lm);
+            }
             match claim_or_subscribe(mid).await {
                 Claim::Subscriber(mut rx) => loop {
-                    if let Some(v) = rx.borrow().clone() { break v; }
-                    if rx.changed().await.is_err() { break String::new(); }
+                    if let Some(v) = rx.borrow().clone() {
+                        break v;
+                    }
+                    if rx.changed().await.is_err() {
+                        break String::new();
+                    }
                 },
                 Claim::Owner(tx) => {
                     let net_start = Instant::now();
@@ -134,16 +143,25 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
                                         info!(bangumi_id = mid, status = 200, net_ms = %net_start.elapsed().as_millis(), xml_len = body.len(), "mikan rss fetched and cached");
                                         out = body;
                                     }
-                                    Err(e) => { warn!(error = %e, bangumi_id = mid, "mikan rss read body error"); }
+                                    Err(e) => {
+                                        warn!(error = %e, bangumi_id = mid, "mikan rss read body error");
+                                    }
                                 }
                             } else {
-                                warn!(status = resp.status().as_u16(), bangumi_id = mid, "mikan rss non-OK status");
+                                warn!(
+                                    status = resp.status().as_u16(),
+                                    bangumi_id = mid,
+                                    "mikan rss non-OK status"
+                                );
                             }
                         }
-                        Err(e) => { warn!(error = %e, bangumi_id = mid, "mikan rss request error"); }
+                        Err(e) => {
+                            warn!(error = %e, bangumi_id = mid, "mikan rss request error");
+                        }
                     }
                     let _ = tx.send(Some(out.clone()));
-                    let mut m = TASKS.lock().await; m.remove(&mid);
+                    let mut m = TASKS.lock().await;
+                    m.remove(&mid);
                     out
                 }
             }
@@ -154,7 +172,10 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
 fn parse_rss_channel(mid: u32, xml: &str) -> Option<rss::Channel> {
     match rss::Channel::from_str(xml) {
         Ok(c) => Some(c),
-        Err(e) => { warn!(error = %e, bangumi_id = mid, "mikan rss parse error"); None }
+        Err(e) => {
+            warn!(error = %e, bangumi_id = mid, "mikan rss parse error");
+            None
+        }
     }
 }
 
@@ -168,15 +189,31 @@ fn parse_rss_items(ch: &rss::Channel) -> Vec<MikanResourceItem> {
         if let Some(enc) = it.enclosure() {
             torrent_url = Some(enc.url().to_string());
             let len_str = enc.length();
-            if !len_str.is_empty() { size_bytes = len_str.parse::<u64>().ok(); }
+            if !len_str.is_empty() {
+                size_bytes = len_str.parse::<u64>().ok();
+            }
         }
         let pub_date = it.pub_date().map(|s| s.to_string());
         let desc = it.description().map(|s| s.to_string());
         let group = parse_group(&title);
         let (episode, episode_range) = parse_episode_info(&title);
-        let resolution = parse_resolution(&title).or_else(|| desc.as_deref().and_then(parse_resolution));
+        let resolution =
+            parse_resolution(&title).or_else(|| desc.as_deref().and_then(parse_resolution));
         let (subtitle_lang, subtitle_type) = parse_subtitle(&title, desc.as_deref());
-        out.push(MikanResourceItem { title, page_url, torrent_url, magnet: None, pub_date, size_bytes, group, episode, episode_range, resolution, subtitle_lang, subtitle_type });
+        out.push(MikanResourceItem {
+            title,
+            page_url,
+            torrent_url,
+            magnet: None,
+            pub_date,
+            size_bytes,
+            group,
+            episode,
+            episode_range,
+            resolution,
+            subtitle_lang,
+            subtitle_type,
+        });
     }
     out
 }
