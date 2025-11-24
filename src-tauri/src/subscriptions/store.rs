@@ -1,4 +1,3 @@
-use once_cell::sync::OnceCell;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
@@ -7,20 +6,17 @@ use crate::infra::time::now_secs;
 use crate::models::bangumi::{SubjectResponse, SubjectStatusCode};
 use crate::services::bangumi_service;
 use crate::subscriptions;
-use deadpool_sqlite::{Config as DbConfig, Pool as DbPool, Runtime as DbRuntime};
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 use tracing::info;
 
-static SUBS_DB_FILE: OnceCell<PathBuf> = OnceCell::new();
+static SUBS_DB_FILE: once_cell::sync::OnceCell<PathBuf> = once_cell::sync::OnceCell::new();
 
 pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     std::fs::create_dir_all(&base_dir)?;
     let file = base_dir.join("data.sqlite");
     SUBS_DB_FILE.set(file.clone()).ok();
-    let cfg = DbConfig::new(file.to_string_lossy().to_string());
-    let pool = cfg.create_pool(DbRuntime::Tokio1)?;
-    SUBS_DB_POOL.set(pool).ok();
+    crate::infra::db::init_data_db(base_dir)?;
     Ok(())
 }
 
@@ -54,9 +50,7 @@ fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
 }
 
 pub async fn list() -> Result<Vec<(u32, i64, bool)>, AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let out = conn
         .interact(|conn| -> Result<Vec<(u32, i64, bool)>, rusqlite::Error> {
@@ -79,9 +73,7 @@ pub async fn list() -> Result<Vec<(u32, i64, bool)>, AppError> {
 }
 
 pub async fn list_ids() -> Result<Vec<u32>, AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let out = conn
         .interact(|conn| -> Result<Vec<u32>, rusqlite::Error> {
@@ -101,9 +93,7 @@ pub async fn list_ids() -> Result<Vec<u32>, AppError> {
 }
 
 pub async fn has(id: u32) -> Result<bool, AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let exists = conn
         .interact(move |conn| -> Result<bool, rusqlite::Error> {
@@ -117,9 +107,7 @@ pub async fn has(id: u32) -> Result<bool, AppError> {
 }
 
 pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let res = conn
         .interact(move |conn| -> Result<bool, rusqlite::Error> {
@@ -149,9 +137,7 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
 }
 
 pub async fn clear() -> Result<(), AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     conn.interact(|conn| -> Result<(), rusqlite::Error> {
         ensure_table(conn)?;
@@ -209,9 +195,7 @@ pub async fn upsert_index_row(
     subject: SubjectResponse,
     status: SubjectStatusCode,
 ) -> Result<(), AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     conn
         .interact(move |conn| -> Result<(), rusqlite::Error> {
@@ -286,9 +270,7 @@ pub async fn refresh_index_all() -> Result<(), AppError> {
 pub async fn query(
     params: crate::commands::subscriptions::SubQueryParams,
 ) -> Result<(Vec<u32>, u32), AppError> {
-    let pool = SUBS_DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let (ids, total) = conn
         .interact(move |conn| -> Result<(Vec<u32>, u32), rusqlite::Error> {
@@ -400,4 +382,3 @@ mod tests {
         assert!(r2.is_empty());
     }
 }
-static SUBS_DB_POOL: OnceCell<DbPool> = OnceCell::new();

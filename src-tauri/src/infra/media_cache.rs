@@ -1,6 +1,6 @@
 use crate::error::{AppError, CommandResult};
 use crate::infra::path::app_base_dir;
-use crate::services::bangumi_service::client::CLIENT;
+use crate::infra::http::CLIENT;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use tracing::{debug, info};

@@ -4,6 +4,7 @@ use crate::subscriptions;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
+use crate::infra::tasks::{round_robin_take, next_offset};
 use tokio::time::{sleep, Duration};
 use tracing::{info, warn};
 
@@ -34,14 +35,7 @@ pub fn spawn_preheat_worker() {
             let mut js: JoinSet<()> = JoinSet::new();
             let total = rows.len();
             let start = PREHEAT_OFFSET.load(std::sync::atomic::Ordering::Relaxed) % total;
-            let end = std::cmp::min(total, start + PREHEAT_LIMIT);
-            let mut slice: Vec<(u32, i64, bool)> = rows[start..end].to_vec();
-            if slice.len() < PREHEAT_LIMIT {
-                let remain = PREHEAT_LIMIT - slice.len();
-                let extra_end = std::cmp::min(remain, total);
-                slice.extend_from_slice(&rows[..extra_end]);
-            }
-            let processed = slice.len();
+            let (slice, processed) = round_robin_take(&rows, start, PREHEAT_LIMIT);
             info!(
                 total,
                 start,
@@ -71,10 +65,9 @@ pub fn spawn_preheat_worker() {
                 });
             }
             while js.join_next().await.is_some() {}
-            let next = (start + processed) % total;
+            let next = next_offset(total, start, processed);
             PREHEAT_OFFSET.store(next, std::sync::atomic::Ordering::Relaxed);
             sleep(Duration::from_secs(PREHEAT_INTERVAL_SECS)).await;
         }
     });
 }
-

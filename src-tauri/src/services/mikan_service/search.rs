@@ -1,6 +1,6 @@
 use crate::cache;
 use crate::error::AppError;
-use crate::services::bangumi_service::client::CLIENT;
+use crate::infra::http::CLIENT;
 use reqwest::StatusCode;
 use scraper::{Html, Selector};
 use std::collections::HashSet;

@@ -1,7 +1,7 @@
 use crate::cache;
 use crate::error::AppError;
 use crate::models::mikan::MikanResourceItem;
-use crate::services::bangumi_service::client::CLIENT;
+use crate::infra::http::CLIENT;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};

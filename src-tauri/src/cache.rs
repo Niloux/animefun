@@ -1,19 +1,12 @@
-use once_cell::sync::OnceCell;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
-use deadpool_sqlite::{Config as DbConfig, Pool as DbPool, Runtime as DbRuntime};
 use tracing::{debug, info};
 
 pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
-    std::fs::create_dir_all(&base_dir)?;
-    let file = base_dir.join("cache.sqlite");
-    DB_FILE.set(file.clone()).ok();
-    let cfg = DbConfig::new(file.to_string_lossy().to_string());
-    let pool = cfg.create_pool(DbRuntime::Tokio1)?;
-    DB_POOL.set(pool).ok();
+    crate::infra::db::init_cache_db(base_dir)?;
     Ok(())
 }
 
@@ -39,9 +32,7 @@ fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
 }
 
 pub async fn get(key: &str) -> Result<Option<String>, AppError> {
-    let pool = DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "pool_uninit"))?;
+    let pool = crate::infra::db::cache_pool()?;
     let key = key.to_string();
     let conn = pool.get().await?;
     let out = conn
@@ -69,9 +60,7 @@ pub async fn get(key: &str) -> Result<Option<String>, AppError> {
 }
 
 pub async fn set(key: &str, value: String, ttl_secs: i64) -> Result<(), AppError> {
-    let pool = DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "pool_uninit"))?;
+    let pool = crate::infra::db::cache_pool()?;
     let key = key.to_string();
     let conn = pool.get().await?;
     conn
@@ -94,9 +83,7 @@ pub async fn set(key: &str, value: String, ttl_secs: i64) -> Result<(), AppError
 }
 
 pub async fn get_meta(key: &str) -> Result<(Option<String>, Option<String>), AppError> {
-    let pool = DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "pool_uninit"))?;
+    let pool = crate::infra::db::cache_pool()?;
     let key = key.to_string();
     let conn = pool.get().await?;
     let out = conn
@@ -124,9 +111,7 @@ pub async fn set_meta(
     etag: Option<String>,
     last_modified: Option<String>,
 ) -> Result<(), AppError> {
-    let pool = DB_POOL
-        .get()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "pool_uninit"))?;
+    let pool = crate::infra::db::cache_pool()?;
     let key = key.to_string();
     let conn = pool.get().await?;
     conn
@@ -142,8 +127,6 @@ pub async fn set_meta(
         .await??;
     Ok(())
 }
-static DB_FILE: OnceCell<PathBuf> = OnceCell::new();
-static DB_POOL: OnceCell<DbPool> = OnceCell::new();
 
 #[cfg(test)]
 mod tests {

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
 use tracing::{info, warn};
+use crate::infra::tasks::{round_robin_take, next_offset};
 
 use super::status::get_status_cached;
 use super::store::{list, upsert_index_row};
@@ -37,14 +38,7 @@ pub fn spawn_refresh_worker() {
             let mut handles = Vec::new();
             let total = rows.len();
             let start = REFRESH_OFFSET.load(Ordering::Relaxed) % total;
-            let end = std::cmp::min(total, start + REFRESH_LIMIT);
-            let mut slice: Vec<(u32, i64, bool)> = rows[start..end].to_vec();
-            if slice.len() < REFRESH_LIMIT {
-                let remain = REFRESH_LIMIT - slice.len();
-                let extra_end = std::cmp::min(remain, total);
-                slice.extend_from_slice(&rows[..extra_end]);
-            }
-            let processed = slice.len();
+            let (slice, processed) = round_robin_take(&rows, start, REFRESH_LIMIT);
             for (id, _added_at, _notify) in slice.into_iter() {
                 let sem_clone = Arc::clone(&sem);
                 handles.push(tokio::spawn(async move {
@@ -57,7 +51,7 @@ pub fn spawn_refresh_worker() {
             for h in handles {
                 let _ = h.await;
             }
-            let next = (start + processed) % total;
+            let next = next_offset(total, start, processed);
             REFRESH_OFFSET.store(next, Ordering::Relaxed);
             sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
         }
@@ -82,14 +76,7 @@ pub fn spawn_index_worker() {
             let mut handles = Vec::new();
             let total = rows.len();
             let start = INDEX_OFFSET.load(Ordering::Relaxed) % total;
-            let end = std::cmp::min(total, start + INDEX_LIMIT);
-            let mut slice: Vec<(u32, i64, bool)> = rows[start..end].to_vec();
-            if slice.len() < INDEX_LIMIT {
-                let remain = INDEX_LIMIT - slice.len();
-                let extra_end = std::cmp::min(remain, total);
-                slice.extend_from_slice(&rows[..extra_end]);
-            }
-            let processed = slice.len();
+            let (slice, processed) = round_robin_take(&rows, start, INDEX_LIMIT);
             for (id, added_at, _notify) in slice.into_iter() {
                 let sem_clone = Arc::clone(&sem);
                 handles.push(tokio::spawn(async move {
@@ -105,7 +92,7 @@ pub fn spawn_index_worker() {
             for h in handles {
                 let _ = h.await;
             }
-            let next = (start + processed) % total;
+            let next = next_offset(total, start, processed);
             INDEX_OFFSET.store(next, Ordering::Relaxed);
             sleep(Duration::from_secs(INDEX_INTERVAL_SECS)).await;
         }

@@ -6,7 +6,8 @@ use reqwest::{RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::{debug, info};
 
-use super::client::{BGM_API_HOST, CLIENT};
+use crate::infra::http::CLIENT;
+use super::client::BGM_API_HOST;
 
 async fn fetch_api<T>(
     key: &str,
