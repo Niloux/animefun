@@ -9,6 +9,12 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
+    #[error(transparent)]
+    DeadpoolPool(#[from] deadpool_sqlite::PoolError),
+    #[error(transparent)]
+    DeadpoolInteract(#[from] deadpool_sqlite::InteractError),
+    #[error(transparent)]
+    DeadpoolCreatePool(#[from] deadpool_sqlite::CreatePoolError),
     #[error("Cache miss for key '{0}' after receiving 304 Not Modified")]
     CacheMissAfter304(String),
     #[error(transparent)]
@@ -25,6 +31,9 @@ impl AppError {
             AppError::Reqwest(_) => "reqwest",
             AppError::Io(_) => "io",
             AppError::Sqlite(_) => "sqlite",
+            AppError::DeadpoolPool(_) => "deadpool_pool",
+            AppError::DeadpoolInteract(_) => "deadpool_interact",
+            AppError::DeadpoolCreatePool(_) => "deadpool_create_pool",
             AppError::CacheMissAfter304(_) => "cache_miss_after_304",
             AppError::SerdeJson(_) => "serde_json",
         }

@@ -103,43 +103,144 @@ pub async fn sub_query(
 ) -> CommandResult<crate::models::bangumi::SearchResponse> {
     let rows = subscriptions::list().await?;
     let sort_needs_status = matches!(params.sort.as_deref(), Some("status"));
+    let sort_requires_all = matches!(
+        params.sort.as_deref(),
+        Some("rank" | "score" | "heat" | "match")
+    );
+    let has_text_filters = params
+        .keywords
+        .as_ref()
+        .map(|k| !k.trim().is_empty())
+        .unwrap_or(false)
+        || params
+            .genres
+            .as_ref()
+            .map(|g| !g.is_empty())
+            .unwrap_or(false)
+        || params.min_rating.is_some()
+        || params.max_rating.is_some();
     let need_status = params.status_code.is_some() || sort_needs_status;
-    let sem = Arc::new(Semaphore::new(8));
-    let mut js: JoinSet<
-        Result<
-            (
-                SubjectResponse,
-                Option<crate::models::bangumi::SubjectStatus>,
-            ),
-            crate::error::AppError,
-        >,
-    > = JoinSet::new();
-    for (id, _added_at, _notify) in rows.iter().cloned() {
-        let sem_clone = Arc::clone(&sem);
-        js.spawn(async move {
-            let _permit = sem_clone.acquire_owned().await.ok();
-            let anime = bangumi_service::fetch_subject(id).await?;
-            let status = if need_status {
-                Some(subscriptions::get_status_cached(id).await?)
-            } else {
-                None
-            };
-            Ok::<
+    let use_prefilter = need_status && !(has_text_filters || sort_requires_all);
+
+    let mut base_ids: Vec<u32> = rows.iter().map(|(id, _, _)| *id).collect();
+    let mut status_map: std::collections::HashMap<u32, SubjectStatusCode> =
+        std::collections::HashMap::new();
+
+    if use_prefilter {
+        let sem = Arc::new(Semaphore::new(8));
+        let mut js: JoinSet<
+            Result<(u32, crate::models::bangumi::SubjectStatus), crate::error::AppError>,
+        > = JoinSet::new();
+        for id in base_ids.iter().cloned() {
+            let sem_clone = Arc::clone(&sem);
+            js.spawn(async move {
+                let _permit = sem_clone.acquire_owned().await.ok();
+                let st = subscriptions::get_status_cached(id).await?;
+                Ok::<(u32, crate::models::bangumi::SubjectStatus), crate::error::AppError>((id, st))
+            });
+        }
+        base_ids.clear();
+        while let Some(res) = js.join_next().await {
+            if let Ok(Ok((id, st))) = res {
+                if let Some(code) = params.status_code.as_ref() {
+                    if &st.code != code {
+                        continue;
+                    }
+                }
+                status_map.insert(id, st.code);
+                base_ids.push(id);
+            }
+        }
+        if sort_needs_status {
+            base_ids.sort_by(|a, b| {
+                let oa = status_map.get(a).map(|c| status_order(c)).unwrap_or(5);
+                let ob = status_map.get(b).map(|c| status_order(c)).unwrap_or(5);
+                oa.cmp(&ob)
+            });
+        }
+    }
+
+    let limit = params.limit.unwrap_or(20);
+    let offset = params.offset.unwrap_or(0);
+    let total_ids = base_ids.len() as u32;
+    let page_ids: Vec<u32> = if (offset as usize) >= base_ids.len() {
+        Vec::new()
+    } else {
+        base_ids
+            .into_iter()
+            .skip(offset as usize)
+            .take(limit as usize)
+            .collect()
+    };
+
+    let mut items: Vec<(
+        SubjectResponse,
+        Option<crate::models::bangumi::SubjectStatus>,
+    )> = Vec::new();
+    if use_prefilter {
+        let sem = Arc::new(Semaphore::new(8));
+        let mut js: JoinSet<
+            Result<
                 (
                     SubjectResponse,
                     Option<crate::models::bangumi::SubjectStatus>,
                 ),
                 crate::error::AppError,
-            >((anime, status))
-        });
-    }
-    let mut items: Vec<(
-        SubjectResponse,
-        Option<crate::models::bangumi::SubjectStatus>,
-    )> = Vec::with_capacity(rows.len());
-    while let Some(res) = js.join_next().await {
-        if let Ok(Ok(it)) = res {
-            items.push(it);
+            >,
+        > = JoinSet::new();
+        for id in page_ids.into_iter() {
+            let sem_clone = Arc::clone(&sem);
+            js.spawn(async move {
+                let _permit = sem_clone.acquire_owned().await.ok();
+                let anime = bangumi_service::fetch_subject(id).await?;
+                Ok::<
+                    (
+                        SubjectResponse,
+                        Option<crate::models::bangumi::SubjectStatus>,
+                    ),
+                    crate::error::AppError,
+                >((anime, None))
+            });
+        }
+        while let Some(res) = js.join_next().await {
+            if let Ok(Ok(it)) = res {
+                items.push(it);
+            }
+        }
+    } else {
+        let sem = Arc::new(Semaphore::new(8));
+        let mut js: JoinSet<
+            Result<
+                (
+                    SubjectResponse,
+                    Option<crate::models::bangumi::SubjectStatus>,
+                ),
+                crate::error::AppError,
+            >,
+        > = JoinSet::new();
+        for (id, _added_at, _notify) in rows.iter().cloned() {
+            let sem_clone = Arc::clone(&sem);
+            js.spawn(async move {
+                let _permit = sem_clone.acquire_owned().await.ok();
+                let anime = bangumi_service::fetch_subject(id).await?;
+                let status = if need_status {
+                    Some(subscriptions::get_status_cached(id).await?)
+                } else {
+                    None
+                };
+                Ok::<
+                    (
+                        SubjectResponse,
+                        Option<crate::models::bangumi::SubjectStatus>,
+                    ),
+                    crate::error::AppError,
+                >((anime, status))
+            });
+        }
+        while let Some(res) = js.join_next().await {
+            if let Ok(Ok(it)) = res {
+                items.push(it);
+            }
         }
     }
     let mut filtered_items: Vec<(
@@ -265,19 +366,25 @@ pub async fn sub_query(
         _ => {}
     }
 
-    let total = filtered_items.len() as u32;
-    let limit = params.limit.unwrap_or(20);
-    let offset = params.offset.unwrap_or(0);
-    let start = offset as usize;
-    let data: Vec<SubjectResponse> = if start >= filtered_items.len() {
-        Vec::new()
+    let total = if use_prefilter {
+        total_ids
     } else {
-        filtered_items
-            .into_iter()
-            .skip(start)
-            .take(limit as usize)
-            .map(|(a, _)| a)
-            .collect()
+        filtered_items.len() as u32
+    };
+    let data: Vec<SubjectResponse> = if use_prefilter {
+        filtered_items.into_iter().map(|(a, _)| a).collect()
+    } else {
+        let start = offset as usize;
+        if start >= filtered_items.len() {
+            Vec::new()
+        } else {
+            filtered_items
+                .into_iter()
+                .skip(start)
+                .take(limit as usize)
+                .map(|(a, _)| a)
+                .collect()
+        }
     };
 
     Ok(crate::models::bangumi::SearchResponse {
