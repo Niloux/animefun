@@ -30,7 +30,7 @@ export function ResourceDialog({
   episode: BEpisode | null;
   resources?: MikanResourcesResponse | null;
 }) {
-  const { epNo, matched, mapped } = useEpisodeResources(
+  const { matched, mapped } = useEpisodeResources(
     resources ?? null,
     episode ?? null
   );
@@ -85,9 +85,7 @@ export function ResourceDialog({
         <div className="mx-auto w-full max-w-2xl">
           <DialogHeader className="py-4 gap-1">
             <DialogTitle>
-              {episode
-                ? `第 ${epNo} 话 ${episode.name_cn || episode.name}`
-                : ""}
+              {episode ? `${episode.name_cn || episode.name}` : ""}
             </DialogTitle>
             <DialogDescription>共 {matched.length} 条资源</DialogDescription>
           </DialogHeader>

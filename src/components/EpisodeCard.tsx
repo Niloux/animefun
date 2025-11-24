@@ -28,11 +28,11 @@ export function EpisodeCard({
           </span>
         </div>
         <div className="flex-1 mb-auto">
-          <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">
+          <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight line-clamp-1">
             {episode.name_cn || episode.name}
           </p>
           {episode.name !== episode.name_cn && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mt-1">
+            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mt-1">
               {episode.name}
             </p>
           )}
