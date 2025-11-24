@@ -6,9 +6,13 @@ use reqwest::{RequestBuilder, StatusCode};
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::{debug, info};
 
-use super::client::{CLIENT, BGM_API_HOST};
+use super::client::{BGM_API_HOST, CLIENT};
 
-async fn fetch_api<T>(key: &str, req_builder: RequestBuilder, cache_duration_secs: u64) -> Result<T, AppError>
+async fn fetch_api<T>(
+    key: &str,
+    req_builder: RequestBuilder,
+    cache_duration_secs: u64,
+) -> Result<T, AppError>
 where
     T: Serialize + DeserializeOwned,
 {
@@ -41,8 +45,14 @@ where
     if let Ok(s) = serde_json::to_string(&data) {
         let _ = cache::set(key, s, cache_duration_secs.try_into().unwrap()).await;
     }
-    let new_etag = headers.get(ETAG).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
-    let new_lm = headers.get(LAST_MODIFIED).and_then(|v| v.to_str().ok()).map(|s| s.to_string());
+    let new_etag = headers
+        .get(ETAG)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let new_lm = headers
+        .get(LAST_MODIFIED)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
     let _ = cache::set_meta(key, new_etag, new_lm).await;
     Ok(data)
 }
@@ -78,7 +88,10 @@ pub async fn search_subject(
         "air_date": air_date, "rating": rating, "rating_count": rating_count,
         "rank": rank, "nsfw": nsfw, "limit": limit, "offset": offset
     });
-    let key = format!("search:{}", serde_json::to_string(&key_payload).unwrap_or_default());
+    let key = format!(
+        "search:{}",
+        serde_json::to_string(&key_payload).unwrap_or_default()
+    );
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
     #[derive(serde::Serialize)]
     struct FilterPayload {
@@ -105,22 +118,54 @@ pub async fn search_subject(
         #[serde(skip_serializing_if = "Option::is_none")]
         filter: Option<FilterPayload>,
     }
-    let payload = SearchPayload { keyword: keywords.to_string(), sort, filter: Some(FilterPayload { subject_type, tag, air_date, rating, rating_count, rank, nsfw }) };
+    let payload = SearchPayload {
+        keyword: keywords.to_string(),
+        sort,
+        filter: Some(FilterPayload {
+            subject_type,
+            tag,
+            air_date,
+            rating,
+            rating_count,
+            rank,
+            nsfw,
+        }),
+    };
     let mut req_builder = CLIENT.post(&url).json(&payload);
     let mut qs: Vec<(&str, String)> = Vec::new();
-    if let Some(l) = limit { qs.push(("limit", l.to_string())); }
-    if let Some(o) = offset { qs.push(("offset", o.to_string())); }
-    if !qs.is_empty() { req_builder = req_builder.query(&qs); }
+    if let Some(l) = limit {
+        qs.push(("limit", l.to_string()));
+    }
+    if let Some(o) = offset {
+        qs.push(("offset", o.to_string()));
+    }
+    if !qs.is_empty() {
+        req_builder = req_builder.query(&qs);
+    }
     fetch_api(&key, req_builder, 3600).await
 }
 
-pub async fn fetch_episodes(subject_id: u32, ep_type: Option<u8>, limit: Option<u32>, offset: Option<u32>) -> Result<PagedEpisode, AppError> {
-    let key = format!("episodes:{}:{:?}:{:?}:{:?}", subject_id, ep_type, limit, offset);
+pub async fn fetch_episodes(
+    subject_id: u32,
+    ep_type: Option<u8>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<PagedEpisode, AppError> {
+    let key = format!(
+        "episodes:{}:{:?}:{:?}:{:?}",
+        subject_id, ep_type, limit, offset
+    );
     let url = format!("{}/v0/episodes", BGM_API_HOST);
     let mut qs: Vec<(&str, String)> = vec![("subject_id", subject_id.to_string())];
-    if let Some(t) = ep_type { qs.push(("type", (t as u32).to_string())); }
-    if let Some(l) = limit { qs.push(("limit", l.to_string())); }
-    if let Some(o) = offset { qs.push(("offset", o.to_string())); }
+    if let Some(t) = ep_type {
+        qs.push(("type", (t as u32).to_string()));
+    }
+    if let Some(l) = limit {
+        qs.push(("limit", l.to_string()));
+    }
+    if let Some(o) = offset {
+        qs.push(("offset", o.to_string()));
+    }
     let req_builder = CLIENT.get(&url).query(&qs);
     fetch_api(&key, req_builder, 3600).await
 }

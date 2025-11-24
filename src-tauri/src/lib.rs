@@ -16,7 +16,8 @@ pub fn run() {
             let base = crate::infra::path::app_base_dir(app.handle());
             cache::init(base).map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             let base2 = crate::infra::path::app_base_dir(app.handle());
-            subscriptions::init(base2).map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
+            subscriptions::init(base2)
+                .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             let base3 = crate::infra::path::app_base_dir(app.handle());
             crate::services::mikan_service::init(base3)
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
@@ -24,6 +25,7 @@ pub fn run() {
                 app.handle().clone(),
             ));
             subscriptions::spawn_refresh_worker();
+            subscriptions::spawn_index_worker();
             crate::services::mikan_service::spawn_preheat_worker();
             Ok(())
         })

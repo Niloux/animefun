@@ -4,7 +4,12 @@ use std::path::PathBuf;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
+use crate::models::bangumi::{SubjectResponse, SubjectStatusCode};
+use crate::services::bangumi_service;
+use crate::subscriptions;
 use deadpool_sqlite::{Config as DbConfig, Pool as DbPool, Runtime as DbRuntime};
+use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
 use tracing::info;
 
 static SUBS_DB_FILE: OnceCell<PathBuf> = OnceCell::new();
@@ -25,6 +30,23 @@ fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
             subject_id INTEGER PRIMARY KEY,
             added_at   INTEGER NOT NULL,
             notify     INTEGER NOT NULL DEFAULT 0
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS subjects_index (
+            subject_id    INTEGER PRIMARY KEY,
+            added_at      INTEGER NOT NULL DEFAULT 0,
+            updated_at    INTEGER NOT NULL,
+            name          TEXT    NOT NULL,
+            name_cn       TEXT    NOT NULL,
+            tags_csv      TEXT    NOT NULL DEFAULT '',
+            meta_tags_csv TEXT    NOT NULL DEFAULT '',
+            rating_score  REAL,
+            rating_rank   INTEGER,
+            rating_total  INTEGER,
+            status_code   INTEGER NOT NULL,
+            status_ord    INTEGER NOT NULL
         )",
         [],
     )?;
@@ -138,6 +160,221 @@ pub async fn clear() -> Result<(), AppError> {
     })
     .await??;
     Ok(())
+}
+
+fn status_ord(code: &SubjectStatusCode) -> i64 {
+    match code {
+        SubjectStatusCode::Airing => 0,
+        SubjectStatusCode::PreAir => 1,
+        SubjectStatusCode::Finished => 2,
+        SubjectStatusCode::OnHiatus => 3,
+        SubjectStatusCode::Unknown => 4,
+    }
+}
+
+fn build_tags_csv(subject: &SubjectResponse) -> String {
+    let mut tags: Vec<String> = Vec::new();
+    if let Some(t) = subject.meta_tags.as_ref() {
+        for s in t.iter() {
+            let k = s.trim().to_lowercase();
+            if !k.is_empty() {
+                tags.push(k);
+            }
+        }
+    }
+    if let Some(t) = subject.tags.as_ref() {
+        for x in t.iter() {
+            let k = x.name.trim().to_lowercase();
+            if !k.is_empty() {
+                tags.push(k);
+            }
+        }
+    }
+    tags.sort();
+    tags.dedup();
+    let mut csv = String::from(",");
+    for (i, k) in tags.iter().enumerate() {
+        if i > 0 {
+            csv.push(',');
+        }
+        csv.push_str(k);
+    }
+    csv.push(',');
+    csv
+}
+
+pub async fn upsert_index_row(
+    id: u32,
+    added_at: i64,
+    subject: SubjectResponse,
+    status: SubjectStatusCode,
+) -> Result<(), AppError> {
+    let pool = SUBS_DB_POOL
+        .get()
+        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let conn = pool.get().await?;
+    conn
+        .interact(move |conn| -> Result<(), rusqlite::Error> {
+            ensure_table(conn)?;
+            let name = subject.name.clone();
+            let name_cn = subject.name_cn.clone();
+            let tags_csv = build_tags_csv(&subject);
+            let meta_tags_csv = String::new();
+            let rating_score: Option<f32> = subject.rating.as_ref().map(|r| r.score);
+            let rating_rank: Option<i64> = subject.rating.as_ref().and_then(|r| r.rank.map(|x| x as i64));
+            let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
+            let status_ord_v = status_ord(&status);
+            let status_code = status_ord_v;
+            let updated_at = now_secs();
+            conn.execute(
+                "INSERT INTO subjects_index(subject_id, added_at, updated_at, name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+                 ON CONFLICT(subject_id) DO UPDATE SET
+                    added_at=excluded.added_at,
+                    updated_at=excluded.updated_at,
+                    name=excluded.name,
+                    name_cn=excluded.name_cn,
+                    tags_csv=excluded.tags_csv,
+                    meta_tags_csv=excluded.meta_tags_csv,
+                    rating_score=excluded.rating_score,
+                    rating_rank=excluded.rating_rank,
+                    rating_total=excluded.rating_total,
+                    status_code=excluded.status_code,
+                    status_ord=excluded.status_ord",
+                params![
+                    id as i64,
+                    added_at,
+                    updated_at,
+                    name,
+                    name_cn,
+                    tags_csv,
+                    meta_tags_csv,
+                    rating_score,
+                    rating_rank,
+                    rating_total,
+                    status_code,
+                    status_ord_v,
+                ],
+            )?;
+            Ok(())
+        })
+        .await??;
+    Ok(())
+}
+
+pub async fn refresh_index_all() -> Result<(), AppError> {
+    let rows = list().await?;
+    let sem = std::sync::Arc::new(Semaphore::new(6));
+    let mut js: JoinSet<Result<(), AppError>> = JoinSet::new();
+    for (id, added_at, _notify) in rows.into_iter() {
+        let sem_clone = sem.clone();
+        js.spawn(async move {
+            let _permit = sem_clone.acquire_owned().await.ok();
+            let subject = bangumi_service::fetch_subject(id).await?;
+            let status = subscriptions::get_status_cached(id).await?.code;
+            upsert_index_row(id, added_at, subject, status).await
+        });
+    }
+    while let Some(res) = js.join_next().await {
+        if let Ok(Err(e)) = res {
+            return Err(e);
+        }
+    }
+    Ok(())
+}
+
+pub async fn query(
+    params: crate::commands::subscriptions::SubQueryParams,
+) -> Result<(Vec<u32>, u32), AppError> {
+    let pool = SUBS_DB_POOL
+        .get()
+        .ok_or_else(|| std::io::Error::other("pool_uninit"))?;
+    let conn = pool.get().await?;
+    let (ids, total) = conn
+        .interact(move |conn| -> Result<(Vec<u32>, u32), rusqlite::Error> {
+            ensure_table(conn)?;
+            let mut sql_where = String::new();
+            let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+            if let Some(k) = params.keywords.as_ref() {
+                let q = k.trim().to_lowercase();
+                if !q.is_empty() {
+                    sql_where.push_str(" AND (LOWER(name) LIKE ? OR LOWER(name_cn) LIKE ?)");
+                    binds.push(Box::new(format!("%{}%", q)));
+                    binds.push(Box::new(format!("%{}%", q)));
+                }
+            }
+            if let Some(gs) = params.genres.as_ref() {
+                for g in gs.iter() {
+                    let v = g.trim().to_lowercase();
+                    if !v.is_empty() {
+                        sql_where.push_str(" AND (tags_csv LIKE ?)");
+                        binds.push(Box::new(format!("%,{},%", v)));
+                    }
+                }
+            }
+            if let Some(minr) = params.min_rating.as_ref() {
+                sql_where.push_str(" AND (rating_score IS NOT NULL AND rating_score >= ?)");
+                binds.push(Box::new(*minr));
+            }
+            if let Some(maxr) = params.max_rating.as_ref() {
+                sql_where.push_str(" AND (rating_score IS NOT NULL AND rating_score <= ?)");
+                binds.push(Box::new(*maxr));
+            }
+            if let Some(code) = params.status_code.as_ref() {
+                sql_where.push_str(" AND status_code = ?");
+                let cval: i64 = status_ord(code) as i64;
+                binds.push(Box::new(cval));
+            }
+            let order_by = match params.sort.as_deref() {
+                Some("status") => " ORDER BY status_ord ASC".to_string(),
+                Some("rank") => " ORDER BY (rating_rank IS NULL) ASC, rating_rank ASC".to_string(),
+                Some("score") => " ORDER BY COALESCE(rating_score, 0) DESC".to_string(),
+                Some("heat") => " ORDER BY COALESCE(rating_total, 0) DESC".to_string(),
+                Some("match") => {
+                    if let Some(k) = params.keywords.as_ref() {
+                        let q = k.trim().to_lowercase();
+                        if !q.is_empty() {
+                            sql_where.push_str(" AND (LOWER(name) LIKE ? OR LOWER(name_cn) LIKE ?)");
+                            binds.push(Box::new(format!("%{}%", q)));
+                            binds.push(Box::new(format!("%{}%", q)));
+                            " ORDER BY CASE WHEN LOWER(name) LIKE ? THEN 2 WHEN LOWER(name_cn) LIKE ? THEN 1 ELSE 0 END DESC".to_string()
+                        } else { String::new() }
+                    } else { String::new() }
+                }
+                _ => " ORDER BY added_at DESC".to_string(),
+            };
+
+            let limit = params.limit.unwrap_or(20) as i64;
+            let offset = params.offset.unwrap_or(0) as i64;
+
+            // total count
+            let count_sql = format!("SELECT COUNT(*) FROM subjects_index WHERE 1=1{}", sql_where);
+            let mut count_stmt = conn.prepare(&count_sql)?;
+            let total: u32 = {
+                let mut bind_refs: Vec<&dyn rusqlite::ToSql> = Vec::new();
+                for b in binds.iter() { bind_refs.push(&**b); }
+                let mut rows = count_stmt.query(rusqlite::params_from_iter(bind_refs.iter().copied()))?;
+                let cnt: u32 = if let Some(row) = rows.next()? { row.get::<_, i64>(0)? as u32 } else { 0 };
+                cnt
+            };
+
+            // ids page
+            let page_sql = format!("SELECT subject_id FROM subjects_index WHERE 1=1{}{} LIMIT ? OFFSET ?", sql_where, order_by);
+            let mut page_stmt = conn.prepare(&page_sql)?;
+            let mut bind_refs: Vec<&dyn rusqlite::ToSql> = Vec::new();
+            for b in binds.iter() { bind_refs.push(&**b); }
+            bind_refs.push(&limit);
+            bind_refs.push(&offset);
+            let mut rows = page_stmt.query(rusqlite::params_from_iter(bind_refs.iter().copied()))?;
+            let mut out: Vec<u32> = Vec::new();
+            while let Some(row) = rows.next()? {
+                let id: u32 = row.get::<_, i64>(0)? as u32;
+                out.push(id);
+            }
+            Ok((out, total))
+        })
+        .await??;
+    Ok((ids, total))
 }
 
 #[cfg(test)]

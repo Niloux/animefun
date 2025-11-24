@@ -5,12 +5,17 @@ use tokio::time::{sleep, Duration};
 use tracing::{info, warn};
 
 use super::status::get_status_cached;
-use super::store::list;
+use super::store::{list, upsert_index_row};
+use crate::services::bangumi_service;
 
 const REFRESH_CONCURRENCY: usize = 4;
 const REFRESH_LIMIT: usize = 50;
 const REFRESH_INTERVAL_SECS: u64 = 600;
 static REFRESH_OFFSET: AtomicUsize = AtomicUsize::new(0);
+const INDEX_CONCURRENCY: usize = 4;
+const INDEX_LIMIT: usize = 50;
+const INDEX_INTERVAL_SECS: u64 = 900;
+static INDEX_OFFSET: AtomicUsize = AtomicUsize::new(0);
 
 pub fn spawn_refresh_worker() {
     tauri::async_runtime::spawn(async move {
@@ -55,6 +60,54 @@ pub fn spawn_refresh_worker() {
             let next = (start + processed) % total;
             REFRESH_OFFSET.store(next, Ordering::Relaxed);
             sleep(Duration::from_secs(REFRESH_INTERVAL_SECS)).await;
+        }
+    });
+}
+
+pub fn spawn_index_worker() {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            let rows = match list().await {
+                Ok(v) => v,
+                Err(_) => {
+                    sleep(Duration::from_secs(INDEX_INTERVAL_SECS)).await;
+                    continue;
+                }
+            };
+            if rows.is_empty() {
+                sleep(Duration::from_secs(INDEX_INTERVAL_SECS)).await;
+                continue;
+            }
+            let sem = Arc::new(Semaphore::new(INDEX_CONCURRENCY));
+            let mut handles = Vec::new();
+            let total = rows.len();
+            let start = INDEX_OFFSET.load(Ordering::Relaxed) % total;
+            let end = std::cmp::min(total, start + INDEX_LIMIT);
+            let mut slice: Vec<(u32, i64, bool)> = rows[start..end].to_vec();
+            if slice.len() < INDEX_LIMIT {
+                let remain = INDEX_LIMIT - slice.len();
+                let extra_end = std::cmp::min(remain, total);
+                slice.extend_from_slice(&rows[..extra_end]);
+            }
+            let processed = slice.len();
+            for (id, added_at, _notify) in slice.into_iter() {
+                let sem_clone = Arc::clone(&sem);
+                handles.push(tokio::spawn(async move {
+                    if let Ok(_permit) = sem_clone.acquire_owned().await {
+                        let subject = bangumi_service::fetch_subject(id).await.ok();
+                        let status = get_status_cached(id).await.ok();
+                        if let (Some(sj), Some(st)) = (subject, status) {
+                            let _ = upsert_index_row(id, added_at, sj, st.code).await;
+                        }
+                    }
+                }));
+            }
+            for h in handles {
+                let _ = h.await;
+            }
+            let next = (start + processed) % total;
+            INDEX_OFFSET.store(next, Ordering::Relaxed);
+            sleep(Duration::from_secs(INDEX_INTERVAL_SECS)).await;
         }
     });
 }
