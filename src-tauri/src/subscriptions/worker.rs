@@ -6,7 +6,7 @@ use tokio::time::{sleep, Duration};
 use tracing::{debug, info, warn};
 
 use super::status::get_status_cached;
-use super::store::{list, upsert_index_row_if_changed};
+use super::store::{index_upsert_if_changed, list};
 use crate::services::bangumi_service;
 
 const REFRESH_CONCURRENCY: usize = 4;
@@ -43,7 +43,7 @@ pub fn spawn_refresh_worker() {
                         let status = get_status_cached(id).await.ok();
                         let subject = bangumi_service::fetch_subject(id).await.ok();
                         if let (Some(st), Some(sj)) = (status, subject) {
-                            let _ = upsert_index_row_if_changed(id, added_at, sj, st.code).await;
+                            let _ = index_upsert_if_changed(id, added_at, sj, st.code).await;
                         }
                     }
                 }));

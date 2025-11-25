@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
-use crate::models::bangumi::{SubjectResponse, SubjectStatusCode};
+use crate::models::bangumi::{Images, SubjectRating, SubjectResponse, SubjectStatusCode};
 use crate::services::bangumi_service;
 use crate::subscriptions;
 use tracing::{debug, info};
@@ -40,10 +40,15 @@ fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
             rating_rank   INTEGER,
             rating_total  INTEGER,
             status_code   INTEGER NOT NULL,
-            status_ord    INTEGER NOT NULL
+            status_ord    INTEGER NOT NULL,
+            cover_url     TEXT    NOT NULL DEFAULT ''
         )",
         [],
     )?;
+    let _ = conn.execute(
+        "ALTER TABLE subjects_index ADD COLUMN cover_url TEXT NOT NULL DEFAULT ''",
+        [],
+    );
     Ok(())
 }
 
@@ -142,11 +147,11 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
                 Ok(s) => s.code,
                 Err(_) => SubjectStatusCode::Unknown,
             };
-            let _ = upsert_index_row(id, now, subject, status).await;
+            let _ = index_upsert(id, now, subject, status).await;
         });
     } else {
         tauri::async_runtime::spawn(async move {
-            let _ = delete_index_row(id).await;
+            let _ = index_delete(id).await;
         });
     }
 
@@ -206,7 +211,7 @@ fn build_tags_csv(subject: &SubjectResponse) -> String {
     csv
 }
 
-pub async fn upsert_index_row(
+pub async fn index_upsert(
     id: u32,
     added_at: i64,
     subject: SubjectResponse,
@@ -227,9 +232,10 @@ pub async fn upsert_index_row(
             let status_ord_v = status_ord(&status);
             let status_code = status_ord_v;
             let updated_at = now_secs();
+            let cover_url = subject.images.large.clone();
             conn.execute(
-                "INSERT INTO subjects_index(subject_id, added_at, updated_at, name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord)
-                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+                "INSERT INTO subjects_index(subject_id, added_at, updated_at, name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord, cover_url)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
                  ON CONFLICT(subject_id) DO UPDATE SET
                     added_at=excluded.added_at,
                     updated_at=excluded.updated_at,
@@ -241,7 +247,8 @@ pub async fn upsert_index_row(
                     rating_rank=excluded.rating_rank,
                     rating_total=excluded.rating_total,
                     status_code=excluded.status_code,
-                    status_ord=excluded.status_ord",
+                    status_ord=excluded.status_ord,
+                    cover_url=excluded.cover_url",
                 params![
                     id as i64,
                     added_at,
@@ -255,6 +262,7 @@ pub async fn upsert_index_row(
                     rating_total,
                     status_code,
                     status_ord_v,
+                    cover_url,
                 ],
             )?;
             Ok(())
@@ -263,7 +271,7 @@ pub async fn upsert_index_row(
     Ok(())
 }
 
-pub async fn upsert_index_row_if_changed(
+pub async fn index_upsert_if_changed(
     id: u32,
     added_at: i64,
     subject: SubjectResponse,
@@ -281,6 +289,7 @@ pub async fn upsert_index_row_if_changed(
     let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
     let status_ord_v = status_ord(&status);
     let status_code = status_ord_v;
+    let cover_url = subject.images.large.clone();
 
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
@@ -288,7 +297,7 @@ pub async fn upsert_index_row_if_changed(
         .interact(move |conn| -> Result<bool, rusqlite::Error> {
             ensure_table(conn)?;
             let mut stmt = conn.prepare(
-                "SELECT name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord FROM subjects_index WHERE subject_id = ?1",
+                "SELECT name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord, cover_url FROM subjects_index WHERE subject_id = ?1",
             )?;
             let mut rows = stmt.query(params![id as i64])?;
             if let Some(row) = rows.next()? {
@@ -301,6 +310,7 @@ pub async fn upsert_index_row_if_changed(
                 let cur_rating_total: Option<i64> = row.get(6)?;
                 let cur_status_code: i64 = row.get(7)?;
                 let cur_status_ord: i64 = row.get(8)?;
+                let cur_cover_url: String = row.get(9)?;
                 Ok(!(cur_name == name
                     && cur_name_cn == name_cn
                     && cur_tags_csv == tags_csv
@@ -309,7 +319,8 @@ pub async fn upsert_index_row_if_changed(
                     && cur_rating_rank == rating_rank
                     && cur_rating_total == rating_total
                     && cur_status_code == status_code
-                    && cur_status_ord == status_ord_v))
+                    && cur_status_ord == status_ord_v
+                    && cur_cover_url == cover_url))
             } else {
                 Ok(true)
             }
@@ -317,7 +328,7 @@ pub async fn upsert_index_row_if_changed(
         .await??;
     if need_update {
         debug!("索引 {} 已变更", id);
-        upsert_index_row(id, added_at, subject, status).await?;
+        index_upsert(id, added_at, subject, status).await?;
         Ok(true)
     } else {
         debug!("索引 {} 未变更", id);
@@ -325,13 +336,62 @@ pub async fn upsert_index_row_if_changed(
     }
 }
 
-pub async fn query(
+fn make_subject_from_index(
+    id: u32,
+    name: String,
+    name_cn: String,
+    cover_url: String,
+    rating_score: Option<f32>,
+    rating_rank: Option<i64>,
+    rating_total: Option<i64>,
+) -> SubjectResponse {
+    let img = Images {
+        large: cover_url.clone(),
+        common: cover_url.clone(),
+        medium: cover_url.clone(),
+        small: cover_url.clone(),
+        grid: cover_url,
+    };
+    let rating = match (rating_rank, rating_total, rating_score) {
+        (rank_opt, Some(total), Some(score)) => Some(SubjectRating {
+            rank: rank_opt.map(|v| v as u32),
+            total: total as u32,
+            count: std::collections::HashMap::new(),
+            score,
+        }),
+        _ => None,
+    };
+    SubjectResponse {
+        id,
+        url: None,
+        item_type: 2,
+        name,
+        name_cn,
+        summary: String::new(),
+        series: None,
+        nsfw: false,
+        locked: false,
+        date: None,
+        platform: None,
+        images: img,
+        infobox: None,
+        volumes: None,
+        eps: None,
+        total_episodes: None,
+        rating,
+        collection: None,
+        meta_tags: None,
+        tags: None,
+    }
+}
+
+pub async fn query_full(
     params: crate::commands::subscriptions::SubQueryParams,
-) -> Result<(Vec<u32>, u32), AppError> {
+) -> Result<(Vec<SubjectResponse>, u32), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    let (ids, total) = conn
-        .interact(move |conn| -> Result<(Vec<u32>, u32), rusqlite::Error> {
+    let (items, total) = conn
+        .interact(move |conn| -> Result<(Vec<SubjectResponse>, u32), rusqlite::Error> {
             ensure_table(conn)?;
             let mut sql_where = String::new();
             let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
@@ -387,7 +447,6 @@ pub async fn query(
             let limit = params.limit.unwrap_or(20) as i64;
             let offset = params.offset.unwrap_or(0) as i64;
 
-            // total count
             let count_sql = format!("SELECT COUNT(*) FROM subjects_index WHERE 1=1{}", sql_where);
             let mut count_stmt = conn.prepare(&count_sql)?;
             let total: u32 = {
@@ -398,26 +457,85 @@ pub async fn query(
                 cnt
             };
 
-            // ids page
-            let page_sql = format!("SELECT subject_id FROM subjects_index WHERE 1=1{}{} LIMIT ? OFFSET ?", sql_where, order_by);
+            let page_sql = format!(
+                "SELECT subject_id, name, name_cn, rating_score, rating_rank, rating_total, cover_url FROM subjects_index WHERE 1=1{}{} LIMIT ? OFFSET ?",
+                sql_where,
+                order_by,
+            );
             let mut page_stmt = conn.prepare(&page_sql)?;
             let mut bind_refs: Vec<&dyn rusqlite::ToSql> = Vec::new();
             for b in binds.iter() { bind_refs.push(&**b); }
             bind_refs.push(&limit);
             bind_refs.push(&offset);
             let mut rows = page_stmt.query(rusqlite::params_from_iter(bind_refs.iter().copied()))?;
-            let mut out: Vec<u32> = Vec::new();
+            let mut out: Vec<SubjectResponse> = Vec::new();
             while let Some(row) = rows.next()? {
                 let id: u32 = row.get::<_, i64>(0)? as u32;
-                out.push(id);
+                let name: String = row.get(1)?;
+                let name_cn: String = row.get(2)?;
+                let rating_score: Option<f32> = row.get(3)?;
+                let rating_rank: Option<i64> = row.get(4)?;
+                let rating_total: Option<i64> = row.get(5)?;
+                let cover_url: String = row.get(6)?;
+                let subject = make_subject_from_index(
+                    id,
+                    name,
+                    name_cn,
+                    cover_url,
+                    rating_score,
+                    rating_rank,
+                    rating_total,
+                );
+                out.push(subject);
             }
             Ok((out, total))
         })
         .await??;
-    Ok((ids, total))
+    Ok((items, total))
 }
 
-pub async fn delete_index_row(id: u32) -> Result<(), AppError> {
+pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppError> {
+    let pool = crate::infra::db::data_pool()?;
+    let conn = pool.get().await?;
+    let rows = conn
+        .interact(|conn| -> Result<Vec<(u32, i64, bool, SubjectResponse)>, rusqlite::Error> {
+            ensure_table(conn)?;
+            let mut stmt = conn.prepare(
+                "SELECT s.subject_id, s.added_at, s.notify, i.name, i.name_cn, i.rating_score, i.rating_rank, i.rating_total, i.cover_url
+                 FROM subscriptions s
+                 LEFT JOIN subjects_index i ON i.subject_id = s.subject_id
+                 ORDER BY s.added_at DESC",
+            )?;
+            let mut rows = stmt.query([])?;
+            let mut out: Vec<(u32, i64, bool, SubjectResponse)> = Vec::new();
+            while let Some(row) = rows.next()? {
+                let id: u32 = row.get::<_, i64>(0)? as u32;
+                let added_at: i64 = row.get(1)?;
+                let notify_i: i64 = row.get(2)?;
+                let name: String = row.get(3)?;
+                let name_cn: String = row.get(4)?;
+                let rating_score: Option<f32> = row.get(5)?;
+                let rating_rank: Option<i64> = row.get(6)?;
+                let rating_total: Option<i64> = row.get(7)?;
+                let cover_url: String = row.get(8)?;
+                let subject = make_subject_from_index(
+                    id,
+                    name,
+                    name_cn,
+                    cover_url,
+                    rating_score,
+                    rating_rank,
+                    rating_total,
+                );
+                out.push((id, added_at, notify_i != 0, subject));
+            }
+            Ok(out)
+        })
+        .await??;
+    Ok(rows)
+}
+
+pub async fn index_delete(id: u32) -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     conn.interact(move |conn| -> Result<(), rusqlite::Error> {
