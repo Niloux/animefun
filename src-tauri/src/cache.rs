@@ -53,10 +53,39 @@ pub async fn get_entry(
                             debug!(key, "cache hit");
                             Ok(Some((value, etag, last_modified)))
                         } else {
-                            let _ = conn.execute("DELETE FROM cache WHERE key = ?1", params![key]);
-                            debug!("cache expired and deleted");
                             Ok(None)
                         }
+                    } else {
+                        Ok(None)
+                    }
+                },
+            )
+            .await??;
+    Ok(out)
+}
+
+pub async fn get_raw_entry(
+    key: &str,
+) -> Result<Option<(String, Option<String>, Option<String>)>, AppError> {
+    let pool = crate::infra::db::cache_pool()?;
+    let key = key.to_string();
+    let conn = pool.get().await?;
+    let out =
+        conn
+            .interact(
+                move |conn| -> Result<
+                    Option<(String, Option<String>, Option<String>)>,
+                    rusqlite::Error,
+                > {
+                    ensure_table(conn)?;
+                    let mut stmt = conn
+                        .prepare("SELECT value, etag, last_modified FROM cache WHERE key = ?1")?;
+                    let mut rows = stmt.query(params![key.clone()])?;
+                    if let Some(row) = rows.next()? {
+                        let value: String = row.get(0)?;
+                        let etag: Option<String> = row.get(1)?;
+                        let last_modified: Option<String> = row.get(2)?;
+                        Ok(Some((value, etag, last_modified)))
                     } else {
                         Ok(None)
                     }

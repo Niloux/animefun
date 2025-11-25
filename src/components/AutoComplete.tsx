@@ -38,29 +38,25 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const [popoverMaxHeight, setPopoverMaxHeight] = useState<number>(300);
 
   const queryResult = useQuery({
-    queryKey: [
-      'autocomplete',
-      query.trim(),
-      maxSuggestions,
-      source,
-    ],
+    queryKey: ["autocomplete", query.trim(), maxSuggestions, source],
     queryFn: async () => {
       const trimmed = query.trim();
-      const data = source === "subscriptions"
-        ? await querySubscriptions(trimmed, 'match', [], 0, 10, null, 20, 0)
-        : await searchSubject(
-            trimmed,
-            [2],
-            'match',
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            false,
-            20,
-            0
-          );
+      const data =
+        source === "subscriptions"
+          ? await querySubscriptions(trimmed, "match", [], 0, 10, null, 20, 0)
+          : await searchSubject(
+              trimmed,
+              [2],
+              "match",
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              false,
+              20,
+              0
+            );
       return data;
     },
     select: (data) => {
@@ -111,9 +107,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
 
   return (
     <Popover
-      open={
-        isOpen && !isComposing && query.trim().length >= MIN_QUERY_LEN
-      }
+      open={isOpen && !isComposing && query.trim().length >= MIN_QUERY_LEN}
       onOpenChange={setIsOpen}
     >
       <PopoverTrigger asChild>
