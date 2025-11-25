@@ -20,7 +20,9 @@ export function Layout({ preloadMap }: LayoutProps) {
               fallback={
                 <div className="flex h-full w-full items-center justify-center gap-2">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  <span className="text-lg text-muted-foreground">加载中...</span>
+                  <span className="text-lg text-muted-foreground">
+                    加载中...
+                  </span>
                 </div>
               }
             >

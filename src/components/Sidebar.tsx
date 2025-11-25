@@ -64,7 +64,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
 
   // 类型守卫：检查是否为父菜单（有子菜单）
   const isParent = (menuItem: MenuItem): menuItem is ParentMenuItem => {
-    return 'children' in menuItem;
+    return "children" in menuItem;
   };
 
   // 预加载处理函数
