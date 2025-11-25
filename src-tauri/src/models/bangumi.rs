@@ -49,7 +49,17 @@ where
                 .filter(|s| !s.is_empty())
                 .collect::<Vec<_>>()
                 .join("、");
-            out.push(InfoItem { key: it.key, value });
+            let vals: Vec<String> = value
+                .split('、')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+            let values = if vals.is_empty() { None } else { Some(vals) };
+            out.push(InfoItem {
+                key: it.key,
+                value,
+                values,
+            });
         }
         Ok(Some(out))
     } else {
@@ -226,6 +236,8 @@ pub struct PagedEpisode {
 pub struct InfoItem {
     pub key: String,
     pub value: String,
+    #[ts(optional)]
+    pub values: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, PartialEq)]

@@ -23,7 +23,9 @@ const AnimeInfoBoxBase: React.FC<AnimeInfoBoxProps> = ({ items }) => {
                 {info.key}:
               </span>
               <span className="text-sm text-gray-900 dark:text-white font-semibold text-right">
-                {info.value}
+                {Array.isArray(info.values) && info.values.length > 0
+                  ? info.values.join("、")
+                  : info.value}
               </span>
             </div>
           ))
