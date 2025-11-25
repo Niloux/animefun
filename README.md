@@ -55,22 +55,18 @@
 ## 应用截图
 
 - 首页（日历与更新）：
-  - `docs/screenshots/home.png`
 
   ![Home](docs/screenshots/home.png)
 
 - 订阅列表（过滤与搜索）：
-  - `docs/screenshots/subscriptions.png`
 
   ![Subscriptions](docs/screenshots/subscriptions.png)
 
 - 番剧详情（信息与标签）：
-  - `docs/screenshots/detail.png`
 
   ![Detail](docs/screenshots/detail.png)
 
 - 资源聚合（Mikan RSS）：
-  - `docs/screenshots/resources.png`
 
   ![Resources](docs/screenshots/resources.png)
 
