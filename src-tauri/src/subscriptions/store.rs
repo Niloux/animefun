@@ -6,8 +6,6 @@ use crate::infra::time::now_secs;
 use crate::models::bangumi::{SubjectResponse, SubjectStatusCode};
 use crate::services::bangumi_service;
 use crate::subscriptions;
-use tokio::sync::Semaphore;
-use tokio::task::JoinSet;
 use tracing::{debug, info};
 
 static SUBS_DB_FILE: once_cell::sync::OnceCell<PathBuf> = once_cell::sync::OnceCell::new();
@@ -107,6 +105,7 @@ pub async fn has(id: u32) -> Result<bool, AppError> {
 }
 
 pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
+    let now = now_secs();
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let res = conn
@@ -122,7 +121,6 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
                 info!(id, "unsubscribe");
                 Ok(false)
             } else {
-                let now = now_secs();
                 let notify_i = if notify.unwrap_or(false) { 1 } else { 0 };
                 conn.execute(
                     "INSERT INTO subscriptions(subject_id, added_at, notify) VALUES(?1, ?2, ?3)",
@@ -133,6 +131,25 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
             }
         })
         .await??;
+
+    if res {
+        tauri::async_runtime::spawn(async move {
+            let subject = match bangumi_service::fetch_subject(id).await {
+                Ok(s) => s,
+                Err(_) => return,
+            };
+            let status = match subscriptions::get_status_cached(id).await {
+                Ok(s) => s.code,
+                Err(_) => SubjectStatusCode::Unknown,
+            };
+            let _ = upsert_index_row(id, now, subject, status).await;
+        });
+    } else {
+        tauri::async_runtime::spawn(async move {
+            let _ = delete_index_row(id).await;
+        });
+    }
+
     Ok(res)
 }
 
@@ -308,27 +325,6 @@ pub async fn upsert_index_row_if_changed(
     }
 }
 
-pub async fn refresh_index_all() -> Result<(), AppError> {
-    let rows = list().await?;
-    let sem = std::sync::Arc::new(Semaphore::new(6));
-    let mut js: JoinSet<Result<(), AppError>> = JoinSet::new();
-    for (id, added_at, _notify) in rows.into_iter() {
-        let sem_clone = sem.clone();
-        js.spawn(async move {
-            let _permit = sem_clone.acquire_owned().await.ok();
-            let subject = bangumi_service::fetch_subject(id).await?;
-            let status = subscriptions::get_status_cached(id).await?.code;
-            upsert_index_row(id, added_at, subject, status).await
-        });
-    }
-    while let Some(res) = js.join_next().await {
-        if let Ok(Err(e)) = res {
-            return Err(e);
-        }
-    }
-    Ok(())
-}
-
 pub async fn query(
     params: crate::commands::subscriptions::SubQueryParams,
 ) -> Result<(Vec<u32>, u32), AppError> {
@@ -419,6 +415,21 @@ pub async fn query(
         })
         .await??;
     Ok((ids, total))
+}
+
+pub async fn delete_index_row(id: u32) -> Result<(), AppError> {
+    let pool = crate::infra::db::data_pool()?;
+    let conn = pool.get().await?;
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        conn.execute(
+            "DELETE FROM subjects_index WHERE subject_id = ?1",
+            params![id as i64],
+        )?;
+        Ok(())
+    })
+    .await??;
+    Ok(())
 }
 
 #[cfg(test)]

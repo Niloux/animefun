@@ -91,7 +91,6 @@ pub struct SubQueryParams {
 pub async fn sub_query(
     params: SubQueryParams,
 ) -> CommandResult<crate::models::bangumi::SearchResponse> {
-    subscriptions::store::refresh_index_all().await?;
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
     let (page_ids, total) = subscriptions::store::query(params).await?;
