@@ -23,16 +23,29 @@ function matchRange(range?: string, no?: number): boolean {
   return false;
 }
 
-export function useEpisodeResources(resources?: MikanResourcesResponse | null, episode?: Episode | null) {
+export function useEpisodeResources(
+  resources?: MikanResourcesResponse | null,
+  episode?: Episode | null,
+  isSingle?: boolean
+) {
   const epNo = useMemo(() => epNoOf(episode ?? null), [episode]);
 
   const matched = useMemo<MikanResourceItem[]>(() => {
-    if (!resources?.mapped || !resources.items || epNo == null) return [];
-    return resources.items.filter((it) => {
+    if (!resources?.mapped || !resources.items) return [];
+    if (resources.items.length === 0) return [];
+    if (epNo == null) return resources.items;
+    const filtered = resources.items.filter((it) => {
       if (typeof it.episode === "number") return it.episode === epNo;
       return matchRange(it.episode_range, epNo);
     });
-  }, [resources, epNo]);
+    if (filtered.length === 0) {
+      const hasEpisodeInfo = resources.items.some(
+        (it) => typeof it.episode === "number" || !!it.episode_range
+      );
+      if (!hasEpisodeInfo || isSingle) return resources.items;
+    }
+    return filtered;
+  }, [resources, epNo, isSingle]);
 
   const grouped = useMemo(() => {
     const m = new Map<string, MikanResourceItem[]>();

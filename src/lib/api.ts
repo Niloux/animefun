@@ -28,7 +28,6 @@ export async function getCalendar(): Promise<CalendarDay[]> {
 export async function getAnimeDetail(id: number): Promise<Anime> {
   try {
     const data = await invoke<Anime>('get_subject', { id });
-    console.log('获取番剧详情成功:', data);
     return data;
   } catch (error) {
     console.error("调用 'get_subject' 失败:", error);

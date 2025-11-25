@@ -24,15 +24,18 @@ export function ResourceDialog({
   onOpenChange,
   episode,
   resources,
+  isSingle,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   episode: BEpisode | null;
   resources?: MikanResourcesResponse | null;
+  isSingle?: boolean;
 }) {
   const { matched, mapped } = useEpisodeResources(
     resources ?? null,
-    episode ?? null
+    episode ?? null,
+    isSingle
   );
 
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
@@ -164,15 +167,7 @@ export function ResourceDialog({
                 )}
               </div>
             )}
-            {resources && !mapped ? (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                未命中
-              </div>
-            ) : matched.length === 0 ? (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                暂无资源
-              </div>
-            ) : (
+            {matched.length > 0 ? (
               <ScrollArea className="h-[50vh]">
                 <div className="space-y-4">
                   {filteredGrouped.map((g) => (
@@ -225,6 +220,14 @@ export function ResourceDialog({
                   ))}
                 </div>
               </ScrollArea>
+            ) : resources && !mapped ? (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                未命中
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                暂无资源
+              </div>
             )}
           </div>
         </div>

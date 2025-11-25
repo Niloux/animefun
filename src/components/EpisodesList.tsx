@@ -217,6 +217,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
         onOpenChange={setOpen}
         episode={selectedEpisode as BEpisode | null}
         resources={resources ?? null}
+        isSingle={totalEpisodes === 1}
       />
     </div>
   );
