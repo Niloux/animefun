@@ -1,7 +1,7 @@
 use crate::{
     error::CommandResult,
     models::bangumi::{SubjectResponse, SubjectStatusCode},
-    subscriptions,
+    services::subscriptions_service,
 };
 use std::time::Instant;
 use tracing::info;
@@ -21,7 +21,7 @@ pub struct SubscriptionItem {
 #[tauri::command]
 pub async fn sub_list() -> CommandResult<Vec<SubscriptionItem>> {
     let start = Instant::now();
-    let rows = subscriptions::store::list_full().await?;
+    let rows = subscriptions_service::list_full().await?;
     let mut out: Vec<SubscriptionItem> = Vec::with_capacity(rows.len());
     for (id, added_at, notify, anime) in rows.into_iter() {
         out.push(SubscriptionItem {
@@ -37,22 +37,22 @@ pub async fn sub_list() -> CommandResult<Vec<SubscriptionItem>> {
 
 #[tauri::command]
 pub async fn sub_list_ids() -> CommandResult<Vec<u32>> {
-    Ok(subscriptions::list_ids().await?)
+    Ok(subscriptions_service::list_ids().await?)
 }
 
 #[tauri::command]
 pub async fn sub_toggle(id: u32) -> CommandResult<bool> {
-    Ok(subscriptions::toggle(id, None).await?)
+    Ok(subscriptions_service::toggle(id, None).await?)
 }
 
 #[tauri::command]
 pub async fn sub_has(id: u32) -> CommandResult<bool> {
-    Ok(subscriptions::has(id).await?)
+    Ok(subscriptions_service::has(id).await?)
 }
 
 #[tauri::command]
 pub async fn sub_clear() -> CommandResult<()> {
-    Ok(subscriptions::clear().await?)
+    Ok(subscriptions_service::clear().await?)
 }
 
 #[derive(serde::Serialize, serde::Deserialize, ts_rs::TS)]
@@ -74,7 +74,7 @@ pub async fn sub_query(
 ) -> CommandResult<crate::models::bangumi::SearchResponse> {
     let limit = params.limit.unwrap_or(20);
     let offset = params.offset.unwrap_or(0);
-    let (data, total) = subscriptions::store::query_full(params).await?;
+    let (data, total) = subscriptions_service::query_full(params).await?;
     Ok(crate::models::bangumi::SearchResponse {
         total,
         limit,

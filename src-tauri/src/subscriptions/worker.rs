@@ -6,7 +6,8 @@ use tokio::time::{sleep, Duration};
 use tracing::{debug, info, warn};
 
 use super::status::get_status_cached;
-use super::store::{index_upsert_if_changed, list};
+use super::index_repo::index_upsert_if_changed;
+use super::repo::list;
 use crate::services::bangumi_service;
 
 const REFRESH_CONCURRENCY: usize = 4;

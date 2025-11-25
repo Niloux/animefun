@@ -2,3 +2,4 @@
 
 pub mod bangumi_service;
 pub mod mikan_service;
+pub mod subscriptions_service;

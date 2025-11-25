@@ -1,10 +1,10 @@
+use crate::infra::tasks::{next_offset, round_robin_take};
 use crate::services::mikan_service::map_store;
 use crate::services::mikan_service::rss;
 use crate::subscriptions;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use crate::infra::tasks::{round_robin_take, next_offset};
 use tokio::time::{sleep, Duration};
 use tracing::{info, warn};
 
@@ -18,7 +18,7 @@ pub fn spawn_preheat_worker() {
     tauri::async_runtime::spawn(async move {
         info!("mikan preheat worker started");
         loop {
-            let rows = match subscriptions::list().await {
+            let rows = match subscriptions::repo::list().await {
                 Ok(v) => v,
                 Err(_) => {
                     warn!("subscriptions list failed for mikan preheat");
