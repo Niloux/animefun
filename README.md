@@ -1,10 +1,16 @@
+<div align="center">
+  <img src="src/assets/ikuyo-avatar.png" width="150" alt="Ikuyo Logo">
+  <h1>AnimeFun</h1>
+  <p>一站式本地追番客户端：订阅、日历、剧集与资源聚合，专注快速、稳定、可离线。</p>
+  <p>专为希望自动化追番流程、聚合资源并在一个地方完成所有操作的动漫爱好者打造。</p>
+</div>
+
 <p align="center">
-  <img src="src/assets/ikuyo-avatar.png" alt="ikuyo avatar" width="96" />
+  <a href="https://github.com/Niloux/ikuyo-tauri/actions/workflows/tauri-build.yml"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Niloux/ikuyo-tauri/tauri-build.yml?branch=main&style=for-the-badge"></a>
+  <a href="https://github.com/Niloux/ikuyo-tauri/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/Niloux/ikuyo-tauri?style=for-the-badge&color=blue"></a>
+  <a href="https://github.com/Niloux/ikuyo-tauri/releases"><img alt="Total Downloads" src="https://img.shields.io/github/downloads/Niloux/ikuyo-tauri/total?style=for-the-badge&color=green"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge"></a>
 </p>
-
-# AnimeFun
-
-一站式本地追番客户端：订阅、日历、剧集与资源聚合，专注快速、稳定、可离线。
 
 ## 特性
 
@@ -73,5 +79,6 @@
 ## 致谢
 
 - Bangumi 社区与开放 API
-- Mikan 项目与 RSS 服务
+- Mikan Project与 RSS 服务
 - shadcn-ui/Radix 团队
+- tauri 团队与贡献者
