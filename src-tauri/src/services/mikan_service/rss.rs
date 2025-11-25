@@ -5,7 +5,7 @@ use crate::infra::http::CLIENT;
 use crate::models::mikan::MikanResourceItem;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
+use reqwest::header::{ETAG, LAST_MODIFIED};
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -51,33 +51,6 @@ async fn cache_body_and_meta(key: &str, body: String, headers: &reqwest::header:
     let _ = cache::set_entry(key, body, new_etag, new_lm, RSS_TTL_SECS).await;
 }
 
-async fn fetch_plain_and_cache(url: &str, key: &str) -> String {
-    match CLIENT.get(url).send().await {
-        Ok(resp) => {
-            if let Err(e) = resp.error_for_status_ref() {
-                warn!(error = %e, url = %url, "mikan rss non-OK status");
-                String::new()
-            } else {
-                let headers = resp.headers().clone();
-                match resp.text().await {
-                    Ok(body) => {
-                        cache_body_and_meta(key, body.clone(), &headers).await;
-                        body
-                    }
-                    Err(e) => {
-                        warn!(error = %e, url = %url, "mikan rss read body error");
-                        String::new()
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            warn!(error = %e, url = %url, "mikan rss request error");
-            String::new()
-        }
-    }
-}
-
 pub async fn fetch_rss(mid: u32) -> Result<Vec<MikanResourceItem>, AppError> {
     let xml = get_xml_from_cache_or_net(mid).await;
     let parse_start = Instant::now();
@@ -96,20 +69,11 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
     let key = format!("mikan:rss:{}", mid);
     let url = format!("{}/RSS/Bangumi?bangumiId={}", MIKAN_HOST, mid);
     let cached = cache::get_entry(&key).await;
-    let (cached_body, etag, last_modified) = match cached {
-        Ok(Some((b, e, l))) => {
-            info!(bangumi_id = mid, key = %key, xml_len = b.len(), source = "cache", "mikan rss xml ready");
-            (Some(b), e, l)
-        }
-        _ => (None, None, None),
-    };
-    let mut req = CLIENT.get(&url);
-    if let Some(e) = etag.clone() {
-        req = req.header(IF_NONE_MATCH, e);
+    if let Ok(Some((b, _e, _l))) = cached {
+        info!(bangumi_id = mid, key = %key, xml_len = b.len(), source = "cache", "mikan rss xml ready");
+        return b;
     }
-    if let Some(lm) = last_modified.clone() {
-        req = req.header(IF_MODIFIED_SINCE, lm);
-    }
+    let req = CLIENT.get(&url);
     match claim_or_subscribe(mid).await {
         Claim::Subscriber(mut rx) => loop {
             if let Some(v) = rx.borrow().clone() {
@@ -124,19 +88,7 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
             let mut out = String::new();
             match req.send().await {
                 Ok(resp) => {
-                    if resp.status() == StatusCode::NOT_MODIFIED {
-                        if let Some(x) = cached_body.clone() {
-                            let _ = cache::set_entry(&key, x.clone(), etag, last_modified, RSS_TTL_SECS).await;
-                            info!(bangumi_id = mid, status = 304, net_ms = %net_start.elapsed().as_millis(), xml_len = x.len(), "mikan rss served from cache after 304");
-                            out = x;
-                        } else {
-                            let body = fetch_plain_and_cache(&url, &key).await;
-                            if !body.is_empty() {
-                                info!(bangumi_id = mid, status = 200, net_ms = %net_start.elapsed().as_millis(), xml_len = body.len(), "mikan rss fetched after 304 miss");
-                            }
-                            out = body;
-                        }
-                    } else if resp.status() == StatusCode::OK {
+                    if resp.status() == StatusCode::OK {
                         let headers = resp.headers().clone();
                         match resp.text().await {
                             Ok(body) => {
@@ -148,6 +100,8 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
                                 warn!(error = %e, bangumi_id = mid, "mikan rss read body error");
                             }
                         }
+                    } else if resp.status() == StatusCode::NOT_MODIFIED {
+                        info!(bangumi_id = mid, status = 304, net_ms = %net_start.elapsed().as_millis(), "mikan rss not modified");
                     } else {
                         warn!(
                             status = resp.status().as_u16(),

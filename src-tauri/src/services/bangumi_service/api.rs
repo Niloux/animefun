@@ -1,10 +1,10 @@
 use crate::cache;
 use crate::error::AppError;
 use crate::models::bangumi::{CalendarResponse, PagedEpisode, SearchResponse, SubjectResponse};
-use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
-use reqwest::{RequestBuilder, StatusCode};
+use reqwest::header::{ETAG, LAST_MODIFIED};
+use reqwest::RequestBuilder;
 use serde::{de::DeserializeOwned, Serialize};
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::infra::config::BGM_API_HOST;
 use crate::infra::http::CLIENT;
@@ -17,96 +17,39 @@ async fn fetch_api<T>(
 where
     T: Serialize + DeserializeOwned,
 {
-    let mut req = req_builder;
-    // 尝试读取缓存条目
-    let cached_entry = cache::get_entry(key).await?;
-
-    if let Some((cached_data, etag, last_modified)) = cached_entry {
-        debug!(key, "cache hit, setting conditional headers");
-        // 若命中缓存，使用其元数据进行条件请求
-        if let Some(ref e) = etag {
-            req = req.header(IF_NONE_MATCH, e);
-        }
-        if let Some(ref lm) = last_modified {
-            req = req.header(IF_MODIFIED_SINCE, lm);
-        }
-
-        let resp = req.send().await?;
-        debug!(key, status = %resp.status().as_u16(), "http response");
-
-        if resp.status() == StatusCode::NOT_MODIFIED {
-            info!(key, "304 Not Modified, using cached data");
-            // 服务器确认本地数据为最新
-            // 仅需刷新缓存 TTL 并返回已有数据
-            cache::set_entry(
-                &key,
-                cached_data.clone(),
-                etag,
-                last_modified,
-                cache_duration_secs.try_into().unwrap(),
-            )
-            .await?;
-
-            return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
-        }
-
-        // 收到 200 OK 则处理并缓存新数据
-        resp.error_for_status_ref()?;
-        let headers = resp.headers().clone();
-        let data = resp.json::<T>().await?;
-
-        info!(key, "cache update");
-        if let Ok(s) = serde_json::to_string(&data) {
-            let new_etag = headers
-                .get(ETAG)
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-            let new_lm = headers
-                .get(LAST_MODIFIED)
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-            cache::set_entry(
-                key,
-                s,
-                new_etag,
-                new_lm,
-                cache_duration_secs.try_into().unwrap(),
-            )
-            .await?;
-        }
-
-        Ok(data)
-    } else {
-        // 未命中缓存，直接发起请求
-        debug!(key, "cache miss, fetching directly");
-        let resp = req.send().await?;
-        resp.error_for_status_ref()?;
-
-        let headers = resp.headers().clone();
-        let data = resp.json::<T>().await?;
-
-        info!(key, "caching new data");
-        if let Ok(s) = serde_json::to_string(&data) {
-            let new_etag = headers
-                .get(ETAG)
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-            let new_lm = headers
-                .get(LAST_MODIFIED)
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-            cache::set_entry(
-                key,
-                s,
-                new_etag,
-                new_lm,
-                cache_duration_secs.try_into().unwrap(),
-            )
-            .await?;
-        }
-
-        Ok(data)
+    // 命中缓存则直接返回，不走网络
+    if let Some((cached_data, _etag, _last_modified)) = cache::get_entry(key).await? {
+        debug!(key, "cache hit, returning cached data");
+        return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
     }
+
+    // 未命中缓存，直接发起请求
+    let resp = req_builder.send().await?;
+    resp.error_for_status_ref()?;
+
+    let headers = resp.headers().clone();
+    let data = resp.json::<T>().await?;
+
+    if let Ok(s) = serde_json::to_string(&data) {
+        let new_etag = headers
+            .get(ETAG)
+            .and_then(|v| v.to_str().ok())
+            .map(String::from);
+        let new_lm = headers
+            .get(LAST_MODIFIED)
+            .and_then(|v| v.to_str().ok())
+            .map(String::from);
+        cache::set_entry(
+            key,
+            s,
+            new_etag,
+            new_lm,
+            cache_duration_secs.try_into().unwrap(),
+        )
+        .await?;
+    }
+
+    Ok(data)
 }
 
 pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {

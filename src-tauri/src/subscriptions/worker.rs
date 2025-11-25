@@ -1,9 +1,9 @@
+use crate::infra::tasks::{next_offset, round_robin_take};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
-use tracing::{info, warn};
-use crate::infra::tasks::{round_robin_take, next_offset};
+use tracing::{debug, info, warn};
 
 use super::status::get_status_cached;
 use super::store::{list, upsert_index_row};
@@ -43,11 +43,12 @@ pub fn spawn_refresh_worker() {
                 let sem_clone = Arc::clone(&sem);
                 handles.push(tokio::spawn(async move {
                     if let Ok(_permit) = sem_clone.acquire_owned().await {
-                        info!(id, "refresh status");
+                        debug!(id, "refresh status");
                         let _ = get_status_cached(id).await;
                     }
                 }));
             }
+            info!("同步 {} 个订阅状态", total);
             for h in handles {
                 let _ = h.await;
             }
@@ -64,11 +65,13 @@ pub fn spawn_index_worker() {
             let rows = match list().await {
                 Ok(v) => v,
                 Err(_) => {
+                    warn!("subscriptions list failed");
                     sleep(Duration::from_secs(INDEX_INTERVAL_SECS)).await;
                     continue;
                 }
             };
             if rows.is_empty() {
+                info!("no subscriptions, sleeping");
                 sleep(Duration::from_secs(INDEX_INTERVAL_SECS)).await;
                 continue;
             }
@@ -84,11 +87,13 @@ pub fn spawn_index_worker() {
                         let subject = bangumi_service::fetch_subject(id).await.ok();
                         let status = get_status_cached(id).await.ok();
                         if let (Some(sj), Some(st)) = (subject, status) {
+                            debug!(id, "index subject");
                             let _ = upsert_index_row(id, added_at, sj, st.code).await;
                         }
                     }
                 }));
             }
+            info!("同步 {} 个订阅信息", total);
             for h in handles {
                 let _ = h.await;
             }
