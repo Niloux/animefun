@@ -12,7 +12,7 @@ interface LayoutProps {
 export function Layout({ preloadMap }: LayoutProps) {
   return (
     <SidebarProvider>
-      <div className="flex w-full">
+      <div className="flex w-full h-svh overflow-auto">
         <AppSidebar preloadMap={preloadMap} />
         <SidebarInset>
           <div className="p-6">
