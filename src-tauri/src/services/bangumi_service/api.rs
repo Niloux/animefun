@@ -1,14 +1,13 @@
 use crate::cache;
 use crate::error::AppError;
 use crate::models::bangumi::{CalendarResponse, PagedEpisode, SearchResponse, SubjectResponse};
-use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
+use reqwest::header::{ETAG, LAST_MODIFIED};
 use reqwest::RequestBuilder;
 use serde::{de::DeserializeOwned, Serialize};
 use tracing::debug;
 
 use crate::infra::config::BGM_API_HOST;
 use crate::infra::http::CLIENT;
-use reqwest::StatusCode;
 
 const TTL_CALENDAR_SECS: i64 = 6 * 3600;
 const TTL_SUBJECT_SECS: i64 = 24 * 3600;
@@ -23,54 +22,20 @@ async fn fetch_api<T>(
 where
     T: Serialize + DeserializeOwned,
 {
+    // 命中缓存则直接返回，不走网络
     if let Some((cached_data, _etag, _last_modified)) = cache::get_entry(key).await? {
         debug!(key, "cache hit, returning cached data");
         return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
     }
 
-    let mut rb = req_builder;
-    let mut cached_body: Option<String> = None;
-    let mut prev_etag: Option<String> = None;
-    let mut prev_lm: Option<String> = None;
-    if let Some((body, etag, lm)) = cache::get_raw_entry(key).await? {
-        cached_body = Some(body);
-        prev_etag = etag.clone();
-        prev_lm = lm.clone();
-        if let Some(e) = etag.as_ref() {
-            rb = rb.header(IF_NONE_MATCH, e);
-        }
-        if let Some(l) = lm.as_ref() {
-            rb = rb.header(IF_MODIFIED_SINCE, l);
-        }
-    }
-
+    // 未命中缓存，直接发起请求
     crate::infra::http::wait_api_limit().await;
-    let resp = rb.send().await?;
-    if resp.status() == StatusCode::NOT_MODIFIED {
-        if let Some(b) = cached_body {
-            let headers = resp.headers().clone();
-            let mut new_etag = headers
-                .get(ETAG)
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-            let mut new_lm = headers
-                .get(LAST_MODIFIED)
-                .and_then(|v| v.to_str().ok())
-                .map(String::from);
-            if new_etag.is_none() {
-                new_etag = prev_etag;
-            }
-            if new_lm.is_none() {
-                new_lm = prev_lm;
-            }
-            cache::set_entry(key, b.clone(), new_etag, new_lm, cache_duration_secs).await?;
-            return serde_json::from_str::<T>(&b).map_err(AppError::from);
-        }
-    }
-
+    let resp = req_builder.send().await?;
     resp.error_for_status_ref()?;
+
     let headers = resp.headers().clone();
     let data = resp.json::<T>().await?;
+
     if let Ok(s) = serde_json::to_string(&data) {
         let new_etag = headers
             .get(ETAG)
@@ -82,6 +47,7 @@ where
             .map(String::from);
         cache::set_entry(key, s, new_etag, new_lm, cache_duration_secs).await?;
     }
+
     Ok(data)
 }
 
