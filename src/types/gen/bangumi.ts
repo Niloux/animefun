@@ -12,7 +12,7 @@ export type Episode = { id: number, type: number, name: string, name_cn: string,
 
 export type Images = { large: string, common: string, medium: string, small: string, grid: string, };
 
-export type InfoItem = { key: string, value: string, values?: Array<string>, };
+export type InfoItem = { key: string, values: Array<string>, };
 
 export type PagedEpisode = { total: number, limit: number, offset: number, data: Array<Episode>, };
 

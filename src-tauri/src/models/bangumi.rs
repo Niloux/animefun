@@ -6,7 +6,8 @@ use ts_rs::TS;
 #[serde(untagged)]
 enum InfoValue {
     Text(String),
-    V { v: String },
+    VStr { v: String },
+    VList { v: Vec<InfoValue> },
     List(Vec<InfoValue>),
 }
 
@@ -20,7 +21,12 @@ struct InfoItemRaw {
 fn collect_strings(v: &InfoValue, out: &mut Vec<String>) {
     match v {
         InfoValue::Text(s) => out.push(s.clone()),
-        InfoValue::V { v } => out.push(v.clone()),
+        InfoValue::VStr { v } => out.push(v.clone()),
+        InfoValue::VList { v } => {
+            for x in v {
+                collect_strings(x, out);
+            }
+        }
         InfoValue::List(xs) => {
             for x in xs {
                 collect_strings(x, out);
@@ -44,20 +50,13 @@ where
             if let Some(v) = it.value.as_ref() {
                 collect_strings(v, &mut parts);
             }
-            let value = parts
+            let values: Vec<String> = parts
                 .into_iter()
-                .filter(|s| !s.is_empty())
-                .collect::<Vec<_>>()
-                .join("、");
-            let vals: Vec<String> = value
-                .split('、')
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect();
-            let values = if vals.is_empty() { None } else { Some(vals) };
             out.push(InfoItem {
                 key: it.key,
-                value,
                 values,
             });
         }
@@ -235,9 +234,48 @@ pub struct PagedEpisode {
 #[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct InfoItem {
     pub key: String,
-    pub value: String,
-    #[ts(optional)]
-    pub values: Option<Vec<String>>,
+    pub values: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct Wrap {
+        #[serde(default, deserialize_with = "deserialize_infobox")]
+        infobox: Option<Vec<InfoItem>>,
+    }
+
+    #[test]
+    fn parse_simple_string_value() {
+        let json = serde_json::json!({
+            "infobox": [
+                {"key":"中文名", "value":"你的名字。"}
+            ]
+        });
+        let w: Wrap = serde_json::from_value(json).unwrap();
+        let infobox = w.infobox.unwrap();
+        assert_eq!(infobox[0].key, "中文名");
+        assert_eq!(infobox[0].values, vec!["你的名字。".to_string()]);
+    }
+
+    #[test]
+    fn parse_alias_v_list() {
+        let json = serde_json::json!({
+            "infobox": [
+                {"key":"别名", "value":[{"v":"Kimi no Na wa."},{"v":"Your Name."}]}
+            ]
+        });
+        let w: Wrap = serde_json::from_value(json).unwrap();
+        let infobox = w.infobox.unwrap();
+        assert_eq!(infobox[0].key, "别名");
+        assert_eq!(
+            infobox[0].values,
+            vec!["Kimi no Na wa.".to_string(), "Your Name.".to_string(),]
+        );
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, TS, PartialEq)]
