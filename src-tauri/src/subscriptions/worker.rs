@@ -5,9 +5,9 @@ use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
 use tracing::{debug, info, warn};
 
-use super::status::get_status_cached;
 use super::index_repo::index_upsert_if_changed;
 use super::repo::list;
+use super::status::get_status_cached;
 use crate::services::bangumi_service;
 
 const REFRESH_CONCURRENCY: usize = 4;

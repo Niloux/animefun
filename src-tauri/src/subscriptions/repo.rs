@@ -44,7 +44,8 @@ pub async fn list_ids() -> Result<Vec<u32>, AppError> {
     let out = conn
         .interact(|conn| -> Result<Vec<u32>, rusqlite::Error> {
             ensure_table(conn)?;
-            let mut stmt = conn.prepare("SELECT subject_id FROM subscriptions ORDER BY added_at DESC")?;
+            let mut stmt =
+                conn.prepare("SELECT subject_id FROM subscriptions ORDER BY added_at DESC")?;
             let mut rows = stmt.query([])?;
             let mut out: Vec<u32> = Vec::new();
             while let Some(row) = rows.next()? {
@@ -75,46 +76,42 @@ pub async fn add(id: u32, notify: bool) -> Result<(), AppError> {
     let now = now_secs();
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn
-        .interact(move |conn| -> Result<(), rusqlite::Error> {
-            ensure_table(conn)?;
-            let notify_i = if notify { 1 } else { 0 };
-            conn.execute(
-                "INSERT INTO subscriptions(subject_id, added_at, notify) VALUES(?1, ?2, ?3)",
-                params![id as i64, now, notify_i],
-            )?;
-            Ok(())
-        })
-        .await??;
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        let notify_i = if notify { 1 } else { 0 };
+        conn.execute(
+            "INSERT INTO subscriptions(subject_id, added_at, notify) VALUES(?1, ?2, ?3)",
+            params![id as i64, now, notify_i],
+        )?;
+        Ok(())
+    })
+    .await??;
     Ok(())
 }
 
 pub async fn remove(id: u32) -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn
-        .interact(move |conn| -> Result<(), rusqlite::Error> {
-            ensure_table(conn)?;
-            conn.execute(
-                "DELETE FROM subscriptions WHERE subject_id = ?1",
-                params![id as i64],
-            )?;
-            Ok(())
-        })
-        .await??;
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        conn.execute(
+            "DELETE FROM subscriptions WHERE subject_id = ?1",
+            params![id as i64],
+        )?;
+        Ok(())
+    })
+    .await??;
     Ok(())
 }
 
 pub async fn clear() -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn
-        .interact(|conn| -> Result<(), rusqlite::Error> {
-            ensure_table(conn)?;
-            conn.execute("DELETE FROM subscriptions", [])?;
-            Ok(())
-        })
-        .await??;
+    conn.interact(|conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        conn.execute("DELETE FROM subscriptions", [])?;
+        Ok(())
+    })
+    .await??;
     Ok(())
 }
-

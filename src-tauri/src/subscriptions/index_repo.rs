@@ -214,16 +214,15 @@ pub async fn index_upsert_if_changed(
 pub async fn index_delete(id: u32) -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn
-        .interact(move |conn| -> Result<(), rusqlite::Error> {
-            ensure_table(conn)?;
-            conn.execute(
-                "DELETE FROM subjects_index WHERE subject_id = ?1",
-                params![id as i64],
-            )?;
-            Ok(())
-        })
-        .await??;
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        conn.execute(
+            "DELETE FROM subjects_index WHERE subject_id = ?1",
+            params![id as i64],
+        )?;
+        Ok(())
+    })
+    .await??;
     Ok(())
 }
 
@@ -425,4 +424,3 @@ pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppEr
         .await??;
     Ok(rows)
 }
-
