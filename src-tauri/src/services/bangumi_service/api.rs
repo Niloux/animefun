@@ -9,10 +9,15 @@ use tracing::debug;
 use crate::infra::config::BGM_API_HOST;
 use crate::infra::http::CLIENT;
 
+const TTL_CALENDAR_SECS: i64 = 6 * 3600;
+const TTL_SUBJECT_SECS: i64 = 24 * 3600;
+const TTL_SEARCH_SECS: i64 = 3600;
+const TTL_EPISODES_SECS: i64 = 3600;
+
 async fn fetch_api<T>(
     key: &str,
     req_builder: RequestBuilder,
-    cache_duration_secs: u64,
+    cache_duration_secs: i64,
 ) -> Result<T, AppError>
 where
     T: Serialize + DeserializeOwned,
@@ -39,14 +44,7 @@ where
             .get(LAST_MODIFIED)
             .and_then(|v| v.to_str().ok())
             .map(String::from);
-        cache::set_entry(
-            key,
-            s,
-            new_etag,
-            new_lm,
-            cache_duration_secs.try_into().unwrap(),
-        )
-        .await?;
+        cache::set_entry(key, s, new_etag, new_lm, cache_duration_secs).await?;
     }
 
     Ok(data)
@@ -55,14 +53,14 @@ where
 pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
     let url = format!("{}/calendar", BGM_API_HOST);
     let req_builder = CLIENT.get(&url);
-    fetch_api("calendar", req_builder, 6 * 3600).await
+    fetch_api("calendar", req_builder, TTL_CALENDAR_SECS).await
 }
 
 pub async fn fetch_subject(id: u32) -> Result<SubjectResponse, AppError> {
     let key = format!("subject:{}", id);
     let url = format!("{}/v0/subjects/{}", BGM_API_HOST, id);
     let req_builder = CLIENT.get(&url);
-    fetch_api(&key, req_builder, 24 * 3600).await
+    fetch_api(&key, req_builder, TTL_SUBJECT_SECS).await
 }
 
 pub async fn search_subject(
@@ -78,39 +76,59 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<SearchResponse, AppError> {
-    // 构造规范且稳定的缓存键
-    let mut key_parts: Vec<String> = vec![format!("keywords={}", keywords)];
-    if let Some(st) = &subject_type {
-        key_parts.push(format!("type={:?}", st));
+    #[derive(serde::Serialize)]
+    struct SearchKey {
+        keyword: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        subject_type: Option<Vec<u8>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        sort: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tag: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        air_date: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rating: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rating_count: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        rank: Option<Vec<String>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        nsfw: Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        limit: Option<u32>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        offset: Option<u32>,
     }
-    if let Some(s) = &sort {
-        key_parts.push(format!("sort={}", s));
+    fn sorted_u8(v: Option<Vec<u8>>) -> Option<Vec<u8>> {
+        v.map(|mut x| {
+            x.sort();
+            x
+        })
     }
-    if let Some(t) = &tag {
-        key_parts.push(format!("tag={:?}", t));
+    fn sorted_str(v: Option<Vec<String>>) -> Option<Vec<String>> {
+        v.map(|mut x| {
+            x.sort();
+            x
+        })
     }
-    if let Some(ad) = &air_date {
-        key_parts.push(format!("air_date={:?}", ad));
-    }
-    if let Some(r) = &rating {
-        key_parts.push(format!("rating={:?}", r));
-    }
-    if let Some(rc) = &rating_count {
-        key_parts.push(format!("rating_count={:?}", rc));
-    }
-    if let Some(rk) = &rank {
-        key_parts.push(format!("rank={:?}", rk));
-    }
-    if let Some(n) = nsfw {
-        key_parts.push(format!("nsfw={}", n));
-    }
-    if let Some(l) = limit {
-        key_parts.push(format!("limit={}", l));
-    }
-    if let Some(o) = offset {
-        key_parts.push(format!("offset={}", o));
-    }
-    let key = format!("search:{}", key_parts.join("&"));
+    let key_struct = SearchKey {
+        keyword: keywords.to_string(),
+        subject_type: sorted_u8(subject_type.clone()),
+        sort: sort.clone(),
+        tag: sorted_str(tag.clone()),
+        air_date: sorted_str(air_date.clone()),
+        rating: sorted_str(rating.clone()),
+        rating_count: sorted_str(rating_count.clone()),
+        rank: sorted_str(rank.clone()),
+        nsfw,
+        limit,
+        offset,
+    };
+    let key = format!(
+        "search:{}",
+        serde_json::to_string(&key_struct).map_err(AppError::from)?
+    );
 
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
     #[derive(serde::Serialize)]
@@ -162,7 +180,7 @@ pub async fn search_subject(
     if !qs.is_empty() {
         req_builder = req_builder.query(&qs);
     }
-    fetch_api(&key, req_builder, 3600).await
+    fetch_api(&key, req_builder, TTL_SEARCH_SECS).await
 }
 
 pub async fn fetch_episodes(
@@ -190,5 +208,5 @@ pub async fn fetch_episodes(
         qs.push(("offset", o.to_string()));
     }
     let req_builder = CLIENT.get(&url).query(&qs);
-    fetch_api(&key, req_builder, 3600).await
+    fetch_api(&key, req_builder, TTL_EPISODES_SECS).await
 }

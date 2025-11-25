@@ -1,70 +1,61 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
-use serde_json::Value;
 use ts_rs::TS;
 
-// 辅助函数：递归收集 serde_json::Value 中的字符串
-fn collect_strings_from_value(v: &Value, out: &mut Vec<String>) {
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum InfoValue {
+    Text(String),
+    V { v: String },
+    List(Vec<InfoValue>),
+}
+
+#[derive(Deserialize)]
+struct InfoItemRaw {
+    key: String,
+    #[serde(default)]
+    value: Option<InfoValue>,
+}
+
+fn collect_strings(v: &InfoValue, out: &mut Vec<String>) {
     match v {
-        Value::String(s) => out.push(s.clone()),
-        Value::Array(arr) => {
-            for item in arr {
-                collect_strings_from_value(item, out);
-            }
-        }
-        Value::Object(map) => {
-            // 特例：形如 `{"v": "some_value"}` 的对象
-            if let Some(inner) = map.get("v") {
-                collect_strings_from_value(inner, out);
-            } else {
-                // 其他对象的通用回退，可能不够理想
-                for (_, val) in map.iter() {
-                    collect_strings_from_value(val, out);
-                }
-            }
-        }
-        // 对于数字、布尔等类型，转换为字符串
-        other => {
-            let s = other.to_string();
-            if !s.is_empty() && s != "null" {
-                out.push(s.trim_matches('"').to_string());
+        InfoValue::Text(s) => out.push(s.clone()),
+        InfoValue::V { v } => out.push(v.clone()),
+        InfoValue::List(xs) => {
+            for x in xs {
+                collect_strings(x, out);
             }
         }
     }
 }
 
-// 'infobox' 字段的自定义反序列化器
 fn deserialize_infobox<'de, D>(deserializer: D) -> Result<Option<Vec<InfoItem>>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let v: Option<Value> = Option::deserialize(deserializer)?;
-    match v {
-        Some(Value::Array(arr)) => {
-            let mut items: Vec<InfoItem> = Vec::new();
-            for it in arr {
-                if let Value::Object(map) = it {
-                    let key = map.get("key").and_then(|k| k.as_str()).unwrap_or("").to_string();
-                    if key.is_empty() {
-                        continue;
-                    }
-                    let val = map.get("value").unwrap_or(&Value::Null);
-                    let mut parts: Vec<String> = Vec::new();
-                    collect_strings_from_value(val, &mut parts);
-                    let value = parts
-                        .into_iter()
-                        .filter(|s| !s.is_empty())
-                        .collect::<Vec<_>>()
-                        .join("、");
-                    items.push(InfoItem { key, value });
-                }
+    let raw: Option<Vec<InfoItemRaw>> = Option::deserialize(deserializer)?;
+    if let Some(items) = raw {
+        let mut out: Vec<InfoItem> = Vec::with_capacity(items.len());
+        for it in items {
+            if it.key.is_empty() {
+                continue;
             }
-            Ok(Some(items))
+            let mut parts: Vec<String> = Vec::new();
+            if let Some(v) = it.value.as_ref() {
+                collect_strings(v, &mut parts);
+            }
+            let value = parts
+                .into_iter()
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join("、");
+            out.push(InfoItem { key: it.key, value });
         }
-        _ => Ok(None),
+        Ok(Some(out))
+    } else {
+        Ok(None)
     }
 }
-
 
 #[derive(Debug, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
