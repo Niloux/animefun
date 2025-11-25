@@ -1,68 +1,113 @@
-name: publish
+name: Tauri Build
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - release
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
-  publish-tauri:
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: --target aarch64-apple-darwin
-          - platform: macos-latest
-            args: --target x86_64-apple-darwin
-          - platform: ubuntu-22.04
-            args: ""
-          - platform: windows-latest
-            args: ""
-    runs-on: ${{ matrix.platform }}
+  build-windows:
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: setup node
+      - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
-          cache: pnpm
+          node-version: "20"
 
-      - name: setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install pnpm
+        run: npm install -g pnpm@10.12.4
+
+      - name: Setup Cache
+        uses: actions/cache@v4
         with:
-          version: 9
+          path: |
+            ~/.pnpm-store
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: windows-build-${{ hashFiles('**/pnpm-lock.yaml', '**/Cargo.lock') }}
+          restore-keys: |
+            windows-build-
 
-      - name: install Rust stable
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: "./src-tauri -> target"
-
-      - name: install frontend dependencies
+      - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - uses: tauri-apps/tauri-action@v1
+      - name: Show pnpm version
+        run: pnpm --version
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-build-windows
+          path: src-tauri/target/release/bundle
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    runs-on: macos-latest
+    needs: build-windows
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
         with:
-          tauriScript: pnpm tauri
-          tagName: app-v__VERSION__
-          releaseName: "animefun v__VERSION__"
-          releaseBody: "构建产物见附件"
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          node-version: "20"
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.12.4
+
+      - name: Setup Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pnpm-store
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: macos-build-${{ hashFiles('**/pnpm-lock.yaml', '**/Cargo.lock') }}
+          restore-keys: |
+            macos-build-
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Show pnpm version
+        run: pnpm --version
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-build-macos
+          path: src-tauri/target/release/bundle
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.app.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
