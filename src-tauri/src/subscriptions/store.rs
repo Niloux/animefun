@@ -6,7 +6,7 @@ use crate::infra::time::now_secs;
 use crate::models::bangumi::{Images, SubjectRating, SubjectResponse, SubjectStatusCode};
 use crate::services::bangumi_service;
 use crate::subscriptions;
-use tracing::{debug, info};
+use tracing::info;
 
 static SUBS_DB_FILE: once_cell::sync::OnceCell<PathBuf> = once_cell::sync::OnceCell::new();
 
@@ -248,7 +248,17 @@ pub async fn index_upsert(
                     rating_total=excluded.rating_total,
                     status_code=excluded.status_code,
                     status_ord=excluded.status_ord,
-                    cover_url=excluded.cover_url",
+                    cover_url=excluded.cover_url
+                 WHERE name <> excluded.name
+                    OR name_cn <> excluded.name_cn
+                    OR tags_csv <> excluded.tags_csv
+                    OR meta_tags_csv <> excluded.meta_tags_csv
+                    OR rating_score IS NOT excluded.rating_score
+                    OR rating_rank IS NOT excluded.rating_rank
+                    OR rating_total IS NOT excluded.rating_total
+                    OR status_code <> excluded.status_code
+                    OR status_ord <> excluded.status_ord
+                    OR cover_url <> excluded.cover_url",
                 params![
                     id as i64,
                     added_at,
@@ -277,63 +287,68 @@ pub async fn index_upsert_if_changed(
     subject: SubjectResponse,
     status: SubjectStatusCode,
 ) -> Result<bool, AppError> {
-    let name = subject.name.clone();
-    let name_cn = subject.name_cn.clone();
-    let tags_csv = build_tags_csv(&subject);
-    let meta_tags_csv = String::new();
-    let rating_score: Option<f32> = subject.rating.as_ref().map(|r| r.score);
-    let rating_rank: Option<i64> = subject
-        .rating
-        .as_ref()
-        .and_then(|r| r.rank.map(|x| x as i64));
-    let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
-    let status_ord_v = status_ord(&status);
-    let status_code = status_ord_v;
-    let cover_url = subject.images.large.clone();
-
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    let need_update = conn
-        .interact(move |conn| -> Result<bool, rusqlite::Error> {
+    let changed = conn
+        .interact(move |conn| -> Result<usize, rusqlite::Error> {
             ensure_table(conn)?;
-            let mut stmt = conn.prepare(
-                "SELECT name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord, cover_url FROM subjects_index WHERE subject_id = ?1",
+            let name = subject.name.clone();
+            let name_cn = subject.name_cn.clone();
+            let tags_csv = build_tags_csv(&subject);
+            let meta_tags_csv = String::new();
+            let rating_score: Option<f32> = subject.rating.as_ref().map(|r| r.score);
+            let rating_rank: Option<i64> = subject.rating.as_ref().and_then(|r| r.rank.map(|x| x as i64));
+            let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
+            let status_ord_v = status_ord(&status);
+            let status_code = status_ord_v;
+            let updated_at = now_secs();
+            let cover_url = subject.images.large.clone();
+            let n = conn.execute(
+                "INSERT INTO subjects_index(subject_id, added_at, updated_at, name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord, cover_url)
+                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+                 ON CONFLICT(subject_id) DO UPDATE SET
+                    added_at=excluded.added_at,
+                    updated_at=excluded.updated_at,
+                    name=excluded.name,
+                    name_cn=excluded.name_cn,
+                    tags_csv=excluded.tags_csv,
+                    meta_tags_csv=excluded.meta_tags_csv,
+                    rating_score=excluded.rating_score,
+                    rating_rank=excluded.rating_rank,
+                    rating_total=excluded.rating_total,
+                    status_code=excluded.status_code,
+                    status_ord=excluded.status_ord,
+                    cover_url=excluded.cover_url
+                 WHERE name <> excluded.name
+                    OR name_cn <> excluded.name_cn
+                    OR tags_csv <> excluded.tags_csv
+                    OR meta_tags_csv <> excluded.meta_tags_csv
+                    OR rating_score IS NOT excluded.rating_score
+                    OR rating_rank IS NOT excluded.rating_rank
+                    OR rating_total IS NOT excluded.rating_total
+                    OR status_code <> excluded.status_code
+                    OR status_ord <> excluded.status_ord
+                    OR cover_url <> excluded.cover_url",
+                params![
+                    id as i64,
+                    added_at,
+                    updated_at,
+                    name,
+                    name_cn,
+                    tags_csv,
+                    meta_tags_csv,
+                    rating_score,
+                    rating_rank,
+                    rating_total,
+                    status_code,
+                    status_ord_v,
+                    cover_url,
+                ],
             )?;
-            let mut rows = stmt.query(params![id as i64])?;
-            if let Some(row) = rows.next()? {
-                let cur_name: String = row.get(0)?;
-                let cur_name_cn: String = row.get(1)?;
-                let cur_tags_csv: String = row.get(2)?;
-                let cur_meta_tags_csv: String = row.get(3)?;
-                let cur_rating_score: Option<f32> = row.get(4)?;
-                let cur_rating_rank: Option<i64> = row.get(5)?;
-                let cur_rating_total: Option<i64> = row.get(6)?;
-                let cur_status_code: i64 = row.get(7)?;
-                let cur_status_ord: i64 = row.get(8)?;
-                let cur_cover_url: String = row.get(9)?;
-                Ok(!(cur_name == name
-                    && cur_name_cn == name_cn
-                    && cur_tags_csv == tags_csv
-                    && cur_meta_tags_csv == meta_tags_csv
-                    && cur_rating_score == rating_score
-                    && cur_rating_rank == rating_rank
-                    && cur_rating_total == rating_total
-                    && cur_status_code == status_code
-                    && cur_status_ord == status_ord_v
-                    && cur_cover_url == cover_url))
-            } else {
-                Ok(true)
-            }
+            Ok(n)
         })
         .await??;
-    if need_update {
-        debug!("索引 {} 已变更", id);
-        index_upsert(id, added_at, subject, status).await?;
-        Ok(true)
-    } else {
-        debug!("索引 {} 未变更", id);
-        Ok(false)
-    }
+    Ok(changed > 0)
 }
 
 fn make_subject_from_index(
