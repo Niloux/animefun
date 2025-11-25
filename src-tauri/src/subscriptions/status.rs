@@ -15,14 +15,14 @@ fn status_ttl_secs(code: &SubjectStatusCode) -> i64 {
 
 pub async fn get_status_cached(id: u32) -> Result<SubjectStatus, AppError> {
     let key = format!("sub:status:{}", id);
-    if let Some(s) = cache::get(&key).await? {
+    if let Some((s, _, _)) = cache::get_entry(&key).await? {
         let v: SubjectStatus = serde_json::from_str(&s)?;
         return Ok(v);
     }
     let v = bangumi_service::calc_subject_status(id).await?;
     if let Ok(s) = serde_json::to_string(&v) {
         let ttl = status_ttl_secs(&v.code);
-        let _ = cache::set(&key, s, ttl).await;
+        let _ = cache::set_entry(&key, s, None, None, ttl).await;
     }
     Ok(v)
 }

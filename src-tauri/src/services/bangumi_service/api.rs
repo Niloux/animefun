@@ -17,45 +17,96 @@ async fn fetch_api<T>(
 where
     T: Serialize + DeserializeOwned,
 {
-    if let Ok(Some(cached_data)) = cache::get(key).await {
-        debug!(key, "cache hit");
-        if let Ok(parsed) = serde_json::from_str::<T>(&cached_data) {
-            return Ok(parsed);
-        }
-    }
-    let (etag, last_modified) = cache::get_meta(key).await.unwrap_or((None, None));
     let mut req = req_builder;
-    if let Some(e) = etag {
-        req = req.header(IF_NONE_MATCH, e);
+    // 尝试读取缓存条目
+    let cached_entry = cache::get_entry(key).await?;
+
+    if let Some((cached_data, etag, last_modified)) = cached_entry {
+        debug!(key, "cache hit, setting conditional headers");
+        // 若命中缓存，使用其元数据进行条件请求
+        if let Some(ref e) = etag {
+            req = req.header(IF_NONE_MATCH, e);
+        }
+        if let Some(ref lm) = last_modified {
+            req = req.header(IF_MODIFIED_SINCE, lm);
+        }
+
+        let resp = req.send().await?;
+        debug!(key, status = %resp.status().as_u16(), "http response");
+
+        if resp.status() == StatusCode::NOT_MODIFIED {
+            info!(key, "304 Not Modified, using cached data");
+            // 服务器确认本地数据为最新
+            // 仅需刷新缓存 TTL 并返回已有数据
+            cache::set_entry(
+                &key,
+                cached_data.clone(),
+                etag,
+                last_modified,
+                cache_duration_secs.try_into().unwrap(),
+            )
+            .await?;
+
+            return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
+        }
+
+        // 收到 200 OK 则处理并缓存新数据
+        resp.error_for_status_ref()?;
+        let headers = resp.headers().clone();
+        let data = resp.json::<T>().await?;
+
+        info!(key, "cache update");
+        if let Ok(s) = serde_json::to_string(&data) {
+            let new_etag = headers
+                .get(ETAG)
+                .and_then(|v| v.to_str().ok())
+                .map(String::from);
+            let new_lm = headers
+                .get(LAST_MODIFIED)
+                .and_then(|v| v.to_str().ok())
+                .map(String::from);
+            cache::set_entry(
+                key,
+                s,
+                new_etag,
+                new_lm,
+                cache_duration_secs.try_into().unwrap(),
+            )
+            .await?;
+        }
+
+        Ok(data)
+    } else {
+        // 未命中缓存，直接发起请求
+        debug!(key, "cache miss, fetching directly");
+        let resp = req.send().await?;
+        resp.error_for_status_ref()?;
+
+        let headers = resp.headers().clone();
+        let data = resp.json::<T>().await?;
+
+        info!(key, "caching new data");
+        if let Ok(s) = serde_json::to_string(&data) {
+            let new_etag = headers
+                .get(ETAG)
+                .and_then(|v| v.to_str().ok())
+                .map(String::from);
+            let new_lm = headers
+                .get(LAST_MODIFIED)
+                .and_then(|v| v.to_str().ok())
+                .map(String::from);
+            cache::set_entry(
+                key,
+                s,
+                new_etag,
+                new_lm,
+                cache_duration_secs.try_into().unwrap(),
+            )
+            .await?;
+        }
+
+        Ok(data)
     }
-    if let Some(lm) = last_modified {
-        req = req.header(IF_MODIFIED_SINCE, lm);
-    }
-    let resp = req.send().await?;
-    debug!(key, status=%resp.status().as_u16(), "http response");
-    if resp.status() == StatusCode::NOT_MODIFIED {
-        let cached_data = cache::get(key)
-            .await?
-            .ok_or_else(|| AppError::CacheMissAfter304(key.to_string()))?;
-        return serde_json::from_str::<T>(&cached_data).map_err(AppError::from);
-    }
-    resp.error_for_status_ref()?;
-    let headers = resp.headers().clone();
-    let data = resp.json::<T>().await?;
-    info!(key, "cache update");
-    if let Ok(s) = serde_json::to_string(&data) {
-        let _ = cache::set(key, s, cache_duration_secs.try_into().unwrap()).await;
-    }
-    let new_etag = headers
-        .get(ETAG)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
-    let new_lm = headers
-        .get(LAST_MODIFIED)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
-    let _ = cache::set_meta(key, new_etag, new_lm).await;
-    Ok(data)
 }
 
 pub async fn fetch_calendar() -> Result<Vec<CalendarResponse>, AppError> {
@@ -84,15 +135,40 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<SearchResponse, AppError> {
-    let key_payload = serde_json::json!({
-        "keywords": keywords, "subject_type": subject_type, "sort": sort, "tag": tag,
-        "air_date": air_date, "rating": rating, "rating_count": rating_count,
-        "rank": rank, "nsfw": nsfw, "limit": limit, "offset": offset
-    });
-    let key = format!(
-        "search:{}",
-        serde_json::to_string(&key_payload).unwrap_or_default()
-    );
+    // 构造规范且稳定的缓存键
+    let mut key_parts: Vec<String> = vec![format!("keywords={}", keywords)];
+    if let Some(st) = &subject_type {
+        key_parts.push(format!("type={:?}", st));
+    }
+    if let Some(s) = &sort {
+        key_parts.push(format!("sort={}", s));
+    }
+    if let Some(t) = &tag {
+        key_parts.push(format!("tag={:?}", t));
+    }
+    if let Some(ad) = &air_date {
+        key_parts.push(format!("air_date={:?}", ad));
+    }
+    if let Some(r) = &rating {
+        key_parts.push(format!("rating={:?}", r));
+    }
+    if let Some(rc) = &rating_count {
+        key_parts.push(format!("rating_count={:?}", rc));
+    }
+    if let Some(rk) = &rank {
+        key_parts.push(format!("rank={:?}", rk));
+    }
+    if let Some(n) = nsfw {
+        key_parts.push(format!("nsfw={}", n));
+    }
+    if let Some(l) = limit {
+        key_parts.push(format!("limit={}", l));
+    }
+    if let Some(o) = offset {
+        key_parts.push(format!("offset={}", o));
+    }
+    let key = format!("search:{}", key_parts.join("&"));
+
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
     #[derive(serde::Serialize)]
     struct FilterPayload {
@@ -153,8 +229,11 @@ pub async fn fetch_episodes(
     offset: Option<u32>,
 ) -> Result<PagedEpisode, AppError> {
     let key = format!(
-        "episodes:{}:{:?}:{:?}:{:?}",
-        subject_id, ep_type, limit, offset
+        "episodes:{}:{}:{}:{}",
+        subject_id,
+        ep_type.map(|v| v.to_string()).unwrap_or_default(),
+        limit.map(|v| v.to_string()).unwrap_or_default(),
+        offset.map(|v| v.to_string()).unwrap_or_default()
     );
     let url = format!("{}/v0/episodes", BGM_API_HOST);
     let mut qs: Vec<(&str, String)> = vec![("subject_id", subject_id.to_string())];

@@ -10,8 +10,8 @@ const SEARCH_TTL_SECS: i64 = 6 * 3600;
 
 pub async fn search_candidates(name: &str) -> Result<Vec<u32>, AppError> {
     let key = format!("mikan:search:{}", name);
-    let html = match cache::get(&key).await? {
-        Some(h) => h,
+    let html = match cache::get_entry(&key).await? {
+        Some((h, _, _)) => h,
         None => {
             let url = format!("{}/Home/Search", MIKAN_HOST);
             let resp = CLIENT.get(url).query(&[("searchstr", name)]).send().await?;
@@ -19,7 +19,7 @@ pub async fn search_candidates(name: &str) -> Result<Vec<u32>, AppError> {
                 resp.error_for_status_ref()?;
             }
             let h = resp.text().await?;
-            let _ = cache::set(&key, h.clone(), SEARCH_TTL_SECS).await;
+            let _ = cache::set_entry(&key, h.clone(), None, None, SEARCH_TTL_SECS).await;
             h
         }
     };
