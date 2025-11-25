@@ -77,67 +77,7 @@ pub async fn index_upsert(
     subject: SubjectResponse,
     status: SubjectStatusCode,
 ) -> Result<(), AppError> {
-    let pool = crate::infra::db::data_pool()?;
-    let conn = pool.get().await?;
-    conn
-        .interact(move |conn| -> Result<(), rusqlite::Error> {
-            ensure_table(conn)?;
-            let name = subject.name.clone();
-            let name_cn = subject.name_cn.clone();
-            let tags_csv = build_tags_csv(&subject);
-            let meta_tags_csv = String::new();
-            let rating_score: Option<f32> = subject.rating.as_ref().map(|r| r.score);
-            let rating_rank: Option<i64> = subject.rating.as_ref().and_then(|r| r.rank.map(|x| x as i64));
-            let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
-            let status_ord_v = status_ord(&status);
-            let status_code = status_ord_v;
-            let updated_at = now_secs();
-            let cover_url = subject.images.large.clone();
-            conn.execute(
-                "INSERT INTO subjects_index(subject_id, added_at, updated_at, name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord, cover_url)
-                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
-                 ON CONFLICT(subject_id) DO UPDATE SET
-                    added_at=excluded.added_at,
-                    updated_at=excluded.updated_at,
-                    name=excluded.name,
-                    name_cn=excluded.name_cn,
-                    tags_csv=excluded.tags_csv,
-                    meta_tags_csv=excluded.meta_tags_csv,
-                    rating_score=excluded.rating_score,
-                    rating_rank=excluded.rating_rank,
-                    rating_total=excluded.rating_total,
-                    status_code=excluded.status_code,
-                    status_ord=excluded.status_ord,
-                    cover_url=excluded.cover_url
-                 WHERE name <> excluded.name
-                    OR name_cn <> excluded.name_cn
-                    OR tags_csv <> excluded.tags_csv
-                    OR meta_tags_csv <> excluded.meta_tags_csv
-                    OR rating_score IS NOT excluded.rating_score
-                    OR rating_rank IS NOT excluded.rating_rank
-                    OR rating_total IS NOT excluded.rating_total
-                    OR status_code <> excluded.status_code
-                    OR status_ord <> excluded.status_ord
-                    OR cover_url <> excluded.cover_url",
-                params![
-                    id as i64,
-                    added_at,
-                    updated_at,
-                    name,
-                    name_cn,
-                    tags_csv,
-                    meta_tags_csv,
-                    rating_score,
-                    rating_rank,
-                    rating_total,
-                    status_code,
-                    status_ord_v,
-                    cover_url,
-                ],
-            )?;
-            Ok(())
-        })
-        .await??;
+    let _ = index_upsert_rows(id, added_at, subject, status).await?;
     Ok(())
 }
 
@@ -147,9 +87,19 @@ pub async fn index_upsert_if_changed(
     subject: SubjectResponse,
     status: SubjectStatusCode,
 ) -> Result<bool, AppError> {
+    let n = index_upsert_rows(id, added_at, subject, status).await?;
+    Ok(n > 0)
+}
+
+async fn index_upsert_rows(
+    id: u32,
+    added_at: i64,
+    subject: SubjectResponse,
+    status: SubjectStatusCode,
+) -> Result<usize, AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    let changed = conn
+    let n = conn
         .interact(move |conn| -> Result<usize, rusqlite::Error> {
             ensure_table(conn)?;
             let name = subject.name.clone();
@@ -208,7 +158,7 @@ pub async fn index_upsert_if_changed(
             Ok(n)
         })
         .await??;
-    Ok(changed > 0)
+    Ok(n)
 }
 
 pub async fn index_delete(id: u32) -> Result<(), AppError> {
@@ -220,6 +170,18 @@ pub async fn index_delete(id: u32) -> Result<(), AppError> {
             "DELETE FROM subjects_index WHERE subject_id = ?1",
             params![id as i64],
         )?;
+        Ok(())
+    })
+    .await??;
+    Ok(())
+}
+
+pub async fn index_clear() -> Result<(), AppError> {
+    let pool = crate::infra::db::data_pool()?;
+    let conn = pool.get().await?;
+    conn.interact(|conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        conn.execute("DELETE FROM subjects_index", [])?;
         Ok(())
     })
     .await??;

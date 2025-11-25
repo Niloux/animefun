@@ -10,7 +10,8 @@ pub async fn has(id: u32) -> Result<bool, AppError> {
 }
 
 pub async fn clear() -> Result<(), AppError> {
-    crate::subscriptions::repo::clear().await
+    crate::subscriptions::repo::clear().await?;
+    crate::subscriptions::index_repo::index_clear().await
 }
 
 pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
