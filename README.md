@@ -12,6 +12,24 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge"></a>
 </p>
 
+## 应用截图
+
+- 首页（日历与更新）：
+
+  ![Home](docs/screenshots/home.png)
+
+- 订阅列表（过滤与搜索）：
+
+  ![Subscriptions](docs/screenshots/subscriptions.png)
+
+- 番剧详情（信息与标签）：
+
+  ![Detail](docs/screenshots/detail.png)
+
+- 资源聚合（Mikan RSS）：
+
+  ![Resources](docs/screenshots/resources.png)
+
 ## 特性
 
 - 订阅管理：一键收藏/取消、批量清理、后台周期性刷新索引（10 分钟轮询）
@@ -44,37 +62,18 @@
 - `src/lib/` 前端工具层（API 调用、分页、懒加载、查询客户端）
 - `src/types/gen/` Rust 自动导出到 TS 的类型定义
 - `src-tauri/` Rust 后端（命令、服务、订阅并发刷新、缓存、DB 等）
-- `public/bangumi_api.yml` Bangumi OpenAPI 规范
+- `docs/bangumi_api.yml` Bangumi OpenAPI 规范
 
 ## 数据与隐私
 
 - 存储位置：`~/.animefun`（SQLite `data.sqlite`/`cache.sqlite` 与 `images/` 缓存）
 - 网络来源：Bangumi API、Mikan RSS；仅本地缓存，不上传个人数据
-- 安全策略：Tauri 2 CSP + 资源协议白名单（详见配置）
 
 ## 技术栈
 
 - 前端：React 19、React Router、React Query、Tailwind v4、shadcn-ui
 - 后端：Tauri 2、Rust、SQLite（deadpool_sqlite）、reqwest、tracing
 - 类型：ts-rs 自动生成前后端共享类型
-
-## 应用截图
-
-- 首页（日历与更新）：
-
-  ![Home](docs/screenshots/home.png)
-
-- 订阅列表（过滤与搜索）：
-
-  ![Subscriptions](docs/screenshots/subscriptions.png)
-
-- 番剧详情（信息与标签）：
-
-  ![Detail](docs/screenshots/detail.png)
-
-- 资源聚合（Mikan RSS）：
-
-  ![Resources](docs/screenshots/resources.png)
 
 ## 致谢
 
