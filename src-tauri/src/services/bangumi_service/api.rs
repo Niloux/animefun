@@ -44,6 +44,7 @@ where
         }
     }
 
+    crate::infra::http::wait_api_limit().await;
     let resp = rb.send().await?;
     if resp.status() == StatusCode::NOT_MODIFIED {
         if let Some(b) = cached_body {
