@@ -4,4 +4,4 @@ pub mod worker;
 
 pub use status::get_status_cached;
 pub use store::{clear, has, init, list, list_ids, toggle};
-pub use worker::{spawn_index_worker, spawn_refresh_worker};
+pub use worker::spawn_refresh_worker;

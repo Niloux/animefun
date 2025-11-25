@@ -25,7 +25,6 @@ pub fn run() {
                 app.handle().clone(),
             ));
             subscriptions::spawn_refresh_worker();
-            subscriptions::spawn_index_worker();
             crate::services::mikan_service::spawn_preheat_worker();
             Ok(())
         })

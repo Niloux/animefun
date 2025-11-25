@@ -8,7 +8,7 @@ use crate::services::bangumi_service;
 use crate::subscriptions;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
-use tracing::info;
+use tracing::{debug, info};
 
 static SUBS_DB_FILE: once_cell::sync::OnceCell<PathBuf> = once_cell::sync::OnceCell::new();
 
@@ -244,6 +244,68 @@ pub async fn upsert_index_row(
         })
         .await??;
     Ok(())
+}
+
+pub async fn upsert_index_row_if_changed(
+    id: u32,
+    added_at: i64,
+    subject: SubjectResponse,
+    status: SubjectStatusCode,
+) -> Result<bool, AppError> {
+    let name = subject.name.clone();
+    let name_cn = subject.name_cn.clone();
+    let tags_csv = build_tags_csv(&subject);
+    let meta_tags_csv = String::new();
+    let rating_score: Option<f32> = subject.rating.as_ref().map(|r| r.score);
+    let rating_rank: Option<i64> = subject
+        .rating
+        .as_ref()
+        .and_then(|r| r.rank.map(|x| x as i64));
+    let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
+    let status_ord_v = status_ord(&status);
+    let status_code = status_ord_v;
+
+    let pool = crate::infra::db::data_pool()?;
+    let conn = pool.get().await?;
+    let need_update = conn
+        .interact(move |conn| -> Result<bool, rusqlite::Error> {
+            ensure_table(conn)?;
+            let mut stmt = conn.prepare(
+                "SELECT name, name_cn, tags_csv, meta_tags_csv, rating_score, rating_rank, rating_total, status_code, status_ord FROM subjects_index WHERE subject_id = ?1",
+            )?;
+            let mut rows = stmt.query(params![id as i64])?;
+            if let Some(row) = rows.next()? {
+                let cur_name: String = row.get(0)?;
+                let cur_name_cn: String = row.get(1)?;
+                let cur_tags_csv: String = row.get(2)?;
+                let cur_meta_tags_csv: String = row.get(3)?;
+                let cur_rating_score: Option<f32> = row.get(4)?;
+                let cur_rating_rank: Option<i64> = row.get(5)?;
+                let cur_rating_total: Option<i64> = row.get(6)?;
+                let cur_status_code: i64 = row.get(7)?;
+                let cur_status_ord: i64 = row.get(8)?;
+                Ok(!(cur_name == name
+                    && cur_name_cn == name_cn
+                    && cur_tags_csv == tags_csv
+                    && cur_meta_tags_csv == meta_tags_csv
+                    && cur_rating_score == rating_score
+                    && cur_rating_rank == rating_rank
+                    && cur_rating_total == rating_total
+                    && cur_status_code == status_code
+                    && cur_status_ord == status_ord_v))
+            } else {
+                Ok(true)
+            }
+        })
+        .await??;
+    if need_update {
+        debug!("索引 {} 已变更", id);
+        upsert_index_row(id, added_at, subject, status).await?;
+        Ok(true)
+    } else {
+        debug!("索引 {} 未变更", id);
+        Ok(false)
+    }
 }
 
 pub async fn refresh_index_all() -> Result<(), AppError> {
