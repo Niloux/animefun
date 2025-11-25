@@ -39,31 +39,36 @@ fn deserialize_infobox<'de, D>(deserializer: D) -> Result<Option<Vec<InfoItem>>,
 where
     D: Deserializer<'de>,
 {
-    let raw: Option<Vec<InfoItemRaw>> = Option::deserialize(deserializer)?;
-    if let Some(items) = raw {
-        let mut out: Vec<InfoItem> = Vec::with_capacity(items.len());
-        for it in items {
-            if it.key.is_empty() {
-                continue;
-            }
-            let mut parts: Vec<String> = Vec::new();
-            if let Some(v) = it.value.as_ref() {
-                collect_strings(v, &mut parts);
-            }
-            let values: Vec<String> = parts
-                .into_iter()
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect();
-            out.push(InfoItem {
-                key: it.key,
-                values,
-            });
+    let val_opt: Option<serde_json::Value> = Option::deserialize(deserializer)?;
+    if let Some(val) = val_opt {
+        if let Ok(items) = serde_json::from_value::<Vec<InfoItem>>(val.clone()) {
+            return Ok(Some(items));
         }
-        Ok(Some(out))
-    } else {
-        Ok(None)
+        if let Ok(raw_items) = serde_json::from_value::<Vec<InfoItemRaw>>(val) {
+            let mut out: Vec<InfoItem> = Vec::with_capacity(raw_items.len());
+            for it in raw_items {
+                if it.key.is_empty() {
+                    continue;
+                }
+                let mut parts: Vec<String> = Vec::new();
+                if let Some(v) = it.value.as_ref() {
+                    collect_strings(v, &mut parts);
+                }
+                let values: Vec<String> = parts
+                    .into_iter()
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                out.push(InfoItem {
+                    key: it.key,
+                    values,
+                });
+            }
+            return Ok(Some(out));
+        }
+        return Ok(None);
     }
+    Ok(None)
 }
 
 #[derive(Debug, Serialize, Deserialize, TS)]
@@ -274,6 +279,26 @@ mod tests {
         assert_eq!(
             infobox[0].values,
             vec!["Kimi no Na wa.".to_string(), "Your Name.".to_string(),]
+        );
+    }
+
+    #[test]
+    fn parse_normalized_cached_shape() {
+        let json = serde_json::json!({
+            "infobox": [
+                {"key":"中文名", "values":["你的名字。"]},
+                {"key":"别名", "values":["Kimi no Na wa.", "Your Name."]}
+            ]
+        });
+        let w: Wrap = serde_json::from_value(json).unwrap();
+        let infobox = w.infobox.unwrap();
+        assert_eq!(infobox.len(), 2);
+        assert_eq!(infobox[0].key, "中文名");
+        assert_eq!(infobox[0].values, vec!["你的名字。".to_string()]);
+        assert_eq!(infobox[1].key, "别名");
+        assert_eq!(
+            infobox[1].values,
+            vec!["Kimi no Na wa.".to_string(), "Your Name.".to_string()]
         );
     }
 }
