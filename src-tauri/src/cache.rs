@@ -25,7 +25,6 @@ fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
     Ok(())
 }
 
-#[allow(dead_code)]
 pub async fn get_entry(
     key: &str,
 ) -> Result<Option<(String, Option<String>, Option<String>)>, AppError> {
