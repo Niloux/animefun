@@ -12,7 +12,7 @@ type SubscriptionItem = {
 export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
   const mode = opts?.mode ?? "full";
   const [items, setItems] = useState<SubscriptionItem[]>([]);
-  const [ids, setIds] = useState<number[]>([]);
+  const [idSet, setIdSet] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let mounted = true;
@@ -20,16 +20,20 @@ export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
       try {
         if (mode === "full") {
           const data = await getSubscriptions();
-          if (mounted) setItems(Array.isArray(data) ? data : []);
+          if (mounted) {
+            const arr = Array.isArray(data) ? data : [];
+            setItems(arr);
+            setIdSet(new Set(arr.map((x) => x.id)));
+          }
         } else {
           const data = await getSubscriptionIds();
-          if (mounted) setIds(Array.isArray(data) ? data : []);
+          if (mounted) setIdSet(new Set(Array.isArray(data) ? data : []));
         }
       } catch (e) {
         console.error(e);
         if (mounted) {
           setItems([]);
-          setIds([]);
+          setIdSet(new Set());
         }
       }
     };
@@ -39,21 +43,25 @@ export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
     };
   }, [mode]);
 
-  const isSubscribed = useCallback(
-    (id: number) =>
-      (ids.length > 0 ? ids.includes(id) : items.some((x) => x.id === id)),
-    [ids, items]
-  );
+  const isSubscribed = useCallback((id: number) => idSet.has(id), [idSet]);
 
   const toggle = useCallback(async (anime: Anime): Promise<boolean> => {
     try {
       const subscribed = await toggleSubscription(anime.id);
       if (subscribed) {
         setItems((prev) => [{ id: anime.id, anime, addedAt: Date.now() }, ...prev.filter((x) => x.id !== anime.id)]);
-        setIds((prev) => (prev.includes(anime.id) ? prev : [anime.id, ...prev]));
+        setIdSet((prev) => {
+          const next = new Set(prev);
+          next.add(anime.id);
+          return next;
+        });
       } else {
         setItems((prev) => prev.filter((x) => x.id !== anime.id));
-        setIds((prev) => prev.filter((x) => x !== anime.id));
+        setIdSet((prev) => {
+          const next = new Set(prev);
+          next.delete(anime.id);
+          return next;
+        });
       }
       return subscribed;
     } catch (e) {
@@ -69,6 +77,7 @@ export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
       try {
         await clearSubscriptions();
         setItems([]);
+        setIdSet(new Set());
       } catch (e) {
         console.error(e);
       }
