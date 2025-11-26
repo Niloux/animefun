@@ -67,7 +67,7 @@ export function useSearchCore<TFilters>(options: {
   });
 
   const setQuery = (v: string) => setState((s) => ({ ...s, keywords: v, submitted: false }));
-  const setFilters = (f: TFilters) => setState((s) => ({ ...s, filters: f, submitted: false }));
+  const setFilters = (f: TFilters) => setState((s) => ({ ...s, filters: f }));
   const setPage = (p: number) => setState((s) => ({ ...s, page: p }));
   const submit = () => setState((s) => ({ ...s, submitted: true, page: 1 }));
 
