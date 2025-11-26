@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
@@ -41,6 +42,21 @@ export function ResourceDialog({
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [resFilter, setResFilter] = useState<number | null>(null);
   const [sublangFilter, setSublangFilter] = useState<string | null>(null);
+
+  const formatSize = (v?: number | bigint | null) => {
+    if (v == null) return null;
+    const n = typeof v === "bigint" ? Number(v) : v;
+    if (!Number.isFinite(n) || n <= 0) return null;
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let i = 0;
+    let s = n;
+    while (s >= 1024 && i < units.length - 1) {
+      s /= 1024;
+      i++;
+    }
+    const val = s < 10 ? s.toFixed(1) : Math.round(s).toString();
+    return `${val} ${units[i]}`;
+  };
 
   const groupOptions = useMemo(() => {
     const s = new Set<string>();
@@ -181,37 +197,57 @@ export function ResourceDialog({
                             <div className="text-sm font-medium">
                               {it.title}
                             </div>
-                            <div className="flex flex-wrap gap-2 text-xs">
-                              {it.page_url && (
-                                <a
-                                  href={it.page_url}
-                                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  页面
-                                </a>
-                              )}
-                              {it.torrent_url && (
-                                <a
-                                  href={it.torrent_url}
-                                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  种子
-                                </a>
-                              )}
-                              {typeof it.resolution === "number" && (
-                                <span className="text-muted-foreground">
-                                  {it.resolution}p
-                                </span>
-                              )}
-                              {it.subtitle_lang && (
-                                <span className="text-muted-foreground">
-                                  {it.subtitle_lang}
-                                </span>
-                              )}
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex flex-wrap items-center gap-2">
+                                {typeof it.resolution === "number" && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-chart-1 text-primary-foreground"
+                                  >
+                                    {it.resolution}p
+                                  </Badge>
+                                )}
+                                {it.subtitle_lang && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-chart-2 text-primary-foreground"
+                                  >
+                                    {it.subtitle_lang}
+                                  </Badge>
+                                )}
+                                {formatSize(it.size_bytes) && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-chart-3 text-primary-foreground"
+                                  >
+                                    {formatSize(it.size_bytes) as string}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {it.page_url && (
+                                  <Button asChild variant="outline" size="sm">
+                                    <a
+                                      href={it.page_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      页面
+                                    </a>
+                                  </Button>
+                                )}
+                                {it.torrent_url && (
+                                  <Button asChild variant="outline" size="sm">
+                                    <a
+                                      href={it.torrent_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      种子
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
