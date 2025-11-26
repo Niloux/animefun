@@ -102,7 +102,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 cursor-pointer"
                   disabled={loading}
                 >
                   第 {currentPage + 1} / {totalPages} 页
@@ -170,8 +170,18 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => jumpToPage(Math.max(0, currentPage - 1))}
-                      aria-disabled={currentPage === 0 || loading}
+                      href="#"
+                      className={
+                        currentPage === 0 || loading
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 0 && !loading) {
+                          jumpToPage(currentPage - 1);
+                        }
+                      }}
                     />
                   </PaginationItem>
                   {pages.map((p, idx) =>
@@ -182,9 +192,15 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                     ) : (
                       <PaginationItem key={p}>
                         <PaginationLink
+                          href="#"
                           isActive={p === currentPage + 1}
-                          onClick={() => jumpToPage(p - 1)}
-                          aria-disabled={loading}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const target = p - 1;
+                            if (!loading && target !== currentPage) {
+                              jumpToPage(target);
+                            }
+                          }}
                         >
                           {p}
                         </PaginationLink>
@@ -193,12 +209,18 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                   )}
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() => {
-                        if (currentPage + 1 < totalPages) {
+                      href="#"
+                      className={
+                        currentPage + 1 >= totalPages || loading
+                          ? "pointer-events-none opacity-50"
+                          : undefined
+                      }
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage + 1 < totalPages && !loading) {
                           jumpToPage(currentPage + 1);
                         }
                       }}
-                      aria-disabled={currentPage + 1 >= totalPages || loading}
                     />
                   </PaginationItem>
                 </PaginationContent>

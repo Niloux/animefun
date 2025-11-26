@@ -186,7 +186,7 @@ const AnimeDetailPage = () => {
                 {anime.meta_tags.map((tag, idx) => (
                   <span
                     key={idx}
-                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                   >
                     {tag}
                   </span>
@@ -200,7 +200,7 @@ const AnimeDetailPage = () => {
                 isSubscribed={isSubscribed(anime.id)}
                 toggle={toggle}
                 size="lg"
-                className="flex-1 md:flex-none"
+                className="flex-1 md:flex-none cursor-pointer"
               />
             </div>
           </div>
@@ -232,7 +232,7 @@ const AnimeDetailPage = () => {
                       (tag: { name: string }, idx: number) => (
                         <span
                           key={idx}
-                          className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                          className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                         >
                           {tag.name}
                         </span>
