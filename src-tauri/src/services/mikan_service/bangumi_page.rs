@@ -1,27 +1,16 @@
-use crate::cache;
 use crate::error::AppError;
 use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
 use reqwest::StatusCode;
 use scraper::{Html, Selector};
 
-const PAGE_TTL_SECS: i64 = 24 * 3600;
-
 pub async fn resolve_subject(bangumi_id: u32) -> Result<Option<u32>, AppError> {
-    let key = format!("mikan:bangumi:{}", bangumi_id);
-    let html = match cache::get_entry(&key).await? {
-        Some((h, _, _)) => h,
-        None => {
-            let url = format!("{}/Home/Bangumi/{}", MIKAN_HOST, bangumi_id);
-            let resp = CLIENT.get(&url).send().await?;
-            if resp.status() != StatusCode::OK {
-                resp.error_for_status_ref()?;
-            }
-            let h = resp.text().await?;
-            let _ = cache::set_entry(&key, h.clone(), None, None, PAGE_TTL_SECS).await;
-            h
-        }
-    };
+    let url = format!("{}/Home/Bangumi/{}", MIKAN_HOST, bangumi_id);
+    let resp = CLIENT.get(&url).send().await?;
+    if resp.status() != StatusCode::OK {
+        resp.error_for_status_ref()?;
+    }
+    let html = resp.text().await?;
     let doc = Html::parse_document(&html);
     let sel = Selector::parse("a").unwrap();
     for a in doc.select(&sel) {
