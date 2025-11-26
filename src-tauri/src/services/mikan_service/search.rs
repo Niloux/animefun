@@ -1,4 +1,3 @@
-use crate::cache;
 use crate::error::AppError;
 use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
@@ -6,23 +5,13 @@ use reqwest::StatusCode;
 use scraper::{Html, Selector};
 use std::collections::HashSet;
 
-const SEARCH_TTL_SECS: i64 = 6 * 3600;
-
 pub async fn search_candidates(name: &str) -> Result<Vec<u32>, AppError> {
-    let key = format!("mikan:search:{}", name);
-    let html = match cache::get_entry(&key).await? {
-        Some((h, _, _)) => h,
-        None => {
-            let url = format!("{}/Home/Search", MIKAN_HOST);
-            let resp = CLIENT.get(url).query(&[("searchstr", name)]).send().await?;
-            if resp.status() != StatusCode::OK {
-                resp.error_for_status_ref()?;
-            }
-            let h = resp.text().await?;
-            let _ = cache::set_entry(&key, h.clone(), None, None, SEARCH_TTL_SECS).await;
-            h
-        }
-    };
+    let url = format!("{}/Home/Search", MIKAN_HOST);
+    let resp = CLIENT.get(url).query(&[("searchstr", name)]).send().await?;
+    if resp.status() != StatusCode::OK {
+        resp.error_for_status_ref()?;
+    }
+    let html = resp.text().await?;
     Ok(parse_bangumi_ids(&html))
 }
 

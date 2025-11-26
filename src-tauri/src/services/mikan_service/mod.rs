@@ -1,9 +1,11 @@
+use crate::cache;
 use crate::error::AppError;
 use crate::models::mikan::{MikanResourceItem, MikanResourcesResponse};
 use crate::services::bangumi_service;
 use std::path::PathBuf;
 
 const MAX_CONCURRENCY: usize = 5;
+const NO_MAP_TTL_SECS: i64 = 30 * 24 * 3600;
 
 pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     map_store::init(base_dir)
@@ -15,10 +17,15 @@ pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
     if let Some(mid) = map_store::get(sid).await? {
         return Ok(Some(mid));
     }
+    let no_key = format!("mikan:no-map:{}", sid);
+    if cache::get_entry(&no_key).await?.is_some() {
+        return Ok(None);
+    }
     let subject = bangumi_service::api::fetch_subject(sid).await?;
     let name = normalize_name(subject.name, subject.name_cn);
     let candidates = search::search_candidates(&name).await?;
     if candidates.is_empty() {
+        cache::set_entry(&no_key, "1".to_string(), None, None, NO_MAP_TTL_SECS).await?;
         return Ok(None);
     }
     let res = resolver::resolve_candidates(sid, candidates, MAX_CONCURRENCY).await?;
@@ -26,6 +33,7 @@ pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
         map_store::upsert(sid, bid, 1.0, "explicit", false).await?;
         return Ok(Some(bid));
     }
+    cache::set_entry(&no_key, "1".to_string(), None, None, NO_MAP_TTL_SECS).await?;
     Ok(None)
 }
 

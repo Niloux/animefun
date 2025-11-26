@@ -1,7 +1,7 @@
+use governor::{DefaultDirectRateLimiter, Quota, RateLimiter};
 use once_cell::sync::Lazy;
-use std::time::Duration;
-use governor::{Quota, RateLimiter, DefaultDirectRateLimiter};
 use std::num::NonZeroU32;
+use std::time::Duration;
 
 pub const USER_AGENT: &str = "animefun/0.1";
 pub const HTTP_TIMEOUT_SECS: u64 = 10;
@@ -23,7 +23,7 @@ pub static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
 });
 
 pub static LIMITER: Lazy<DefaultDirectRateLimiter> = Lazy::new(|| {
-    let q = Quota::per_second(NonZeroU32::new(2).unwrap());
+    let q = Quota::per_second(NonZeroU32::new(10).unwrap());
     RateLimiter::direct(q)
 });
 
