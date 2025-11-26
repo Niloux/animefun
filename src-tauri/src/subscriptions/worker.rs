@@ -38,7 +38,9 @@ pub fn spawn_refresh_worker() {
             let mut total_processed: usize = 0;
             info!("开始同步 {} 个订阅状态与索引", total);
             while total_processed < total {
-                let (slice, processed) = round_robin_take(&rows, cur_start, REFRESH_LIMIT);
+                let remain = total - total_processed;
+                let limit = std::cmp::min(REFRESH_LIMIT, remain);
+                let (slice, processed) = round_robin_take(&rows, cur_start, limit);
                 if processed == 0 {
                     break;
                 }
