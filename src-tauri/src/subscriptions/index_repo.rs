@@ -277,6 +277,7 @@ pub async fn query_full(
                 let cval: i64 = status_ord(code) as i64;
                 binds.push(Box::new(cval));
             }
+            let mut match_q: Option<String> = None;
             let order_by = match params.sort.as_deref() {
                 Some("status") => " ORDER BY status_ord ASC".to_string(),
                 Some("rank") => " ORDER BY (rating_rank IS NULL) ASC, rating_rank ASC".to_string(),
@@ -289,6 +290,7 @@ pub async fn query_full(
                             sql_where.push_str(" AND (LOWER(name) LIKE ? OR LOWER(name_cn) LIKE ?)");
                             binds.push(Box::new(format!("%{}%", q)));
                             binds.push(Box::new(format!("%{}%", q)));
+                            match_q = Some(q);
                             " ORDER BY CASE WHEN LOWER(name) LIKE ? THEN 2 WHEN LOWER(name_cn) LIKE ? THEN 1 ELSE 0 END DESC".to_string()
                         } else { String::new() }
                     } else { String::new() }
@@ -317,6 +319,11 @@ pub async fn query_full(
             let mut page_stmt = conn.prepare(&page_sql)?;
             let mut bind_refs: Vec<&dyn rusqlite::ToSql> = Vec::new();
             for b in binds.iter() { bind_refs.push(&**b); }
+            let (q_like1_opt, q_like2_opt) = if let Some(ref q) = match_q {
+                (Some(format!("%{}%", q)), Some(format!("%{}%", q)))
+            } else { (None, None) };
+            if let Some(ref v1) = q_like1_opt { bind_refs.push(v1 as &dyn rusqlite::ToSql); }
+            if let Some(ref v2) = q_like2_opt { bind_refs.push(v2 as &dyn rusqlite::ToSql); }
             bind_refs.push(&limit);
             bind_refs.push(&offset);
             let mut rows = page_stmt.query(rusqlite::params_from_iter(bind_refs.iter().copied()))?;

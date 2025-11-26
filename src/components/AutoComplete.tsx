@@ -164,7 +164,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
               {suggestions.map((anime) => (
                 <CommandItem
                   key={anime.id}
-                  className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2"
+                  className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2 cursor-pointer"
                   onSelect={() => {
                     onSelect(anime);
                     setIsOpen(false);
