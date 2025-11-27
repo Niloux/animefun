@@ -1,4 +1,4 @@
-use crate::error::{AppError, CommandResult};
+use crate::error::CommandResult;
 use crate::services::downloader::{client, config, repo};
 use serde::Serialize;
 use ts_rs::TS;

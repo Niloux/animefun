@@ -1,6 +1,6 @@
 use super::config::DownloaderConfig;
 use crate::error::AppError;
-use reqwest::header::COOKIE;
+use reqwest::header::{COOKIE, ORIGIN, REFERER};
 use reqwest::{multipart, Client};
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
@@ -60,11 +60,26 @@ impl QbitClient {
 
         if let Some(cookie) = resp.headers().get("set-cookie") {
             if let Ok(c) = cookie.to_str() {
-                self.cookie = Some(c.to_string());
+                let sid = c.split(';').next().unwrap_or("").to_string();
+                self.cookie = Some(sid);
             }
         }
 
         Ok(())
+    }
+
+    async fn version_is_v5(&self) -> Result<bool, AppError> {
+        let url = format!("{}/api/v2/app/version", self.base_url);
+        let resp = self.client.get(&url).send().await?;
+        resp.error_for_status_ref()?;
+        let v = resp.text().await?;
+        let major = v
+            .split('.')
+            .next()
+            .unwrap_or("0")
+            .parse::<u32>()
+            .unwrap_or(0);
+        Ok(major >= 5)
     }
 
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
@@ -73,6 +88,9 @@ impl QbitClient {
         if let Some(c) = &self.cookie {
             builder = builder.header(COOKIE, c);
         }
+        let referer = format!("{}/", self.base_url.trim_end_matches('/'));
+        builder = builder.header(ORIGIN, &referer);
+        builder = builder.header(REFERER, &referer);
         builder
     }
 
@@ -110,29 +128,43 @@ impl QbitClient {
     }
 
     pub async fn pause(&self, hash: &str) -> Result<(), AppError> {
-        let resp = self
-            .request(reqwest::Method::GET, "/api/v2/torrents/pause")
-            .query(&[("hashes", hash)])
-            .send()
-            .await?;
+        let is_v5 = self.version_is_v5().await?;
+        let resp = if is_v5 {
+            self.request(reqwest::Method::POST, "/api/v2/torrents/stop")
+                .form(&[("hashes", hash)])
+                .send()
+                .await?
+        } else {
+            self.request(reqwest::Method::GET, "/api/v2/torrents/pause")
+                .query(&[("hashes", hash)])
+                .send()
+                .await?
+        };
         resp.error_for_status_ref()?;
         Ok(())
     }
 
     pub async fn resume(&self, hash: &str) -> Result<(), AppError> {
-        let resp = self
-            .request(reqwest::Method::GET, "/api/v2/torrents/resume")
-            .query(&[("hashes", hash)])
-            .send()
-            .await?;
+        let is_v5 = self.version_is_v5().await?;
+        let resp = if is_v5 {
+            self.request(reqwest::Method::POST, "/api/v2/torrents/start")
+                .form(&[("hashes", hash)])
+                .send()
+                .await?
+        } else {
+            self.request(reqwest::Method::GET, "/api/v2/torrents/resume")
+                .query(&[("hashes", hash)])
+                .send()
+                .await?
+        };
         resp.error_for_status_ref()?;
         Ok(())
     }
 
     pub async fn delete(&self, hash: &str, delete_files: bool) -> Result<(), AppError> {
         let resp = self
-            .request(reqwest::Method::GET, "/api/v2/torrents/delete")
-            .query(&[
+            .request(reqwest::Method::POST, "/api/v2/torrents/delete")
+            .form(&[
                 ("hashes", hash),
                 ("deleteFiles", if delete_files { "true" } else { "false" }),
             ])
