@@ -73,7 +73,8 @@ impl QbitClient {
         let resp = self.client.get(&url).send().await?;
         resp.error_for_status_ref()?;
         let v = resp.text().await?;
-        let major = v
+        let ver = v.trim().trim_start_matches('v');
+        let major = ver
             .split('.')
             .next()
             .unwrap_or("0")
@@ -88,7 +89,7 @@ impl QbitClient {
         if let Some(c) = &self.cookie {
             builder = builder.header(COOKIE, c);
         }
-        let referer = format!("{}/", self.base_url.trim_end_matches('/'));
+        let referer = self.base_url.clone();
         builder = builder.header(ORIGIN, &referer);
         builder = builder.header(REFERER, &referer);
         builder
@@ -165,8 +166,15 @@ impl QbitClient {
         let resp = self
             .request(reqwest::Method::POST, "/api/v2/torrents/delete")
             .form(&[
-                ("hashes", hash),
-                ("deleteFiles", if delete_files { "true" } else { "false" }),
+                ("hashes", hash.to_string()),
+                (
+                    "deleteFiles",
+                    if delete_files {
+                        String::from("true")
+                    } else {
+                        String::from("false")
+                    },
+                ),
             ])
             .send()
             .await?;
