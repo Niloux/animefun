@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Dialog,
   DialogContent,
@@ -226,25 +227,23 @@ export function ResourceDialog({
                               </div>
                               <div className="flex items-center gap-2">
                                 {it.page_url && (
-                                  <Button asChild variant="outline" size="sm">
-                                    <a
-                                      href={it.page_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                    >
-                                      页面
-                                    </a>
+                                  <Button
+                                    className="cursor-pointer"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openUrl(it.page_url!)}
+                                  >
+                                    页面
                                   </Button>
                                 )}
                                 {it.torrent_url && (
-                                  <Button asChild variant="outline" size="sm">
-                                    <a
-                                      href={it.torrent_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                    >
-                                      种子
-                                    </a>
+                                  <Button
+                                    className="cursor-pointer"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openUrl(it.torrent_url!)}
+                                  >
+                                    种子
                                   </Button>
                                 )}
                               </div>
