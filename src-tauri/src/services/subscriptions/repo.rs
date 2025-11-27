@@ -115,3 +115,4 @@ pub async fn clear() -> Result<(), AppError> {
     .await??;
     Ok(())
 }
+

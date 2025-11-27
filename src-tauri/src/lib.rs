@@ -3,7 +3,6 @@ mod error;
 mod infra;
 mod models;
 mod services;
-mod subscriptions;
 
 use tauri::Manager;
 
@@ -15,14 +14,14 @@ pub fn run() {
             let base = crate::infra::path::app_base_dir(app.handle());
             crate::infra::cache::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
-            subscriptions::init(base.clone())
+            crate::services::subscriptions::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             crate::services::mikan::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),
             ));
-            subscriptions::spawn_refresh_worker();
+            crate::services::subscriptions::spawn_refresh_worker();
             crate::services::mikan::spawn_preheat_worker();
 
             // 下载服务

@@ -107,7 +107,10 @@ async fn index_upsert_rows(
             let tags_csv = build_tags_csv(&subject);
             let meta_tags_csv = String::new();
             let rating_score: Option<f32> = subject.rating.as_ref().map(|r| r.score);
-            let rating_rank: Option<i64> = subject.rating.as_ref().and_then(|r| r.rank.map(|x| x as i64));
+            let rating_rank: Option<i64> = subject
+                .rating
+                .as_ref()
+                .and_then(|r| r.rank.map(|x| x as i64));
             let rating_total: Option<i64> = subject.rating.as_ref().map(|r| r.total as i64);
             let status_ord_v = status_ord(&status);
             let status_code = status_ord_v;
@@ -393,3 +396,4 @@ pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppEr
         .await??;
     Ok(rows)
 }
+

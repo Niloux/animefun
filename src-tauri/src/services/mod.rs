@@ -3,4 +3,4 @@
 pub mod bangumi;
 pub mod downloader;
 pub mod mikan;
-pub mod subscriptions_service;
+pub mod subscriptions;

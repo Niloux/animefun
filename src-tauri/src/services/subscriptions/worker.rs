@@ -53,7 +53,6 @@ pub fn spawn_refresh_worker() {
                     handles.push(tokio::spawn(async move {
                         if let Ok(_permit) = sem_clone.acquire_owned().await {
                             debug!(id, "refresh status and index");
-                            // TODO:这里有性能浪费， calc_subject_status 会重复调用 fetch_subject。
                             let status = get_status_cached(id).await.ok();
                             let subject = bangumi::fetch_subject(id).await.ok();
                             if let (Some(st), Some(sj)) = (status, subject) {
