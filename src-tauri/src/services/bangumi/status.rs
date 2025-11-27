@@ -152,9 +152,20 @@ mod tests {
     use crate::services::bangumi::api::{
         fetch_episodes as feps, fetch_subject as fsub, search_subject as ssub,
     };
+    use once_cell::sync::OnceCell;
+
+    static INIT: OnceCell<()> = OnceCell::new();
+    fn ensure_init() {
+        INIT.get_or_init(|| {
+            crate::infra::log::init();
+            let base = std::env::temp_dir().join("animefun-tests");
+            let _ = crate::infra::cache::init(base);
+        });
+    }
 
     #[tokio::test]
     async fn test_fetch_subject() {
+        ensure_init();
         let res = fsub(12381).await.unwrap();
         assert_eq!(res.id, 12381);
         assert!(!res.name.is_empty());
@@ -162,6 +173,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_search_subject() {
+        ensure_init();
         let res = ssub(
             "Fate",
             Some(vec![2]),
@@ -186,6 +198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_episodes() {
+        ensure_init();
         let res = feps(876, None, Some(100), Some(0)).await.unwrap();
         assert!(res.limit >= 1);
         assert!(res.data.len() as u32 <= res.limit);
@@ -193,6 +206,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_calc_subject_status_returns_any_code() {
+        ensure_init();
         let res = calc_subject_status(12381).await.unwrap();
         match res.code {
             SubjectStatusCode::PreAir

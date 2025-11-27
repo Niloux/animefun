@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
+#[ts(export, export_to = "../../src/types/gen/download.ts")]
 pub struct DownloadTask {
     pub id: i64,
     pub anime_id: i64,
@@ -16,7 +16,7 @@ pub struct DownloadTask {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
-#[ts(export)]
+#[ts(export, export_to = "../../src/types/gen/download.ts")]
 pub struct DownloadTaskMetadata {
     pub anime_title: String,
     pub episode_title: String,
