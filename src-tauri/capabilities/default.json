@@ -5,7 +5,6 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
-    "shell:allow-execute"
+    "opener:default"
   ]
 }
