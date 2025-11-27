@@ -4,3 +4,4 @@ pub mod bangumi;
 pub mod cache;
 pub mod mikan;
 pub mod subscriptions;
+pub mod downloader;

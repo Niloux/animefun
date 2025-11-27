@@ -27,6 +27,7 @@ reqwest = { version = "0.12", features = [
     "rustls-tls",
     "gzip",
     "deflate",
+    "multipart",
 ] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 thiserror = "2.0.17"
@@ -42,3 +43,6 @@ rss = "2.0"
 regex = "1"
 deadpool-sqlite = { version = "0.12", features = ["rt_tokio_1"] }
 governor = "0.10"
+sha1 = "0.10.6"
+serde_bencode = "0.2.4"
+hex = "0.4.3"

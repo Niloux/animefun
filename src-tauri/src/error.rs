@@ -19,6 +19,10 @@ pub enum AppError {
     SerdeJson(#[from] serde_json::Error),
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
+    #[error(transparent)]
+    SerdeBencode(#[from] serde_bencode::Error),
+    #[error("{0}")]
+    Any(String),
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名
@@ -36,6 +40,8 @@ impl AppError {
             AppError::DeadpoolCreatePool(_) => "deadpool_create_pool",
             AppError::SerdeJson(_) => "serde_json",
             AppError::Tauri(_) => "tauri",
+            AppError::SerdeBencode(_) => "serde_bencode",
+            AppError::Any(_) => "any",
         }
     }
 }

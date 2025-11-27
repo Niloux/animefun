@@ -39,6 +39,14 @@ pub fn run() {
             commands::subscriptions::sub_clear,
             commands::subscriptions::sub_query,
             commands::mikan::get_mikan_resources,
+            commands::downloader::get_downloader_config,
+            commands::downloader::set_downloader_config,
+            commands::downloader::add_torrent_and_track,
+            commands::downloader::get_tracked_downloads,
+            commands::downloader::get_live_download_info,
+            commands::downloader::pause_download,
+            commands::downloader::resume_download,
+            commands::downloader::delete_download,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
