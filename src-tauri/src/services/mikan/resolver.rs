@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::services::mikan_service::bangumi_page;
+use crate::services::mikan::bangumi_page;
 use tokio::task::JoinSet;
 
 pub async fn resolve_candidates(

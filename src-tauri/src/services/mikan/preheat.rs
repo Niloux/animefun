@@ -1,6 +1,6 @@
 use crate::infra::tasks::{next_offset, round_robin_take};
-use crate::services::mikan_service::map_store;
-use crate::services::mikan_service::rss;
+use crate::services::mikan::map_store;
+use crate::services::mikan::rss;
 use crate::subscriptions;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

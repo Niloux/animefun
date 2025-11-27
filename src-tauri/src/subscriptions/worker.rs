@@ -8,7 +8,7 @@ use tracing::{debug, info, warn};
 use super::index_repo::index_upsert_if_changed;
 use super::repo::list;
 use super::status::get_status_cached;
-use crate::services::bangumi_service;
+use crate::services::bangumi;
 
 const REFRESH_CONCURRENCY: usize = 4;
 const REFRESH_LIMIT: usize = 25;
@@ -55,7 +55,7 @@ pub fn spawn_refresh_worker() {
                             debug!(id, "refresh status and index");
                             // TODO:这里有性能浪费， calc_subject_status 会重复调用 fetch_subject。
                             let status = get_status_cached(id).await.ok();
-                            let subject = bangumi_service::fetch_subject(id).await.ok();
+                            let subject = bangumi::fetch_subject(id).await.ok();
                             if let (Some(st), Some(sj)) = (status, subject) {
                                 match index_upsert_if_changed(id, added_at, sj, st.code).await {
                                     Ok(true) => {

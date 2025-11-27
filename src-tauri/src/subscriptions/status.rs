@@ -1,7 +1,7 @@
 use crate::infra::cache;
 use crate::error::AppError;
 use crate::models::bangumi::{SubjectStatus, SubjectStatusCode};
-use crate::services::bangumi_service;
+use crate::services::bangumi;
 
 fn status_ttl_secs(code: &SubjectStatusCode) -> i64 {
     match code {
@@ -19,7 +19,7 @@ pub async fn get_status_cached(id: u32) -> Result<SubjectStatus, AppError> {
         let v: SubjectStatus = serde_json::from_str(&s)?;
         return Ok(v);
     }
-    let v = bangumi_service::calc_subject_status(id).await?;
+    let v = bangumi::calc_subject_status(id).await?;
     if let Ok(s) = serde_json::to_string(&v) {
         let ttl = status_ttl_secs(&v.code);
         let _ = cache::set_entry(&key, s, None, None, ttl).await;

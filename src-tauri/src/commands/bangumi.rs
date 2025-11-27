@@ -1,11 +1,11 @@
 use crate::{
     error::CommandResult, models::bangumi::PagedEpisode, models::bangumi::SearchResponse,
-    models::bangumi::SubjectResponse, services::bangumi_service,
+    models::bangumi::SubjectResponse, services::bangumi,
 };
 
 #[tauri::command]
 pub async fn get_calendar() -> CommandResult<Vec<crate::models::bangumi::CalendarResponse>> {
-    Ok(bangumi_service::fetch_calendar().await?)
+    Ok(bangumi::fetch_calendar().await?)
 }
 
 #[tauri::command]
@@ -15,17 +15,17 @@ pub async fn get_episodes(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> CommandResult<PagedEpisode> {
-    Ok(bangumi_service::fetch_episodes(subject_id, ep_type, limit, offset).await?)
+    Ok(bangumi::fetch_episodes(subject_id, ep_type, limit, offset).await?)
 }
 
 #[tauri::command]
 pub async fn get_subject(id: u32) -> CommandResult<SubjectResponse> {
-    Ok(bangumi_service::fetch_subject(id).await?)
+    Ok(bangumi::fetch_subject(id).await?)
 }
 
 #[tauri::command]
 pub async fn get_subject_status(id: u32) -> CommandResult<crate::models::bangumi::SubjectStatus> {
-    Ok(bangumi_service::calc_subject_status(id).await?)
+    Ok(bangumi::calc_subject_status(id).await?)
 }
 
 #[tauri::command]
@@ -42,7 +42,7 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> CommandResult<SearchResponse> {
-    Ok(bangumi_service::search_subject(
+    Ok(bangumi::search_subject(
         &keywords,
         subject_type,
         sort,

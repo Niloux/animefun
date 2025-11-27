@@ -26,7 +26,7 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
         let n = notify.unwrap_or(false);
         crate::subscriptions::repo::add(id, n).await?;
         tauri::async_runtime::spawn(async move {
-            let subject = crate::services::bangumi_service::fetch_subject(id)
+            let subject = crate::services::bangumi::fetch_subject(id)
                 .await
                 .ok();
             let status = crate::subscriptions::get_status_cached(id).await.ok();

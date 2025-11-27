@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use crate::infra::cache;
 use crate::models::mikan::{MikanResourceItem, MikanResourcesResponse};
-use crate::services::bangumi_service;
+use crate::services::bangumi;
 use std::path::PathBuf;
 
 const MAX_CONCURRENCY: usize = 5;
@@ -11,7 +11,7 @@ pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     map_store::init(base_dir)
 }
 
-use crate::services::mikan_service::util::normalize_name;
+use crate::services::mikan::util::normalize_name;
 
 pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
     if let Some(mid) = map_store::get(sid).await? {
@@ -21,7 +21,7 @@ pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
     if cache::get_entry(&no_key).await?.is_some() {
         return Ok(None);
     }
-    let subject = bangumi_service::api::fetch_subject(sid).await?;
+    let subject = bangumi::api::fetch_subject(sid).await?;
     let name = normalize_name(subject.name, subject.name_cn);
     let candidates = search::search_candidates(&name).await?;
     if candidates.is_empty() {

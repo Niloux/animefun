@@ -149,7 +149,7 @@ pub async fn calc_subject_status(id: u32) -> Result<SubjectStatus, AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::services::bangumi_service::api::{
+    use crate::services::bangumi::api::{
         fetch_episodes as feps, fetch_subject as fsub, search_subject as ssub,
     };
 

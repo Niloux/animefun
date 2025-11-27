@@ -17,13 +17,13 @@ pub fn run() {
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             subscriptions::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
-            crate::services::mikan_service::init(base.clone())
+            crate::services::mikan::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),
             ));
             subscriptions::spawn_refresh_worker();
-            crate::services::mikan_service::spawn_preheat_worker();
+            crate::services::mikan::spawn_preheat_worker();
 
             // 下载服务
             let downloader_service = crate::services::downloader::service::DownloaderService::new();
