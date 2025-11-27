@@ -8,6 +8,8 @@ mod models;
 mod services;
 mod subscriptions;
 
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -26,8 +28,18 @@ pub fn run() {
             ));
             subscriptions::spawn_refresh_worker();
             crate::services::mikan_service::spawn_preheat_worker();
+
+            // Downloader Service
+            let downloader_service = crate::services::downloader::service::DownloaderService::new();
+            downloader_service.start_sync_loop(app.handle().clone());
+            app.manage(downloader_service);
+            
+            // Start Sidecar
+            crate::services::downloader::manager::SidecarManager::start(app.handle());
+
             Ok(())
         })
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::calendar::get_calendar,
@@ -43,6 +55,11 @@ pub fn run() {
             commands::subscriptions::sub_clear,
             commands::subscriptions::sub_query,
             commands::mikan::get_mikan_resources,
+            commands::download::download_add,
+            commands::download::download_list,
+            commands::download::download_pause,
+            commands::download::download_resume,
+            commands::download::download_delete,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

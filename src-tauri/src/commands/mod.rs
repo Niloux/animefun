@@ -2,6 +2,7 @@
 
 pub mod cache;
 pub mod calendar;
+pub mod download;
 pub mod episodes;
 pub mod mikan;
 pub mod search;

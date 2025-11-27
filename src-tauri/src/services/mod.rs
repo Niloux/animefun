@@ -1,5 +1,6 @@
 //! src-tauri/src/services/mod.rs
 
 pub mod bangumi_service;
+pub mod downloader;
 pub mod mikan_service;
 pub mod subscriptions_service;

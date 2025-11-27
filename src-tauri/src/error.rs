@@ -17,6 +17,8 @@ pub enum AppError {
     DeadpoolCreatePool(#[from] deadpool_sqlite::CreatePoolError),
     #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),
+    #[error(transparent)]
+    Tauri(#[from] tauri::Error),
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名
@@ -33,6 +35,7 @@ impl AppError {
             AppError::DeadpoolInteract(_) => "deadpool_interact",
             AppError::DeadpoolCreatePool(_) => "deadpool_create_pool",
             AppError::SerdeJson(_) => "serde_json",
+            AppError::Tauri(_) => "tauri",
         }
     }
 }
