@@ -263,7 +263,11 @@ const AnimeDetailPage = () => {
 
         {/* 剧集列表 */}
         <div className="mt-8">
-          <EpisodesList subjectId={anime.id} resources={mikan.data ?? null} />
+          <EpisodesList
+            subjectId={anime.id}
+            resources={mikan.data ?? null}
+            resourcesLoading={mikan.loading}
+          />
         </div>
       </div>
     </div>

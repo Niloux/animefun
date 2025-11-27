@@ -17,6 +17,7 @@ import {
 } from "./ui/select";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Spinner } from "./ui/spinner";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
@@ -27,12 +28,14 @@ export function ResourceDialog({
   episode,
   resources,
   isSingle,
+  loading,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   episode: BEpisode | null;
   resources?: MikanResourcesResponse | null;
   isSingle?: boolean;
+  loading?: boolean;
 }) {
   const { matched, mapped } = useEpisodeResources(
     resources ?? null,
@@ -184,7 +187,12 @@ export function ResourceDialog({
                 )}
               </div>
             )}
-            {matched.length > 0 ? (
+            {loading ? (
+              <div className="py-8 flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
+                <Spinner className="size-5" />
+                资源加载中
+              </div>
+            ) : matched.length > 0 ? (
               <ScrollArea className="h-[50vh]">
                 <div className="space-y-4">
                   {filteredGrouped.map((g) => (

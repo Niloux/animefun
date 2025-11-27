@@ -26,11 +26,13 @@ import { ResourceDialog } from "./ResourceDialog";
 interface EpisodesListProps {
   subjectId: number;
   resources?: MikanResourcesResponse | null;
+  resourcesLoading?: boolean;
 }
 
 const EpisodesList: React.FC<EpisodesListProps> = ({
   subjectId,
   resources,
+  resourcesLoading,
 }) => {
   const {
     episodes,
@@ -240,6 +242,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
         episode={selectedEpisode as BEpisode | null}
         resources={resources ?? null}
         isSingle={totalEpisodes === 1}
+        loading={resourcesLoading}
       />
     </div>
   );
