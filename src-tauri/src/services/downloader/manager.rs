@@ -1,7 +1,6 @@
 use once_cell::sync::OnceCell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
-use std::time::Duration;
 use sysinfo::{Signal, System};
 use tauri::AppHandle;
 use tauri_plugin_shell::process::CommandChild;
@@ -28,10 +27,7 @@ impl SidecarManager {
         let download_dir_str = base_dir.to_string_lossy().to_string();
 
         tauri::async_runtime::spawn(async move {
-            let client = reqwest::Client::builder()
-                .timeout(Duration::from_millis(500))
-                .build()
-                .ok();
+            let client = Some(crate::infra::http::CLIENT_LOCAL.clone());
             if let Some(cli) = client {
                 if let Ok(resp) = cli.get("http://127.0.0.1:3030/torrents").send().await {
                     if resp.status().is_success() {

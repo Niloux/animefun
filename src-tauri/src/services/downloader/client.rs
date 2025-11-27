@@ -34,7 +34,7 @@ pub struct RqbitClient {
 impl RqbitClient {
     pub fn new() -> Self {
         Self {
-            client: Client::new(),
+            client: crate::infra::http::CLIENT_LOCAL.clone(),
         }
     }
 
