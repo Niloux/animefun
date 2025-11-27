@@ -1,5 +1,5 @@
-use crate::cache;
 use crate::error::AppError;
+use crate::infra::cache;
 use crate::models::mikan::{MikanResourceItem, MikanResourcesResponse};
 use crate::services::bangumi_service;
 use std::path::PathBuf;

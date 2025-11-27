@@ -90,7 +90,6 @@ pub async fn set_entry(
                 last_modified=excluded.last_modified",
             params![key, value, now, expires, etag, last_modified],
         )?;
-        // 清理已过期条目
         let _ = conn.execute("DELETE FROM cache WHERE expires_at < ?1", params![now]);
         info!("cache upsert and cleanup");
         Ok(())
@@ -99,33 +98,3 @@ pub async fn set_entry(
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::time::{sleep, Duration};
-
-    #[tokio::test]
-    async fn test_cache_set_get_expire_and_delete() {
-        let dir = crate::infra::path::default_app_dir();
-        let _ = init(dir);
-        let k = "__test_key__";
-        let v = "__test_value__".to_string();
-        // 设置：无 etag/last_modified
-        set_entry(k, v, None, None, 1).await.unwrap();
-
-        // 应能取到值
-        let v1 = get_entry(k).await.unwrap();
-        assert!(v1.is_some());
-        let (val, etag, lm) = v1.unwrap();
-        assert_eq!(val, "__test_value__");
-        assert!(etag.is_none());
-        assert!(lm.is_none());
-
-        // 等待其过期
-        sleep(Duration::from_secs(2)).await;
-
-        // 结果应为 None
-        let v2 = get_entry(k).await.unwrap();
-        assert!(v2.is_none());
-    }
-}

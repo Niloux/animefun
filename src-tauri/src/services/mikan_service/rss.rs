@@ -1,4 +1,4 @@
-use crate::cache;
+use crate::infra::cache;
 use crate::error::AppError;
 use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;

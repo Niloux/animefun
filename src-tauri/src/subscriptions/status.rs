@@ -1,4 +1,4 @@
-use crate::cache;
+use crate::infra::cache;
 use crate::error::AppError;
 use crate::models::bangumi::{SubjectStatus, SubjectStatusCode};
 use crate::services::bangumi_service;

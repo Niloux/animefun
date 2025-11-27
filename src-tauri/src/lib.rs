@@ -1,4 +1,3 @@
-mod cache;
 mod commands;
 mod error;
 mod infra;
@@ -14,12 +13,11 @@ pub fn run() {
         .setup(|app| {
             crate::infra::log::init();
             let base = crate::infra::path::app_base_dir(app.handle());
-            cache::init(base).map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
-            let base2 = crate::infra::path::app_base_dir(app.handle());
-            subscriptions::init(base2)
+            crate::infra::cache::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
-            let base3 = crate::infra::path::app_base_dir(app.handle());
-            crate::services::mikan_service::init(base3)
+            subscriptions::init(base.clone())
+                .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
+            crate::services::mikan_service::init(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),

@@ -1,4 +1,4 @@
-use crate::cache;
+use crate::infra::cache;
 use crate::error::AppError;
 use crate::models::bangumi::{CalendarResponse, PagedEpisode, SearchResponse, SubjectResponse};
 use reqwest::header::{ETAG, LAST_MODIFIED};

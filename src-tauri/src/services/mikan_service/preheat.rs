@@ -57,7 +57,7 @@ pub fn spawn_preheat_worker() {
                         if let Ok(_permit) = sem_clone.acquire_owned().await {
                             if let Ok(Some(mid)) = map_store::get(sid).await {
                                 let key = format!("mikan:rss:{}", mid);
-                                match crate::cache::get_entry(&key).await {
+                                match crate::infra::cache::get_entry(&key).await {
                                     Ok(Some((_body, _etag, _lm))) => {
                                         cached_clone.fetch_add(1, Ordering::Relaxed);
                                         debug!(subject_id = sid, mid, "mikan preheat skip: cached");
