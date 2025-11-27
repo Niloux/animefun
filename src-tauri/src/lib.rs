@@ -47,11 +47,11 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            commands::calendar::get_calendar,
-            commands::episodes::get_episodes,
-            commands::subject::get_subject,
-            commands::subject::get_subject_status,
-            commands::search::search_subject,
+            commands::bangumi::get_calendar,
+            commands::bangumi::get_episodes,
+            commands::bangumi::get_subject,
+            commands::bangumi::get_subject_status,
+            commands::bangumi::search_subject,
             commands::cache::cache_image,
             commands::subscriptions::sub_list,
             commands::subscriptions::sub_list_ids,

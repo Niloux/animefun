@@ -43,29 +43,6 @@ impl DownloaderService {
         Ok(id)
     }
 
-    pub async fn list_tasks(&self) -> Result<Vec<serde_json::Value>, AppError> {
-        let db_tasks = repo::list().await?;
-
-        let mut result = Vec::new();
-        for task in db_tasks {
-            let metadata: DownloadTaskMetadata = serde_json::from_str(&task.metadata)
-                .unwrap_or_else(|_| DownloadTaskMetadata {
-                    anime_title: "Unknown".into(),
-                    episode_title: "Unknown".into(),
-                    image_url: None,
-                });
-            result.push(serde_json::json!({
-                "id": task.id,
-                "anime_id": task.anime_id,
-                "episode_id": task.episode_id,
-                "info_hash": task.info_hash,
-                "status": task.status,
-                "metadata": metadata,
-            }));
-        }
-        Ok(result)
-    }
-
     pub async fn pause_task(&self, id: i64) -> Result<(), AppError> {
         if let Some(task) = repo::get(id).await? {
             self.client.pause(&task.info_hash).await?;
