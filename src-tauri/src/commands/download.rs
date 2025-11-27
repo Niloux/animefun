@@ -2,6 +2,7 @@ use tauri::{State};
 use crate::error::CommandResult;
 use crate::services::downloader::service::DownloaderService;
 use crate::models::download::DownloadTaskMetadata;
+use crate::services::downloader::manager::SidecarManager;
 
 #[tauri::command]
 pub async fn download_add(
@@ -45,4 +46,20 @@ pub async fn download_delete(
     delete_file: bool
 ) -> CommandResult<()> {
     state.delete_task(id, delete_file).await
+}
+
+#[tauri::command]
+pub async fn download_health(
+    app: tauri::AppHandle,
+    state: State<'_, DownloaderService>
+) -> CommandResult<serde_json::Value> {
+    let base_dir = crate::infra::path::app_base_dir(&app).join("downloads");
+    let base_dir_str = base_dir.to_string_lossy().to_string();
+    let server_ok = state.health().await.unwrap_or(false);
+    let sidecar_running = SidecarManager::is_running();
+    Ok(serde_json::json!({
+        "sidecar_running": sidecar_running,
+        "server_ok": server_ok,
+        "base_dir": base_dir_str,
+    }))
 }

@@ -1,5 +1,3 @@
-// src-tauri/src/lib.rs
-
 mod cache;
 mod commands;
 mod error;
@@ -29,15 +27,24 @@ pub fn run() {
             subscriptions::spawn_refresh_worker();
             crate::services::mikan_service::spawn_preheat_worker();
 
-            // Downloader Service
+            // 下载服务
             let downloader_service = crate::services::downloader::service::DownloaderService::new();
             downloader_service.start_sync_loop(app.handle().clone());
             app.manage(downloader_service);
-            
-            // Start Sidecar
+
+            // 启动侧车
             crate::services::downloader::manager::SidecarManager::start(app.handle());
 
             Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { .. } => {
+                crate::services::downloader::manager::SidecarManager::stop(&window.app_handle());
+            }
+            tauri::WindowEvent::Destroyed => {
+                crate::services::downloader::manager::SidecarManager::stop(&window.app_handle());
+            }
+            _ => {}
         })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
@@ -60,6 +67,7 @@ pub fn run() {
             commands::download::download_pause,
             commands::download::download_resume,
             commands::download::download_delete,
+            commands::download::download_health,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
