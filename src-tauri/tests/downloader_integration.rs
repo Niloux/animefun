@@ -145,7 +145,7 @@ async fn test_repo_roundtrip() -> Result<(), AppError> {
     animefun_lib::infra::db::init_data_db(base)?;
 
     let h = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-    repo::insert(h, 1, 1, "downloading", None).await?;
+    repo::insert(h, 1, Some(1), "downloading", None, None).await?;
     let list1 = repo::list().await?;
     assert!(list1.iter().any(|x| x.hash == h));
     repo::update_status(h.to_string(), "paused".to_string(), None).await?;
