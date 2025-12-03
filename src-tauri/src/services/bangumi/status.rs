@@ -27,10 +27,7 @@ fn within_window(date: Option<NaiveDate>, window_start: NaiveDate) -> bool {
 }
 
 fn is_finished(expected_eps: Option<u32>, current_eps: Option<u32>) -> bool {
-    match (expected_eps, current_eps) {
-        (Some(exp), Some(cur)) if exp > 0 && cur >= exp => true,
-        _ => false,
-    }
+    matches!((expected_eps, current_eps), (Some(exp), Some(cur)) if exp > 0 && cur >= exp)
 }
 
 fn determine_code(

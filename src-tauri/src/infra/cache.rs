@@ -5,6 +5,9 @@ use crate::error::AppError;
 use crate::infra::time::now_secs;
 use tracing::{debug, info};
 
+type CacheResult<T = ()> = Result<T, rusqlite::Error>;
+type CacheValue = (String, Option<String>, Option<String>);
+
 pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
     crate::infra::db::init_cache_db(base_dir)?;
     Ok(())
@@ -31,37 +34,31 @@ pub async fn get_entry(
     let pool = crate::infra::db::cache_pool()?;
     let key = key.to_string();
     let conn = pool.get().await?;
-    let out =
-        conn
-            .interact(
-                move |conn| -> Result<
-                    Option<(String, Option<String>, Option<String>)>,
-                    rusqlite::Error,
-                > {
-                    ensure_table(conn)?;
-                    let mut stmt = conn.prepare(
-                        "SELECT value, expires_at, etag, last_modified FROM cache WHERE key = ?1",
-                    )?;
-                    let mut rows = stmt.query(params![key.clone()])?;
-                    if let Some(row) = rows.next()? {
-                        let expires_at: i64 = row.get(1)?;
-                        if now_secs() <= expires_at {
-                            let value: String = row.get(0)?;
-                            let etag: Option<String> = row.get(2)?;
-                            let last_modified: Option<String> = row.get(3)?;
-                            debug!(key, "cache hit");
-                            Ok(Some((value, etag, last_modified)))
-                        } else {
-                            let _ = conn.execute("DELETE FROM cache WHERE key = ?1", params![key]);
-                            debug!("cache expired and deleted");
-                            Ok(None)
-                        }
-                    } else {
-                        Ok(None)
-                    }
-                },
-            )
-            .await??;
+    let out = conn
+        .interact(move |conn| -> CacheResult<Option<CacheValue>> {
+            ensure_table(conn)?;
+            let mut stmt = conn.prepare(
+                "SELECT value, expires_at, etag, last_modified FROM cache WHERE key = ?1",
+            )?;
+            let mut rows = stmt.query(params![key.clone()])?;
+            if let Some(row) = rows.next()? {
+                let expires_at: i64 = row.get(1)?;
+                if now_secs() <= expires_at {
+                    let value: String = row.get(0)?;
+                    let etag: Option<String> = row.get(2)?;
+                    let last_modified: Option<String> = row.get(3)?;
+                    debug!(key, "cache hit");
+                    Ok(Some((value, etag, last_modified)))
+                } else {
+                    let _ = conn.execute("DELETE FROM cache WHERE key = ?1", params![key]);
+                    debug!("cache expired and deleted");
+                    Ok(None)
+                }
+            } else {
+                Ok(None)
+            }
+        })
+        .await??;
     Ok(out)
 }
 
@@ -82,9 +79,9 @@ pub async fn set_entry(
         let expires = now + ttl;
         conn.execute(
             "INSERT INTO cache(key, value, updated_at, expires_at, etag, last_modified) VALUES(?1, ?2, ?3, ?4, ?5, ?6)
-                ON CONFLICT(key) DO UPDATE SET 
-                value=excluded.value, 
-                updated_at=excluded.updated_at, 
+                ON CONFLICT(key) DO UPDATE SET
+                value=excluded.value,
+                updated_at=excluded.updated_at,
                 expires_at=excluded.expires_at,
                 etag=excluded.etag,
                 last_modified=excluded.last_modified",
