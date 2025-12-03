@@ -37,22 +37,22 @@ pub async fn sub_list() -> CommandResult<Vec<SubscriptionItem>> {
 
 #[tauri::command]
 pub async fn sub_list_ids() -> CommandResult<Vec<u32>> {
-    Ok(subscriptions::list_ids().await?)
+    subscriptions::list_ids().await
 }
 
 #[tauri::command]
 pub async fn sub_toggle(id: u32) -> CommandResult<bool> {
-    Ok(subscriptions::toggle(id, None).await?)
+    subscriptions::toggle(id, None).await
 }
 
 #[tauri::command]
 pub async fn sub_has(id: u32) -> CommandResult<bool> {
-    Ok(subscriptions::has(id).await?)
+    subscriptions::has(id).await
 }
 
 #[tauri::command]
 pub async fn sub_clear() -> CommandResult<()> {
-    Ok(subscriptions::clear().await?)
+    subscriptions::clear().await
 }
 
 #[derive(serde::Serialize, serde::Deserialize, ts_rs::TS)]

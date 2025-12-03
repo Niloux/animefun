@@ -5,7 +5,7 @@ use crate::{
 
 #[tauri::command]
 pub async fn get_calendar() -> CommandResult<Vec<crate::models::bangumi::CalendarResponse>> {
-    Ok(bangumi::fetch_calendar().await?)
+    bangumi::fetch_calendar().await
 }
 
 #[tauri::command]
@@ -15,17 +15,17 @@ pub async fn get_episodes(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> CommandResult<PagedEpisode> {
-    Ok(bangumi::fetch_episodes(subject_id, ep_type, limit, offset).await?)
+    bangumi::fetch_episodes(subject_id, ep_type, limit, offset).await
 }
 
 #[tauri::command]
 pub async fn get_subject(id: u32) -> CommandResult<SubjectResponse> {
-    Ok(bangumi::fetch_subject(id).await?)
+    bangumi::fetch_subject(id).await
 }
 
 #[tauri::command]
 pub async fn get_subject_status(id: u32) -> CommandResult<crate::models::bangumi::SubjectStatus> {
-    Ok(bangumi::calc_subject_status(id).await?)
+    bangumi::calc_subject_status(id).await
 }
 
 #[tauri::command]
@@ -42,7 +42,7 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> CommandResult<SearchResponse> {
-    Ok(bangumi::search_subject(
+    bangumi::search_subject(
         &keywords,
         subject_type,
         sort,
@@ -55,5 +55,5 @@ pub async fn search_subject(
         limit,
         offset,
     )
-    .await?)
+    .await
 }

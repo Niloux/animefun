@@ -23,13 +23,11 @@ pub struct DownloadItem {
 
 #[tauri::command]
 pub async fn get_downloader_config() -> CommandResult<config::DownloaderConfig> {
-    config::get_config().await.map_err(Into::into)
-}
+    config::get_config().await}
 
 #[tauri::command]
 pub async fn set_downloader_config(config: config::DownloaderConfig) -> CommandResult<()> {
-    config::save_config(config).await.map_err(Into::into)
-}
+    config::save_config(config).await}
 
 #[tauri::command]
 pub async fn add_torrent_and_track(
@@ -59,7 +57,7 @@ pub async fn add_torrent_and_track(
             Ok(_) => Ok(()),
             Err(e) => {
                 let _ = repo::delete(hash.clone()).await;
-                Err(e.into())
+                Err(e)
             }
         }
     } else {
@@ -84,7 +82,7 @@ pub async fn add_torrent_and_track(
             Ok(_) => Ok(()),
             Err(e) => {
                 let _ = repo::delete(hash.clone()).await;
-                Err(e.into())
+                Err(e)
             }
         }
     }

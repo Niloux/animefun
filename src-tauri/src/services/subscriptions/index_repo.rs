@@ -277,7 +277,7 @@ pub async fn query_full(
             }
             if let Some(code) = params.status_code.as_ref() {
                 sql_where.push_str(" AND status_code = ?");
-                let cval: i64 = status_ord(code) as i64;
+                let cval: i64 = status_ord(code);
                 binds.push(Box::new(cval));
             }
             let mut match_q: Option<String> = None;

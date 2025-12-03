@@ -2,5 +2,5 @@ use crate::{error::CommandResult, models::mikan::MikanResourcesResponse, service
 
 #[tauri::command]
 pub async fn get_mikan_resources(subject_id: u32) -> CommandResult<MikanResourcesResponse> {
-    Ok(mikan::get_mikan_resources(subject_id).await?)
+    mikan::get_mikan_resources(subject_id).await
 }

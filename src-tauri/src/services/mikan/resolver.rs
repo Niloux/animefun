@@ -15,15 +15,12 @@ pub async fn resolve_candidates(
         js.spawn(async move { (bid, bangumi_page::resolve_subject(bid).await) });
     }
     while let Some(res) = js.join_next().await {
-        match res {
-            Ok((bid, sid_res)) => {
-                if let Ok(Some(s)) = sid_res {
-                    if s == sid {
-                        return Ok(Some(bid));
-                    }
+        if let Ok((bid, sid_res)) = res {
+            if let Ok(Some(s)) = sid_res {
+                if s == sid {
+                    return Ok(Some(bid));
                 }
             }
-            Err(_) => {}
         }
         if idx < candidates.len() {
             let bid2 = candidates[idx];
