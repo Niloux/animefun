@@ -1,28 +1,28 @@
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { queryClient } from "@/lib/query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "./App.css";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
 import { ROUTES } from "./constants/routes";
-import ErrorBoundary from "./components/ErrorBoundary";
-import "./App.css";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/query";
 
 // 从集中模块导入所有懒加载页面和预加载映射表
 import {
-  HomePage,
-  SearchPage,
-  SubscribePage,
-  ResourcesAllPage,
-  ResourcesDownloadingPage,
-  ResourcesDownloadedPage,
-  SettingsPage,
   AnimeDetailPage,
-  preloadMap
+  HomePage,
+  preloadMap,
+  ResourcesAllPage,
+  ResourcesDownloadedPage,
+  ResourcesDownloadingPage,
+  SearchPage,
+  SettingsPage,
+  SubscribePage,
 } from "./lib/lazy-pages";
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <HashRouter>
+      <BrowserRouter>
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Layout preloadMap={preloadMap} />}>
@@ -48,7 +48,7 @@ function App() {
             </Route>
           </Routes>
         </ErrorBoundary>
-      </HashRouter>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 }
