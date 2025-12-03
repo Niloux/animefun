@@ -56,11 +56,8 @@ pub fn spawn_refresh_worker() {
                             let status = get_status_cached(id).await.ok();
                             let subject = bangumi::fetch_subject(id).await.ok();
                             if let (Some(st), Some(sj)) = (status, subject) {
-                                match index_upsert_if_changed(id, added_at, sj, st.code).await {
-                                    Ok(true) => {
-                                        updated_clone.fetch_add(1, Ordering::Relaxed);
-                                    }
-                                    _ => {}
+                                if let Ok(true) = index_upsert_if_changed(id, added_at, sj, st.code).await {
+                                    updated_clone.fetch_add(1, Ordering::Relaxed);
                                 }
                             }
                         }
