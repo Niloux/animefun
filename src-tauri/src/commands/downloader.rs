@@ -1,5 +1,6 @@
+use crate::error::AppError;
 use crate::error::CommandResult;
-use crate::infra::http::CLIENT;
+use crate::infra::http::{wait_api_limit, CLIENT};
 use crate::services::downloader::{client, config, repo};
 use serde::Serialize;
 use ts_rs::TS;
@@ -37,35 +38,54 @@ pub async fn add_torrent_and_track(
     episode: Option<u32>,
     meta_json: Option<String>,
 ) -> CommandResult<()> {
-    // wait_api_limit().await;
-    let resp = CLIENT.get(&url).send().await?;
-    resp.error_for_status_ref()?;
-    let bytes = resp.bytes().await?.to_vec();
-
-    let hash = client::calculate_info_hash(&bytes)?;
-
-    // 先插入数据库
-    repo::insert(
-        &hash,
-        subject_id,
-        episode,
-        "downloading",
-        None,
-        meta_json.as_deref(),
-    )
-    .await?;
-
-    // 数据库插入成功后，再添加到qBittorrent
-    let conf = config::get_config().await?;
-    let mut qb = client::QbitClient::new(&conf);
-    qb.login(&conf).await?;
-
-    match qb.add_torrent(bytes).await {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            // 如果qBittorrent添加失败，回滚数据库操作
-            let _ = repo::delete(hash.clone()).await;
-            Err(e.into())
+    if url.starts_with("magnet:") {
+        let hash = match client::parse_magnet_btih(&url) {
+            Some(h) => h,
+            None => return Err(AppError::Any("invalid_magnet".into())),
+        };
+        repo::insert(
+            &hash,
+            subject_id,
+            episode,
+            "downloading",
+            None,
+            meta_json.as_deref(),
+        )
+        .await?;
+        let conf = config::get_config().await?;
+        let mut qb = client::QbitClient::new(&conf);
+        qb.login(&conf).await?;
+        match qb.add_url(&url).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let _ = repo::delete(hash.clone()).await;
+                Err(e.into())
+            }
+        }
+    } else {
+        wait_api_limit().await;
+        let resp = CLIENT.get(&url).send().await?;
+        resp.error_for_status_ref()?;
+        let bytes = resp.bytes().await?.to_vec();
+        let hash = client::calculate_info_hash(&bytes)?;
+        repo::insert(
+            &hash,
+            subject_id,
+            episode,
+            "downloading",
+            None,
+            meta_json.as_deref(),
+        )
+        .await?;
+        let conf = config::get_config().await?;
+        let mut qb = client::QbitClient::new(&conf);
+        qb.login(&conf).await?;
+        match qb.add_torrent(bytes).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                let _ = repo::delete(hash.clone()).await;
+                Err(e.into())
+            }
         }
     }
 }

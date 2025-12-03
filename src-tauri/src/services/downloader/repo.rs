@@ -54,7 +54,14 @@ pub async fn insert(
         ensure_table(conn)?;
         conn.execute(
             "INSERT INTO tracked_downloads (hash, subject_id, episode, status, file_path, meta_json, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(hash) DO UPDATE SET
+               subject_id=excluded.subject_id,
+               episode=excluded.episode,
+               status=excluded.status,
+               file_path=excluded.file_path,
+               meta_json=excluded.meta_json,
+               updated_at=excluded.updated_at",
             params![hash, subject_id, episode, status, file_path, meta_json, now, now],
         )?;
         Ok(())

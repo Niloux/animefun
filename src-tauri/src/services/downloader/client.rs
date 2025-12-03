@@ -10,6 +10,7 @@ pub struct QbitClient {
     base_url: String,
     client: Client,
     cookie: Option<String>,
+    is_v5: Option<bool>,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize, TS)]
@@ -44,6 +45,7 @@ impl QbitClient {
             base_url: config.api_url.clone().trim_end_matches('/').to_string(),
             client: Client::new(),
             cookie: None,
+            is_v5: None,
         }
     }
 
@@ -68,7 +70,10 @@ impl QbitClient {
         Ok(())
     }
 
-    async fn version_is_v5(&self) -> Result<bool, AppError> {
+    async fn version_is_v5(&mut self) -> Result<bool, AppError> {
+        if let Some(v) = self.is_v5 {
+            return Ok(v);
+        }
         let url = format!("{}/api/v2/app/version", self.base_url);
         let resp = self.client.get(&url).send().await?;
         resp.error_for_status_ref()?;
@@ -80,7 +85,9 @@ impl QbitClient {
             .unwrap_or("0")
             .parse::<u32>()
             .unwrap_or(0);
-        Ok(major >= 5)
+        let isv5 = major >= 5;
+        self.is_v5 = Some(isv5);
+        Ok(isv5)
     }
 
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
@@ -110,7 +117,27 @@ impl QbitClient {
             .await?;
 
         resp.error_for_status_ref()?;
-        Ok(())
+        let txt = resp.text().await?;
+        if txt.trim() == "Ok." {
+            Ok(())
+        } else {
+            Err(AppError::Any(format!("qbit_add: {}", txt)))
+        }
+    }
+
+    pub async fn add_url(&self, url: &str) -> Result<(), AppError> {
+        let resp = self
+            .request(reqwest::Method::POST, "/api/v2/torrents/add")
+            .form(&[("urls", url.to_string())])
+            .send()
+            .await?;
+        resp.error_for_status_ref()?;
+        let txt = resp.text().await?;
+        if txt.trim() == "Ok." {
+            Ok(())
+        } else {
+            Err(AppError::Any(format!("qbit_add: {}", txt)))
+        }
     }
 
     pub async fn get_torrents_info(
@@ -128,7 +155,7 @@ impl QbitClient {
         Ok(infos)
     }
 
-    pub async fn pause(&self, hash: &str) -> Result<(), AppError> {
+    pub async fn pause(&mut self, hash: &str) -> Result<(), AppError> {
         let is_v5 = self.version_is_v5().await?;
         let resp = if is_v5 {
             self.request(reqwest::Method::POST, "/api/v2/torrents/stop")
@@ -145,7 +172,7 @@ impl QbitClient {
         Ok(())
     }
 
-    pub async fn resume(&self, hash: &str) -> Result<(), AppError> {
+    pub async fn resume(&mut self, hash: &str) -> Result<(), AppError> {
         let is_v5 = self.version_is_v5().await?;
         let resp = if is_v5 {
             self.request(reqwest::Method::POST, "/api/v2/torrents/start")
@@ -181,4 +208,47 @@ impl QbitClient {
         resp.error_for_status_ref()?;
         Ok(())
     }
+}
+
+pub fn parse_magnet_btih(magnet: &str) -> Option<String> {
+    let s = magnet;
+    let p = s.find("btih:")?;
+    let start = p + 5;
+    let end = s[start..].find('&').map(|i| start + i).unwrap_or(s.len());
+    let raw = &s[start..end];
+    let r = raw.trim();
+    let hex_candidate = r.chars().all(|c| c.is_ascii_hexdigit());
+    if hex_candidate && r.len() == 40 {
+        return Some(r.to_lowercase());
+    }
+    let up = r.to_uppercase();
+    let bytes = base32_decode(&up)?;
+    Some(
+        bytes
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>(),
+    )
+}
+
+fn base32_decode(s: &str) -> Option<Vec<u8>> {
+    let mut buf: u64 = 0;
+    let mut bits: usize = 0;
+    let mut out: Vec<u8> = Vec::new();
+    for ch in s.chars() {
+        let v: u8 = match ch {
+            'A'..='Z' => (ch as u8) - b'A',
+            '2'..='7' => (ch as u8) - b'2' + 26,
+            '=' => continue,
+            _ => return None,
+        };
+        buf = (buf << 5) | (v as u64);
+        bits += 5;
+        while bits >= 8 {
+            bits -= 8;
+            let byte = ((buf >> bits) & 0xFF) as u8;
+            out.push(byte);
+        }
+    }
+    Some(out)
 }
