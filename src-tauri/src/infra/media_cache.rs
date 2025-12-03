@@ -1,6 +1,6 @@
 use crate::error::{AppError, CommandResult};
-use crate::infra::path::app_base_dir;
 use crate::infra::http::CLIENT;
+use crate::infra::path::app_base_dir;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 use tracing::{debug, info};

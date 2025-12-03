@@ -1,5 +1,5 @@
-use crate::infra::cache;
 use crate::error::AppError;
+use crate::infra::cache;
 use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
 use crate::models::mikan::MikanResourceItem;

@@ -1,5 +1,5 @@
-use once_cell::sync::OnceCell;
 use deadpool_sqlite::{Config as DbConfig, Pool as DbPool, Runtime as DbRuntime};
+use once_cell::sync::OnceCell;
 use std::path::PathBuf;
 
 use crate::error::AppError;

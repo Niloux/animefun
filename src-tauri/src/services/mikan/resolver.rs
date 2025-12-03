@@ -33,4 +33,3 @@ pub async fn resolve_candidates(
     }
     Ok(None)
 }
-

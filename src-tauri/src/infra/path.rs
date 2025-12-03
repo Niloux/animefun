@@ -2,9 +2,9 @@ use std::path::PathBuf;
 use tauri::Manager;
 
 pub fn app_base_dir(app: &tauri::AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap_or_else(|_| {
-        default_app_dir()
-    })
+    app.path()
+        .app_data_dir()
+        .unwrap_or_else(|_| default_app_dir())
 }
 
 pub fn default_app_dir() -> PathBuf {

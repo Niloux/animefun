@@ -7,4 +7,3 @@ pub fn normalize_name(name: String, alt: String) -> String {
         s.trim_end_matches(&trims[..]).to_string()
     }
 }
-

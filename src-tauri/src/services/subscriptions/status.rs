@@ -1,5 +1,5 @@
-use crate::infra::cache;
 use crate::error::AppError;
+use crate::infra::cache;
 use crate::models::bangumi::{SubjectStatus, SubjectStatusCode};
 
 fn status_ttl_secs(code: &SubjectStatusCode) -> i64 {
@@ -25,4 +25,3 @@ pub async fn get_status_cached(id: u32) -> Result<SubjectStatus, AppError> {
     }
     Ok(v)
 }
-

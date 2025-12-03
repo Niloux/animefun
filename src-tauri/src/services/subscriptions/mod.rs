@@ -39,13 +39,8 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
             let subject = crate::services::bangumi::fetch_subject(id).await.ok();
             let status = get_status_cached(id).await.ok();
             if let (Some(sj), Some(st)) = (subject, status) {
-                let _ = index_repo::index_upsert(
-                    id,
-                    crate::infra::time::now_secs(),
-                    sj,
-                    st.code,
-                )
-                .await;
+                let _ =
+                    index_repo::index_upsert(id, crate::infra::time::now_secs(), sj, st.code).await;
             }
         });
         Ok(true)
@@ -61,4 +56,3 @@ pub async fn query_full(
 ) -> Result<(Vec<SubjectResponse>, u32), AppError> {
     index_repo::query_full(params).await
 }
-

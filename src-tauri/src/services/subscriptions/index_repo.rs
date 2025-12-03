@@ -396,4 +396,3 @@ pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppEr
         .await??;
     Ok(rows)
 }
-
