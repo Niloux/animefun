@@ -6,9 +6,9 @@
 </div>
 
 <p align="center">
-  <a href="https://github.com/Niloux/ikuyo-tauri/actions/workflows/tauri-build.yml"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Niloux/ikuyo-tauri/tauri-build.yml?branch=main&style=for-the-badge"></a>
-  <a href="https://github.com/Niloux/ikuyo-tauri/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/Niloux/ikuyo-tauri?style=for-the-badge&color=blue"></a>
-  <a href="https://github.com/Niloux/ikuyo-tauri/releases"><img alt="Total Downloads" src="https://img.shields.io/github/downloads/Niloux/ikuyo-tauri/total?style=for-the-badge&color=green"></a>
+  <a href="https://github.com/Niloux/animefun/actions/workflows/tauri-build.yml"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Niloux/animefun/tauri-build.yml?branch=main&style=for-the-badge"></a>
+  <a href="https://github.com/Niloux/animefun/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/Niloux/animefun?style=for-the-badge&color=blue"></a>
+  <a href="https://github.com/Niloux/animefun/releases"><img alt="Total Downloads" src="https://img.shields.io/github/downloads/Niloux/animefun/total?style=for-the-badge&color=green"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge"></a>
 </p>
 
