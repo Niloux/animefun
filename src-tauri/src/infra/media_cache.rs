@@ -64,7 +64,7 @@ fn sha256_hex(input: &str) -> String {
 async fn try_existing(images_dir: &Path, hash: &str) -> Result<Option<String>, AppError> {
     for ext in ["jpg", "png", "webp"] {
         let path = images_dir.join(format!("{}.{}", hash, ext));
-        if let Ok(_) = tokio::fs::metadata(&path).await {
+        if tokio::fs::metadata(&path).await.is_ok() {
             if expired(&path).await? {
                 let _ = tokio::fs::remove_file(&path).await;
             } else {
