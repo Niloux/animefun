@@ -42,33 +42,31 @@ fn status_ord(code: &SubjectStatusCode) -> i64 {
 
 fn build_tags_csv(subject: &SubjectResponse) -> String {
     let mut tags: Vec<String> = Vec::new();
-    if let Some(t) = subject.meta_tags.as_ref() {
-        for s in t.iter() {
-            let k = s.trim().to_lowercase();
-            if !k.is_empty() {
-                tags.push(k);
-            }
-        }
+
+    // 处理 meta_tags
+    if let Some(meta_tags) = &subject.meta_tags {
+        tags.extend(
+            meta_tags
+                .iter()
+                .map(|s| s.trim().to_lowercase())
+                .filter(|s| !s.is_empty()),
+        );
     }
-    if let Some(t) = subject.tags.as_ref() {
-        for x in t.iter() {
-            let k = x.name.trim().to_lowercase();
-            if !k.is_empty() {
-                tags.push(k);
-            }
-        }
+
+    // 处理 tags
+    if let Some(api_tags) = &subject.tags {
+        tags.extend(
+            api_tags
+                .iter()
+                .map(|tag| tag.name.trim().to_lowercase())
+                .filter(|s| !s.is_empty()),
+        );
     }
+
     tags.sort();
     tags.dedup();
-    let mut csv = String::from(",");
-    for (i, k) in tags.iter().enumerate() {
-        if i > 0 {
-            csv.push(',');
-        }
-        csv.push_str(k);
-    }
-    csv.push(',');
-    csv
+
+    format!(",{tags},", tags = tags.join(","))
 }
 
 pub async fn index_upsert(
