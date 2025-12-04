@@ -3,8 +3,8 @@ use once_cell::sync::Lazy;
 use std::num::NonZeroU32;
 use std::time::Duration;
 
-pub const USER_AGENT: &str = "animefun/0.1";
-pub const HTTP_TIMEOUT_SECS: u64 = 10;
+// 从 config.rs 导入常量
+use super::config::{API_RATE_LIMIT, HTTP_TIMEOUT_SECS, USER_AGENT};
 
 pub static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     let mut headers = reqwest::header::HeaderMap::new();
@@ -23,7 +23,7 @@ pub static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
 });
 
 pub static LIMITER: Lazy<DefaultDirectRateLimiter> = Lazy::new(|| {
-    let q = Quota::per_second(NonZeroU32::new(10).unwrap());
+    let q = Quota::per_second(NonZeroU32::new(API_RATE_LIMIT).unwrap());
     RateLimiter::direct(q)
 });
 

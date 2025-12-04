@@ -23,11 +23,13 @@ pub struct DownloadItem {
 
 #[tauri::command]
 pub async fn get_downloader_config() -> CommandResult<config::DownloaderConfig> {
-    config::get_config().await}
+    config::get_config().await
+}
 
 #[tauri::command]
 pub async fn set_downloader_config(config: config::DownloaderConfig) -> CommandResult<()> {
-    config::save_config(config).await}
+    config::save_config(config).await
+}
 
 #[tauri::command]
 pub async fn add_torrent_and_track(
