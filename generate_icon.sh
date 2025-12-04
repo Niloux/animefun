@@ -1,4 +1,5 @@
 #!/bin/bash
+# NOTICE!!! macOS自动生成icon的脚本，其他平台不可使用
 
 set -e
 
