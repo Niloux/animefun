@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset } from "./ui/sidebar";
 import AppSidebar from "./Sidebar";
-import { Toaster } from "sonner"; // 引入 Sonner Toaster 组件
-import { Loader2 } from "lucide-react"; // 引入加载动画
+import { Loader2 } from "lucide-react";
 
 interface LayoutProps {
   preloadMap: Record<string, () => void>;
@@ -31,7 +30,6 @@ export function Layout({ preloadMap }: LayoutProps) {
           </div>
         </SidebarInset>
       </div>
-      <Toaster position="bottom-right" /> {/* 添加全局 Toaster 组件 */}
     </SidebarProvider>
   );
 }

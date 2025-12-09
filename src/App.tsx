@@ -2,9 +2,11 @@ import { queryClient } from "@/lib/query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
+import "sonner/dist/styles.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
 import { ROUTES } from "./constants/routes";
+import { Toaster } from "@/components/ui/sonner";
 
 // 从集中模块导入所有懒加载页面和预加载映射表
 import {
@@ -24,6 +26,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ErrorBoundary>
+          <Toaster position="bottom-right" />
           <Routes>
             <Route path="/" element={<Layout preloadMap={preloadMap} />}>
               <Route index element={<Navigate to={ROUTES.HOME} replace />} />
