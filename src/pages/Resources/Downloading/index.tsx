@@ -14,10 +14,21 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Play, Pause, Trash2, HardDriveDownload } from "lucide-react";
 import { formatBytes, formatDuration, cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ResourcesDownloadingPage: FC = () => {
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [itemToDelete, setItemToDelete] = useState<DownloadItem | null>(null);
 
   const fetchList = useCallback(async () => {
     try {
@@ -82,14 +93,16 @@ const ResourcesDownloadingPage: FC = () => {
     }
   };
 
-  const handleDelete = async (hash: string) => {
-    if (!window.confirm("Delete this task and files?")) return;
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
     try {
-      await deleteDownload(hash, true);
+      await deleteDownload(itemToDelete.hash, true);
       toast.success("Deleted");
-      setItems((prev) => prev.filter((i) => i.hash !== hash));
+      setItems((prev) => prev.filter((i) => i.hash !== itemToDelete.hash));
     } catch {
       toast.error("Failed to delete");
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -109,20 +122,49 @@ const ResourcesDownloadingPage: FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">Downloads</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
-          <DownloadCard
-            key={item.hash}
-            item={item}
-            onPause={() => handlePause(item.hash)}
-            onResume={() => handleResume(item.hash)}
-            onDelete={() => handleDelete(item.hash)}
-          />
-        ))}
+    <>
+      <div className="p-6 space-y-4">
+        <h1 className="text-2xl font-bold tracking-tight">Downloads</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {items.map((item) => (
+            <DownloadCard
+              key={item.hash}
+              item={item}
+              onPause={() => handlePause(item.hash)}
+              onResume={() => handleResume(item.hash)}
+              onDelete={() => setItemToDelete(item)}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+
+      <AlertDialog
+        open={!!itemToDelete}
+        onOpenChange={(open) => !open && setItemToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the task and all downloaded files for{" "}
+              <span className="font-semibold text-foreground">
+                {itemToDelete?.title}
+              </span>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
