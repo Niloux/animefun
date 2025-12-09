@@ -1,35 +1,35 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
 import {
-  Home,
-  Search,
   BookOpen,
-  Folder,
-  Settings,
   ChevronDown,
-  ChevronUp,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  Folder,
+  Home,
+  Search,
+  Settings,
 } from "lucide-react";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import ikuyoAvatar from "../assets/ikuyo-avatar.png";
+import { ROUTES } from "../constants/routes";
 import {
   Sidebar,
-  SidebarHeader,
   SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
 } from "./ui/sidebar";
-import { ROUTES } from "../constants/routes";
 
 // 定义菜单结构类型 - 区分父菜单和子菜单以提高类型安全
 type MenuItem = ParentMenuItem | ChildMenuItem;
@@ -132,7 +132,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
               <img
                 src={ikuyoAvatar}
                 alt="ikuyo-avatar"
-                className="rounded-full w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8"
+                className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8"
               />
               <div className="text-left overflow-hidden whitespace-nowrap">
                 {/* <span className="text-xl font-semibold">For Fun</span> */}
