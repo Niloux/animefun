@@ -1,16 +1,28 @@
 use super::config::DownloaderConfig;
 use crate::error::AppError;
+use once_cell::sync::Lazy;
 use reqwest::header::{COOKIE, ORIGIN, REFERER};
-use reqwest::{multipart, Client};
+use reqwest::multipart;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use tokio::sync::Mutex;
 use ts_rs::TS;
 
-pub struct QbitClient {
+struct SessionState {
+    cookie: String,
+    config_hash: u64,
+    is_v5: bool,
+}
+
+static SESSION: Lazy<Mutex<Option<SessionState>>> = Lazy::new(|| Mutex::new(None));
+
+pub struct QbitClient<'a> {
     base_url: String,
-    client: Client,
     cookie: Option<String>,
     is_v5: Option<bool>,
+    config: &'a DownloaderConfig,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize, TS)]
@@ -39,43 +51,83 @@ pub fn calculate_info_hash(bytes: &[u8]) -> Result<String, AppError> {
     Ok(hex::encode(result))
 }
 
-impl QbitClient {
-    pub fn new(config: &DownloaderConfig) -> Self {
+fn calculate_config_hash(c: &DownloaderConfig) -> u64 {
+    let mut s = DefaultHasher::new();
+    c.api_url.hash(&mut s);
+    c.username.hash(&mut s);
+    c.password.hash(&mut s);
+    s.finish()
+}
+
+impl<'a> QbitClient<'a> {
+    pub fn new(config: &'a DownloaderConfig) -> Self {
         Self {
             base_url: config.api_url.clone().trim_end_matches('/').to_string(),
-            client: Client::new(),
             cookie: None,
             is_v5: None,
+            config,
         }
     }
 
-    pub async fn login(&mut self, config: &DownloaderConfig) -> Result<(), AppError> {
+    pub async fn login(&mut self, _config: &DownloaderConfig) -> Result<(), AppError> {
+        let current_hash = calculate_config_hash(self.config);
+
+        // 1. Try global session
+        {
+            let session = SESSION.lock().await;
+            if let Some(s) = &*session {
+                if s.config_hash == current_hash {
+                    self.cookie = Some(s.cookie.clone());
+                    self.is_v5 = Some(s.is_v5);
+                    return Ok(());
+                }
+            }
+        }
+
+        // 2. Login
         let url = format!("{}/api/v2/auth/login", self.base_url);
         let params = [
-            ("username", config.username.as_deref().unwrap_or("")),
-            ("password", config.password.as_deref().unwrap_or("")),
+            ("username", self.config.username.as_deref().unwrap_or("")),
+            ("password", self.config.password.as_deref().unwrap_or("")),
         ];
 
-        let resp = self.client.post(&url).form(&params).send().await?;
+        let resp = crate::infra::http::CLIENT
+            .post(&url)
+            .form(&params)
+            .send()
+            .await?;
 
         resp.error_for_status_ref()?;
 
+        let mut cookie_val = String::new();
         if let Some(cookie) = resp.headers().get("set-cookie") {
             if let Ok(c) = cookie.to_str() {
-                let sid = c.split(';').next().unwrap_or("").to_string();
-                self.cookie = Some(sid);
+                cookie_val = c.split(';').next().unwrap_or("").to_string();
+                self.cookie = Some(cookie_val.clone());
             }
+        }
+
+        // 3. Determine version (also cache it)
+        let is_v5 = self.check_version_is_v5().await?;
+        self.is_v5 = Some(is_v5);
+
+        // 4. Update global session
+        if !cookie_val.is_empty() {
+            let mut session = SESSION.lock().await;
+            *session = Some(SessionState {
+                cookie: cookie_val,
+                config_hash: current_hash,
+                is_v5,
+            });
         }
 
         Ok(())
     }
 
-    async fn version_is_v5(&mut self) -> Result<bool, AppError> {
-        if let Some(v) = self.is_v5 {
-            return Ok(v);
-        }
+    // Helper for login flow
+    async fn check_version_is_v5(&self) -> Result<bool, AppError> {
         let url = format!("{}/api/v2/app/version", self.base_url);
-        let resp = self.client.get(&url).send().await?;
+        let resp = crate::infra::http::CLIENT.get(&url).send().await?;
         resp.error_for_status_ref()?;
         let v = resp.text().await?;
         let ver = v.trim().trim_start_matches('v');
@@ -85,14 +137,22 @@ impl QbitClient {
             .unwrap_or("0")
             .parse::<u32>()
             .unwrap_or(0);
-        let isv5 = major >= 5;
+        Ok(major >= 5)
+    }
+
+    async fn version_is_v5(&mut self) -> Result<bool, AppError> {
+        if let Some(v) = self.is_v5 {
+            return Ok(v);
+        }
+        // Fallback if not set (should not happen if login is called)
+        let isv5 = self.check_version_is_v5().await?;
         self.is_v5 = Some(isv5);
         Ok(isv5)
     }
 
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
         let url = format!("{}{}", self.base_url, path);
-        let mut builder = self.client.request(method, &url);
+        let mut builder = crate::infra::http::CLIENT.request(method, &url);
         if let Some(c) = &self.cookie {
             builder = builder.header(COOKIE, c);
         }

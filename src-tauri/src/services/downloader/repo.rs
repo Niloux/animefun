@@ -34,6 +34,22 @@ fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
     Ok(())
 }
 
+pub async fn update_meta(hash: String, meta_json: String) -> Result<(), AppError> {
+    let pool = crate::infra::db::data_pool()?;
+    let conn = pool.get().await?;
+    let now = now_secs();
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        ensure_table(conn)?;
+        conn.execute(
+            "UPDATE tracked_downloads SET meta_json = ?1, updated_at = ?2 WHERE hash = ?3",
+            params![meta_json, now, hash],
+        )?;
+        Ok(())
+    })
+    .await??;
+    Ok(())
+}
+
 pub async fn insert(
     hash: &str,
     subject_id: u32,
