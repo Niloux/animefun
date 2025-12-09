@@ -27,12 +27,15 @@ interface EpisodesListProps {
   subjectId: number;
   resources?: MikanResourcesResponse | null;
   resourcesLoading?: boolean;
+  subjectTitle?: string;
+  subjectCover?: string | null;
 }
 
 const EpisodesList: React.FC<EpisodesListProps> = ({
   subjectId,
   resources,
   resourcesLoading,
+  subjectCover,
 }) => {
   const {
     episodes,
@@ -243,6 +246,8 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
         resources={resources ?? null}
         isSingle={totalEpisodes === 1}
         loading={resourcesLoading}
+        subjectId={subjectId}
+        subjectCover={subjectCover || undefined}
       />
     </div>
   );

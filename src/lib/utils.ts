@@ -65,3 +65,32 @@ export function sortAnimeList(arr: Anime[], sort: string): Anime[] {
       return listCopy;
   }
 }
+
+export function formatBytes(bytes: number | bigint, decimals = 2) {
+  const b = Number(bytes);
+  if (b === 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return parseFloat((b / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+export function formatDuration(seconds: number | bigint) {
+  const s = Number(seconds);
+  if (s <= 0) return '-';
+  if (s >= 8640000) return '∞'; 
+
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+
+  if (h > 24) return '> 1d';
+  
+  const parts = [];
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  if (sec > 0 && h === 0) parts.push(`${sec}s`); // Only show seconds if less than an hour to save space
+
+  return parts.join(' ');
+}

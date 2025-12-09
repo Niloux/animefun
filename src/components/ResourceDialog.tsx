@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +15,12 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
 import { Spinner } from "./ui/spinner";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
+import { useDownloadAction } from "../hooks/use-download-action";
+import { ResourceGroupList } from "./ResourceGroupList";
 
 export function ResourceDialog({
   open,
@@ -29,6 +29,8 @@ export function ResourceDialog({
   resources,
   isSingle,
   loading,
+  subjectId,
+  subjectCover,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -36,6 +38,8 @@ export function ResourceDialog({
   resources?: MikanResourcesResponse | null;
   isSingle?: boolean;
   loading?: boolean;
+  subjectId?: number;
+  subjectCover?: string;
 }) {
   const { matched, mapped } = useEpisodeResources(
     resources ?? null,
@@ -47,20 +51,11 @@ export function ResourceDialog({
   const [resFilter, setResFilter] = useState<number | null>(null);
   const [sublangFilter, setSublangFilter] = useState<string | null>(null);
 
-  const formatSize = (v?: number | bigint | null) => {
-    if (v == null) return null;
-    const n = typeof v === "bigint" ? Number(v) : v;
-    if (!Number.isFinite(n) || n <= 0) return null;
-    const units = ["B", "KB", "MB", "GB", "TB"];
-    let i = 0;
-    let s = n;
-    while (s >= 1024 && i < units.length - 1) {
-      s /= 1024;
-      i++;
-    }
-    const val = s < 10 ? s.toFixed(1) : Math.round(s).toString();
-    return `${val} ${units[i]}`;
-  };
+  const { handleDownload } = useDownloadAction({
+    subjectId,
+    subjectCover,
+    episode,
+  });
 
   const groupOptions = useMemo(() => {
     const s = new Set<string>();
@@ -194,74 +189,10 @@ export function ResourceDialog({
               </div>
             ) : matched.length > 0 ? (
               <ScrollArea className="h-[50vh]">
-                <div className="space-y-4">
-                  {filteredGrouped.map((g) => (
-                    <div key={g.group} className="border rounded-md">
-                      <div className="px-3 py-2 font-semibold text-sm">
-                        {g.group}
-                      </div>
-                      <div className="divide-y">
-                        {g.items.map((it, idx) => (
-                          <div key={idx} className="p-3 space-y-2">
-                            <div className="text-sm font-medium">
-                              {it.title}
-                            </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex flex-wrap items-center gap-2">
-                                {typeof it.resolution === "number" && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-chart-1 text-primary-foreground"
-                                  >
-                                    {it.resolution}p
-                                  </Badge>
-                                )}
-                                {it.subtitle_lang && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-chart-2 text-primary-foreground"
-                                  >
-                                    {it.subtitle_lang}
-                                  </Badge>
-                                )}
-                                {formatSize(it.size_bytes) && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-chart-3 text-primary-foreground"
-                                  >
-                                    {formatSize(it.size_bytes) as string}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {it.page_url && (
-                                  <Button
-                                    className="cursor-pointer"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openUrl(it.page_url!)}
-                                  >
-                                    页面
-                                  </Button>
-                                )}
-                                {it.torrent_url && (
-                                  <Button
-                                    className="cursor-pointer"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openUrl(it.torrent_url!)}
-                                  >
-                                    种子
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ResourceGroupList
+                  groups={filteredGrouped}
+                  onDownload={handleDownload}
+                />
               </ScrollArea>
             ) : resources && !mapped ? (
               <div className="text-sm text-gray-600 dark:text-gray-400">

@@ -1,4 +1,54 @@
 import { invoke } from '@tauri-apps/api/core';
+import { DownloadItem } from '@/types/gen/downloader';
+import { TorrentInfo } from '@/types/gen/torrent_info';
+
+// ... existing imports
+
+export async function getTrackedDownloads(): Promise<DownloadItem[]> {
+  try {
+    return await invoke<DownloadItem[]>('get_tracked_downloads');
+  } catch (error) {
+    console.error("调用 'get_tracked_downloads' 失败:", error);
+    throw new Error('获取下载列表失败');
+  }
+}
+
+export async function getLiveDownloadInfo(): Promise<TorrentInfo[]> {
+  try {
+    return await invoke<TorrentInfo[]>('get_live_download_info');
+  } catch (error) {
+    console.error("调用 'get_live_download_info' 失败:", error);
+    // Don't throw here to avoid breaking the polling loop, just return empty
+    return [];
+  }
+}
+
+export async function pauseDownload(hash: string): Promise<void> {
+  try {
+    await invoke('pause_download', { hash });
+  } catch (error) {
+    console.error("调用 'pause_download' 失败:", error);
+    throw new Error('暂停下载失败');
+  }
+}
+
+export async function resumeDownload(hash: string): Promise<void> {
+  try {
+    await invoke('resume_download', { hash });
+  } catch (error) {
+    console.error("调用 'resume_download' 失败:", error);
+    throw new Error('恢复下载失败');
+  }
+}
+
+export async function deleteDownload(hash: string, deleteFiles: boolean): Promise<void> {
+  try {
+    await invoke('delete_download', { hash, deleteFiles });
+  } catch (error) {
+    console.error("调用 'delete_download' 失败:", error);
+    throw new Error('删除下载失败');
+  }
+}
 import { CalendarDay, Anime, PagedEpisode, SubjectStatus, SubjectStatusCode } from '../types/bangumi';
 import type { MikanResourcesResponse } from '@/types/gen/mikan';
 import type { SearchResponse } from '@/types/gen/bangumi';
@@ -152,6 +202,25 @@ export async function searchSubjectQ(params: {
 }): Promise<SearchResponse> {
   const data = await invoke<SearchResponse>('search_subject', params);
   return data;
+}
+
+export async function addTorrentAndTrack(
+  url: string,
+  subjectId: number,
+  episode: number | null,
+  metaJson: string | null
+): Promise<void> {
+  try {
+    await invoke('add_torrent_and_track', {
+      url,
+      subjectId,
+      episode,
+      metaJson
+    });
+  } catch (error) {
+    console.error("调用 'add_torrent_and_track' 失败:", error);
+    throw new Error('添加下载任务失败: ' + String(error));
+  }
 }
 
 export async function getSubscriptions(): Promise<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]> {
