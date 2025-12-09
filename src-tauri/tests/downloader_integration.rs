@@ -45,8 +45,8 @@ async fn test_qbit_add_pause_resume_delete() -> Result<(), AppError> {
         return Ok(());
     }
 
-    let mut qb = QbitClient::new(&conf);
-    qb.login(&conf).await?;
+    let mut qb = QbitClient::new(conf);
+    qb.login().await?;
 
     let url =
         "https://mikanani.me/Download/20251126/004d19b0b3ab72b5b22ffa6bd39a98c0e45f4281.torrent";

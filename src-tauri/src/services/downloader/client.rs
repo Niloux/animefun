@@ -18,11 +18,11 @@ struct SessionState {
 
 static SESSION: Lazy<Mutex<Option<SessionState>>> = Lazy::new(|| Mutex::new(None));
 
-pub struct QbitClient<'a> {
+pub struct QbitClient {
     base_url: String,
     cookie: Option<String>,
     is_v5: Option<bool>,
-    config: &'a DownloaderConfig,
+    config: DownloaderConfig,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize, TS)]
@@ -32,8 +32,8 @@ pub struct TorrentInfo {
     pub name: String,
     pub state: String,
     pub progress: f64,
-    pub dlspeed: i64, // bytes/s
-    pub eta: i64,     // seconds
+    pub dlspeed: i64, // 字节/秒
+    pub eta: i64,     // 秒
     pub save_path: String,
 }
 
@@ -59,8 +59,8 @@ fn calculate_config_hash(c: &DownloaderConfig) -> u64 {
     s.finish()
 }
 
-impl<'a> QbitClient<'a> {
-    pub fn new(config: &'a DownloaderConfig) -> Self {
+impl QbitClient {
+    pub fn new(config: DownloaderConfig) -> Self {
         Self {
             base_url: config.api_url.clone().trim_end_matches('/').to_string(),
             cookie: None,
@@ -69,10 +69,10 @@ impl<'a> QbitClient<'a> {
         }
     }
 
-    pub async fn login(&mut self, _config: &DownloaderConfig) -> Result<(), AppError> {
-        let current_hash = calculate_config_hash(self.config);
+    pub async fn login(&mut self) -> Result<(), AppError> {
+        let current_hash = calculate_config_hash(&self.config);
 
-        // 1. Try global session
+        // 1. 尝试全局会话
         {
             let session = SESSION.lock().await;
             if let Some(s) = &*session {
@@ -84,7 +84,7 @@ impl<'a> QbitClient<'a> {
             }
         }
 
-        // 2. Login
+        // 2. 执行登录
         let url = format!("{}/api/v2/auth/login", self.base_url);
         let params = [
             ("username", self.config.username.as_deref().unwrap_or("")),
@@ -107,11 +107,11 @@ impl<'a> QbitClient<'a> {
             }
         }
 
-        // 3. Determine version (also cache it)
+        // 3. 确定版本（并缓存）
         let is_v5 = self.check_version_is_v5().await?;
         self.is_v5 = Some(is_v5);
 
-        // 4. Update global session
+        // 4. 更新全局会话
         if !cookie_val.is_empty() {
             let mut session = SESSION.lock().await;
             *session = Some(SessionState {
@@ -124,7 +124,7 @@ impl<'a> QbitClient<'a> {
         Ok(())
     }
 
-    // Helper for login flow
+    // 登录流程辅助函数
     async fn check_version_is_v5(&self) -> Result<bool, AppError> {
         let url = format!("{}/api/v2/app/version", self.base_url);
         let resp = crate::infra::http::CLIENT.get(&url).send().await?;
@@ -144,7 +144,7 @@ impl<'a> QbitClient<'a> {
         if let Some(v) = self.is_v5 {
             return Ok(v);
         }
-        // Fallback if not set (should not happen if login is called)
+        // 如果未设置则回退（如果已调用登录不应发生）
         let isv5 = self.check_version_is_v5().await?;
         self.is_v5 = Some(isv5);
         Ok(isv5)
