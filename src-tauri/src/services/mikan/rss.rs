@@ -237,19 +237,46 @@ static RE_DASH_NUM: Lazy<Option<Regex>> =
 
 fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
     let t = title;
-    if let Some(re) = RE_RANGE.as_ref() {
-        if let Some(c) = re.captures(t) {
-            let s = c.get(1).map(|m| m.as_str()).unwrap_or("");
-            let e = c.get(2).map(|m| m.as_str()).unwrap_or("");
-            let er = format!("{}-{}", s, e);
-            return (None, Some(er));
-        }
-    }
     if let Some(re) = RE_EP.as_ref() {
         if let Some(c) = re.captures(t) {
             if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
                 return (Some(n), None);
             }
+        }
+    }
+    if let Some(re) = RE_RANGE.as_ref() {
+        if let Some(c) = re.captures(t) {
+            let s = c.get(1).map(|m| m.as_str()).unwrap_or("");
+            let e = c.get(2).map(|m| m.as_str()).unwrap_or("");
+            let s_num = s.parse::<u32>().ok();
+            let e_num = e.parse::<u32>().ok();
+
+            if let (Some(sn), Some(en)) = (s_num, e_num) {
+                let m = c.get(0).unwrap();
+                let start = m.start();
+                let end = m.end();
+                let prev = t[..start].chars().rev().find(|ch| !ch.is_whitespace());
+                let next = t[end..].chars().find(|ch| !ch.is_whitespace());
+                let bracketed = matches!(prev, Some('[') | Some('(') | Some('（') | Some('【'))
+                    || matches!(next, Some(']') | Some(')') | Some('）') | Some('】'));
+                let has_kw = m.as_str().to_lowercase().contains("end")
+                    || m.as_str().contains("全集")
+                    || m.as_str().contains("完");
+
+                if !bracketed && !has_kw {
+                    let re_season = Regex::new(&format!(r"(?i)\bS{}\b", sn)).ok();
+                    let has_season = re_season.as_ref().map(|r| r.is_match(t)).unwrap_or(false)
+                        || t.contains(&format!(" {} /", sn))
+                        || t.contains(&format!(" {}-", sn))
+                        || t.contains(&format!(" {} -", sn));
+                    if has_season {
+                        return (Some(en), None);
+                    }
+                }
+            }
+
+            let er = format!("{}-{}", s, e);
+            return (None, Some(er));
         }
     }
     if let Some(re) = RE_BRACKET_NUM.as_ref() {
@@ -260,17 +287,23 @@ fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
         }
     }
     if let Some(re) = RE_DASH_NUM.as_ref() {
-        for c in re.captures_iter(t) {
+        let main = t.split_once('(').map(|(a, _)| a).unwrap_or(t);
+        let main = main.split_once('（').map(|(a, _)| a).unwrap_or(main);
+        let mut best: Option<u32> = None;
+        for c in re.captures_iter(main) {
             let m = c.get(1).unwrap();
             let s = m.as_str();
             let end = m.end();
-            let next = t[end..].chars().next();
+            let next = main[end..].chars().next();
             if matches!(next, Some('p') | Some('P')) {
                 continue;
             }
             if let Ok(n) = s.parse::<u32>() {
-                return (Some(n), None);
+                best = Some(n);
             }
+        }
+        if best.is_some() {
+            return (best, None);
         }
     }
     (None, None)
@@ -363,6 +396,14 @@ mod tests {
         let t = "[Lilith-Raws] 更衣人偶坠入爱河 - 第07话 1080p";
         let (ep, range) = parse_episode_info(t);
         assert_eq!(ep, Some(7));
+        assert!(range.is_none());
+    }
+
+    #[test]
+    fn test_parse_episode_season_dash_episode() {
+        let t = "[黒ネズミたち] 拥有超常技能的异世界流浪美食家 S2 / Tondemo Skill de Isekai Hourou Meshi 2 - 23 (ABEMA 1920x1080 AVC AAC MP4)";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(23));
         assert!(range.is_none());
     }
 
