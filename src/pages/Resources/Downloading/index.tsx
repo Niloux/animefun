@@ -44,9 +44,8 @@ const ResourcesDownloadingPage: FC = () => {
 
   return (
     <>
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">Downloads</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="p-6">
+        <div className="mx-auto w-full max-w-4xl space-y-4">
           {items.map((item) => (
             <DownloadCard
               key={item.hash}

@@ -35,7 +35,7 @@ export const DownloadCard: FC<DownloadCardProps> = ({
     statusColor = "bg-green-500 hover:bg-green-600 border-transparent";
 
   return (
-    <Card className="overflow-hidden group">
+    <Card className="w-full overflow-hidden transition-shadow hover:shadow-sm">
       <CardContent className="p-0">
         <div className="flex h-32">
           {/* Cover Image */}
