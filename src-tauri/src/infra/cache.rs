@@ -1,5 +1,4 @@
 use rusqlite::{params, Connection};
-use std::path::PathBuf;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
@@ -7,11 +6,6 @@ use tracing::{debug, info};
 
 type CacheResult<T = ()> = Result<T, rusqlite::Error>;
 type CacheValue = (String, Option<String>, Option<String>);
-
-pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
-    crate::infra::db::init_cache_db(base_dir)?;
-    Ok(())
-}
 
 fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
     conn.execute(

@@ -142,7 +142,7 @@ async fn test_qbit_add_pause_resume_delete() -> Result<(), AppError> {
 #[tokio::test]
 async fn test_repo_roundtrip() -> Result<(), AppError> {
     let base = std::env::temp_dir().join("animefun-tests");
-    animefun_lib::infra::db::init_data_db(base)?;
+    animefun_lib::infra::db::init_pools(base.clone())?;
 
     let h = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
     repo::insert(h, 1, Some(1), "downloading", None, None).await?;

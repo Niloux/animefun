@@ -1,11 +1,10 @@
 pub mod index_repo;
 pub mod repo;
 pub mod status;
-pub mod store;
 pub mod worker;
 
 pub use status::get_status_cached;
-pub use store::init;
+
 pub use worker::spawn_refresh_worker;
 
 use crate::error::AppError;
@@ -29,18 +28,37 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
     if exists {
         repo::remove(id).await?;
         tauri::async_runtime::spawn(async move {
-            let _ = index_repo::index_delete(id).await;
+            if let Err(e) = index_repo::index_delete(id).await {
+                tracing::error!("Failed to delete subscription index for {}: {}", id, e);
+            }
         });
         Ok(false)
     } else {
         let n = notify.unwrap_or(false);
         repo::add(id, n).await?;
         tauri::async_runtime::spawn(async move {
-            let subject = crate::services::bangumi::fetch_subject(id).await.ok();
-            let status = get_status_cached(id).await.ok();
-            if let (Some(sj), Some(st)) = (subject, status) {
-                let _ =
-                    index_repo::index_upsert(id, crate::infra::time::now_secs(), sj, st.code).await;
+            match (
+                crate::services::bangumi::fetch_subject(id).await,
+                get_status_cached(id).await,
+            ) {
+                (Ok(sj), Ok(st)) => {
+                    if let Err(e) =
+                        index_repo::index_upsert(id, crate::infra::time::now_secs(), sj, st.code)
+                            .await
+                    {
+                        tracing::error!("Failed to upsert subscription index for {}: {}", id, e);
+                    }
+                }
+                (Err(e), _) => {
+                    tracing::error!(
+                        "Failed to fetch subject for subscription index {}: {}",
+                        id,
+                        e
+                    );
+                }
+                (_, Err(e)) => {
+                    tracing::error!("Failed to get status for subscription index {}: {}", id, e);
+                }
             }
         });
         Ok(true)

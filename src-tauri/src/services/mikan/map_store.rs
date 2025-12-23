@@ -1,13 +1,7 @@
 use rusqlite::{params, Connection};
-use std::path::PathBuf;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
-
-pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
-    crate::infra::db::init_data_db(base_dir)?;
-    Ok(())
-}
 
 fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
     conn.execute(

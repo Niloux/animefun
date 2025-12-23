@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Anime } from "../types/bangumi";
-import { getSubscriptions, getSubscriptionIds, toggleSubscription, clearSubscriptions } from "../lib/api";
+import {
+  getSubscriptions,
+  getSubscriptionIds,
+  toggleSubscription,
+  clearSubscriptions,
+} from "../lib/api";
 
 type SubscriptionItem = {
   id: number;
@@ -46,28 +51,26 @@ export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
   const isSubscribed = useCallback((id: number) => idSet.has(id), [idSet]);
 
   const toggle = useCallback(async (anime: Anime): Promise<boolean> => {
-    try {
-      const subscribed = await toggleSubscription(anime.id);
-      if (subscribed) {
-        setItems((prev) => [{ id: anime.id, anime, addedAt: Date.now() }, ...prev.filter((x) => x.id !== anime.id)]);
-        setIdSet((prev) => {
-          const next = new Set(prev);
-          next.add(anime.id);
-          return next;
-        });
-      } else {
-        setItems((prev) => prev.filter((x) => x.id !== anime.id));
-        setIdSet((prev) => {
-          const next = new Set(prev);
-          next.delete(anime.id);
-          return next;
-        });
-      }
-      return subscribed;
-    } catch (e) {
-      console.error(e);
-      throw e as Error;
+    const subscribed = await toggleSubscription(anime.id);
+    if (subscribed) {
+      setItems((prev) => [
+        { id: anime.id, anime, addedAt: Date.now() },
+        ...prev.filter((x) => x.id !== anime.id),
+      ]);
+      setIdSet((prev) => {
+        const next = new Set(prev);
+        next.add(anime.id);
+        return next;
+      });
+    } else {
+      setItems((prev) => prev.filter((x) => x.id !== anime.id));
+      setIdSet((prev) => {
+        const next = new Set(prev);
+        next.delete(anime.id);
+        return next;
+      });
     }
+    return subscribed;
   }, []);
 
   const list = useMemo(() => items.map((x) => x.anime), [items]);

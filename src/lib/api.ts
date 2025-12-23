@@ -1,57 +1,65 @@
-import { invoke } from '@tauri-apps/api/core';
-import { DownloadItem } from '@/types/gen/downloader';
-import { TorrentInfo } from '@/types/gen/torrent_info';
+import { invoke } from "@tauri-apps/api/core";
+import { DownloadItem } from "@/types/gen/downloader";
+import { TorrentInfo } from "@/types/gen/torrent_info";
 
 // ... existing imports
 
 export async function getTrackedDownloads(): Promise<DownloadItem[]> {
   try {
-    return await invoke<DownloadItem[]>('get_tracked_downloads');
+    return await invoke<DownloadItem[]>("get_tracked_downloads");
   } catch (error) {
     console.error("调用 'get_tracked_downloads' 失败:", error);
-    throw new Error('获取下载列表失败');
+    throw new Error("获取下载列表失败");
   }
 }
 
 export async function getLiveDownloadInfo(): Promise<TorrentInfo[]> {
   try {
-    return await invoke<TorrentInfo[]>('get_live_download_info');
+    return await invoke<TorrentInfo[]>("get_live_download_info");
   } catch (error) {
     console.error("调用 'get_live_download_info' 失败:", error);
-    // Don't throw here to avoid breaking the polling loop, just return empty
-    return [];
+    throw new Error("获取下载信息失败");
   }
 }
 
 export async function pauseDownload(hash: string): Promise<void> {
   try {
-    await invoke('pause_download', { hash });
+    await invoke("pause_download", { hash });
   } catch (error) {
     console.error("调用 'pause_download' 失败:", error);
-    throw new Error('暂停下载失败');
+    throw new Error("暂停下载失败");
   }
 }
 
 export async function resumeDownload(hash: string): Promise<void> {
   try {
-    await invoke('resume_download', { hash });
+    await invoke("resume_download", { hash });
   } catch (error) {
     console.error("调用 'resume_download' 失败:", error);
-    throw new Error('恢复下载失败');
+    throw new Error("恢复下载失败");
   }
 }
 
-export async function deleteDownload(hash: string, deleteFiles: boolean): Promise<void> {
+export async function deleteDownload(
+  hash: string,
+  deleteFiles: boolean,
+): Promise<void> {
   try {
-    await invoke('delete_download', { hash, deleteFiles });
+    await invoke("delete_download", { hash, deleteFiles });
   } catch (error) {
     console.error("调用 'delete_download' 失败:", error);
-    throw new Error('删除下载失败');
+    throw new Error("删除下载失败");
   }
 }
-import { CalendarDay, Anime, PagedEpisode, SubjectStatus, SubjectStatusCode } from '../types/bangumi';
-import type { MikanResourcesResponse } from '@/types/gen/mikan';
-import type { SearchResponse } from '@/types/gen/bangumi';
+import {
+  CalendarDay,
+  Anime,
+  PagedEpisode,
+  SubjectStatus,
+  SubjectStatusCode,
+} from "../types/bangumi";
+import type { MikanResourcesResponse } from "@/types/gen/mikan";
+import type { SearchResponse } from "@/types/gen/bangumi";
 
 /**
  * 从后端获取番剧日历数据
@@ -60,12 +68,12 @@ import type { SearchResponse } from '@/types/gen/bangumi';
  */
 export async function getCalendar(): Promise<CalendarDay[]> {
   try {
-    const data = await invoke<CalendarDay[]>('get_calendar');
+    const data = await invoke<CalendarDay[]>("get_calendar");
     return data;
   } catch (error) {
     console.error("调用 'get_calendar' 失败:", error);
     // 向上抛出一个更通用的错误，让调用方（比如Hook）来决定如何处理UI
-    throw new Error('从后端获取日历数据失败');
+    throw new Error("从后端获取日历数据失败");
   }
 }
 
@@ -77,7 +85,7 @@ export async function getCalendar(): Promise<CalendarDay[]> {
  */
 export async function getAnimeDetail(id: number): Promise<Anime> {
   try {
-    const data = await invoke<Anime>('get_subject', { id });
+    const data = await invoke<Anime>("get_subject", { id });
     return data;
   } catch (error) {
     console.error("调用 'get_subject' 失败:", error);
@@ -98,14 +106,14 @@ export async function getEpisodes(
   subjectId: number,
   epType?: number,
   limit?: number,
-  offset?: number
+  offset?: number,
 ): Promise<PagedEpisode> {
   try {
-    const data = await invoke<PagedEpisode>('get_episodes', {
+    const data = await invoke<PagedEpisode>("get_episodes", {
       subjectId,
       epType,
       limit,
-      offset
+      offset,
     });
     return data;
   } catch (error) {
@@ -116,7 +124,7 @@ export async function getEpisodes(
 
 export async function getSubjectStatus(id: number): Promise<SubjectStatus> {
   try {
-    const data = await invoke<SubjectStatus>('get_subject_status', { id });
+    const data = await invoke<SubjectStatus>("get_subject_status", { id });
     return data;
   } catch (error) {
     console.error("调用 'get_subject_status' 失败:", error);
@@ -151,25 +159,27 @@ export async function searchSubject(
   rank?: string[],
   nsfw?: boolean,
   limit?: number,
-  offset?: number
+  offset?: number,
 ): Promise<{ total: number; limit: number; offset: number; data: Anime[] }> {
   try {
-    const data = await invoke<{ total: number; limit: number; offset: number; data: Anime[] }>(
-      'search_subject',
-      {
-        keywords,
-        subjectType,
-        sort,
-        tag,
-        airDate,
-        rating,
-        ratingCount,
-        rank,
-        nsfw,
-        limit,
-        offset,
-      }
-    );
+    const data = await invoke<{
+      total: number;
+      limit: number;
+      offset: number;
+      data: Anime[];
+    }>("search_subject", {
+      keywords,
+      subjectType,
+      sort,
+      tag,
+      airDate,
+      rating,
+      ratingCount,
+      rank,
+      nsfw,
+      limit,
+      offset,
+    });
     return data;
   } catch (error) {
     console.error("调用 'search_subject' 失败:", error);
@@ -177,9 +187,13 @@ export async function searchSubject(
   }
 }
 
-export async function getMikanResources(subjectId: number): Promise<MikanResourcesResponse> {
+export async function getMikanResources(
+  subjectId: number,
+): Promise<MikanResourcesResponse> {
   try {
-    const data = await invoke<MikanResourcesResponse>('get_mikan_resources', { subjectId });
+    const data = await invoke<MikanResourcesResponse>("get_mikan_resources", {
+      subjectId,
+    });
     return data;
   } catch (error) {
     console.error("调用 'get_mikan_resources' 失败:", error);
@@ -200,7 +214,7 @@ export async function searchSubjectQ(params: {
   limit?: number;
   offset?: number;
 }): Promise<SearchResponse> {
-  const data = await invoke<SearchResponse>('search_subject', params);
+  const data = await invoke<SearchResponse>("search_subject", params);
   return data;
 }
 
@@ -208,23 +222,28 @@ export async function addTorrentAndTrack(
   url: string,
   subjectId: number,
   episode: number | null,
-  metaJson: string | null
+  metaJson: string | null,
 ): Promise<void> {
   try {
-    await invoke('add_torrent_and_track', {
+    await invoke("add_torrent_and_track", {
       url,
       subjectId,
       episode,
-      metaJson
+      metaJson,
     });
   } catch (error) {
     console.error("调用 'add_torrent_and_track' 失败:", error);
-    throw new Error('添加下载任务失败: ' + String(error));
+    throw new Error("添加下载任务失败: " + String(error));
   }
 }
 
-export async function getSubscriptions(): Promise<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]> {
-  const data = await invoke<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]>("sub_list");
+export async function getSubscriptions(): Promise<
+  { id: number; anime: Anime; addedAt: number; notify?: boolean }[]
+> {
+  const data =
+    await invoke<
+      { id: number; anime: Anime; addedAt: number; notify?: boolean }[]
+    >("sub_list");
   return Array.isArray(data) ? data : [];
 }
 
@@ -257,7 +276,12 @@ export async function querySubscriptions(
   limit: number,
   offset: number,
 ): Promise<{ total: number; limit: number; offset: number; data: Anime[] }> {
-  const data = await invoke<{ total: number; limit: number; offset: number; data: Anime[] }>("sub_query", {
+  const data = await invoke<{
+    total: number;
+    limit: number;
+    offset: number;
+    data: Anime[];
+  }>("sub_query", {
     params: {
       keywords,
       sort,
@@ -282,6 +306,6 @@ export async function querySubscriptionsQ(params: {
   limit: number | null;
   offset: number | null;
 }): Promise<SearchResponse> {
-  const data = await invoke<SearchResponse>('sub_query', { params });
+  const data = await invoke<SearchResponse>("sub_query", { params });
   return data;
 }

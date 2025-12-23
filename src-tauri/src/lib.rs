@@ -10,11 +10,7 @@ pub fn run() {
         .setup(|app| {
             crate::infra::log::init();
             let base = crate::infra::path::app_base_dir(app.handle());
-            crate::infra::cache::init(base.clone())
-                .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
-            crate::services::subscriptions::init(base.clone())
-                .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
-            crate::services::mikan::init(base.clone())
+            crate::infra::db::init_pools(base.clone())
                 .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
             tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),

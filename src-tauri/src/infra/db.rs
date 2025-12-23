@@ -24,12 +24,10 @@ fn init_db(
     Ok(())
 }
 
-pub fn init_cache_db(base_dir: PathBuf) -> Result<(), AppError> {
-    init_db(&CACHE_DB_POOL, base_dir, "cache.sqlite")
-}
-
-pub fn init_data_db(base_dir: PathBuf) -> Result<(), AppError> {
-    init_db(&DATA_DB_POOL, base_dir, "data.sqlite")
+pub fn init_pools(base_dir: PathBuf) -> Result<(), AppError> {
+    init_db(&CACHE_DB_POOL, base_dir.clone(), "cache.sqlite")?;
+    init_db(&DATA_DB_POOL, base_dir, "data.sqlite")?;
+    Ok(())
 }
 
 pub fn cache_pool() -> Result<&'static DbPool, AppError> {

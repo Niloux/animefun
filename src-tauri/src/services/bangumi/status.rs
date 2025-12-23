@@ -38,30 +38,19 @@ fn determine_code(
     today: NaiveDate,
     window_start: NaiveDate,
 ) -> SubjectStatusCode {
-    match first_air {
-        Some(fa) if fa > today => SubjectStatusCode::PreAir,
-        Some(_) => {
-            if calendar_on_air {
-                SubjectStatusCode::Airing
-            } else if finished {
-                SubjectStatusCode::Finished
-            } else if within_window(latest_air, window_start) {
-                SubjectStatusCode::Airing
-            } else {
-                SubjectStatusCode::OnHiatus
-            }
-        }
-        None => {
-            if calendar_on_air {
-                SubjectStatusCode::Airing
-            } else if finished {
-                SubjectStatusCode::Finished
-            } else if within_window(latest_air, window_start) {
-                SubjectStatusCode::Airing
-            } else {
-                SubjectStatusCode::Unknown
-            }
-        }
+    let pre_air = first_air.map(|d| d > today).unwrap_or(false);
+    let recently_updated = within_window(latest_air, window_start);
+
+    if pre_air {
+        SubjectStatusCode::PreAir
+    } else if calendar_on_air || recently_updated {
+        SubjectStatusCode::Airing
+    } else if finished {
+        SubjectStatusCode::Finished
+    } else if first_air.is_some() {
+        SubjectStatusCode::OnHiatus
+    } else {
+        SubjectStatusCode::Unknown
     }
 }
 
@@ -156,7 +145,7 @@ mod tests {
         INIT.get_or_init(|| {
             crate::infra::log::init();
             let base = std::env::temp_dir().join("animefun-tests");
-            let _ = crate::infra::cache::init(base);
+            crate::infra::db::init_pools(base).expect("failed to init db pools");
         });
     }
 

@@ -2,14 +2,9 @@ use crate::error::AppError;
 use crate::infra::cache;
 use crate::models::mikan::{MikanResourceItem, MikanResourcesResponse};
 use crate::services::bangumi;
-use std::path::PathBuf;
 
 const MAX_CONCURRENCY: usize = 5;
 const NO_MAP_TTL_SECS: i64 = 3600;
-
-pub fn init(base_dir: PathBuf) -> Result<(), AppError> {
-    map_store::init(base_dir)
-}
 
 use crate::services::mikan::util::normalize_name;
 
