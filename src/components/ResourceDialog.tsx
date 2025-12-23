@@ -17,7 +17,7 @@ import {
 import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
-import type { Episode as BEpisode } from "../types/bangumi";
+import type { Episode } from "../types/gen/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
 import { useDownloadAction } from "../hooks/use-download-action";
 import { ResourceGroupList } from "./ResourceGroupList";
@@ -34,7 +34,7 @@ export function ResourceDialog({
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  episode: BEpisode | null;
+  episode: Episode | null;
   resources?: MikanResourcesResponse | null;
   isSingle?: boolean;
   loading?: boolean;

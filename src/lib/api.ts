@@ -11,123 +11,83 @@ import {
 import type { MikanResourcesResponse } from "@/types/gen/mikan";
 import type { SearchResponse } from "@/types/gen/bangumi";
 
-async function invokeWithErrorHandling<T>(
+/**
+ * API Wrapper to ensure consistent error handling
+ * Throws an Error with the message from the backend or a default message
+ */
+async function call<T>(
   command: string,
   args?: Record<string, unknown>,
-  errorMsg?: string,
+  defaultErrorMsg?: string
 ): Promise<T> {
   try {
     return await invoke<T>(command, args);
   } catch (error) {
-    console.error(`调用 '${command}' 失败:`, error);
-    throw new Error(errorMsg ?? `命令 '${command}' 执行失败`);
+    // Ideally, we just rethrow the error.
+    // The previous implementation logged it, which is bad practice for a library function.
+    // We wrap it in an Error object if it's not already one, or just propagate string errors.
+    const msg = typeof error === 'string' ? error : (error as Error).message || "Unknown error";
+    throw new Error(defaultErrorMsg ? `${defaultErrorMsg}: ${msg}` : msg);
   }
 }
 
-export const getTrackedDownloads = () =>
-  invokeWithErrorHandling<DownloadItem[]>(
-    "get_tracked_downloads",
-    undefined,
-    "获取下载列表失败",
+// --- Downloader ---
+
+export const getTrackedDownloads = async () =>
+  call<DownloadItem[]>("get_tracked_downloads", undefined, "Failed to get downloads");
+
+export const getLiveDownloadInfo = async () =>
+  call<TorrentInfo[]>("get_live_download_info", undefined, "Failed to get download info");
+
+export const pauseDownload = async (hash: string) =>
+  call<void>("pause_download", { hash }, "Failed to pause download");
+
+export const resumeDownload = async (hash: string) =>
+  call<void>("resume_download", { hash }, "Failed to resume download");
+
+export const deleteDownload = async (hash: string, deleteFiles: boolean) =>
+  call<void>("delete_download", { hash, deleteFiles }, "Failed to delete download");
+
+export const addTorrentAndTrack = async (
+  url: string,
+  subjectId: number,
+  episode: number | null,
+  metaJson: string | null,
+) =>
+  call<void>(
+    "add_torrent_and_track",
+    { url, subjectId, episode, metaJson },
+    "Failed to add download task"
   );
 
-export const getLiveDownloadInfo = () =>
-  invokeWithErrorHandling<TorrentInfo[]>(
-    "get_live_download_info",
-    undefined,
-    "获取下载信息失败",
-  );
+// --- Bangumi ---
 
-export const pauseDownload = (hash: string) =>
-  invokeWithErrorHandling("pause_download", { hash }, "暂停下载失败");
+export const getCalendar = async () =>
+  call<CalendarDay[]>("get_calendar", undefined, "Failed to get calendar");
 
-export const resumeDownload = (hash: string) =>
-  invokeWithErrorHandling("resume_download", { hash }, "恢复下载失败");
+export const getAnimeDetail = async (id: number) =>
+  call<Anime>("get_subject", { id }, `Failed to get anime detail (ID: ${id})`);
 
-export const deleteDownload = (hash: string, deleteFiles: boolean) =>
-  invokeWithErrorHandling(
-    "delete_download",
-    { hash, deleteFiles },
-    "删除下载失败",
-  );
-
-export const getCalendar = () =>
-  invokeWithErrorHandling<CalendarDay[]>(
-    "get_calendar",
-    undefined,
-    "从后端获取日历数据失败",
-  );
-
-export const getAnimeDetail = (id: number) =>
-  invokeWithErrorHandling<Anime>(
-    "get_subject",
-    { id },
-    `获取番剧详情失败 (ID: ${id})`,
-  );
-
-export const getEpisodes = (
+export const getEpisodes = async (
   subjectId: number,
   epType?: number,
   limit?: number,
   offset?: number,
 ) =>
-  invokeWithErrorHandling<PagedEpisode>(
+  call<PagedEpisode>(
     "get_episodes",
     { subjectId, epType, limit, offset },
-    `获取剧集列表失败 (Subject ID: ${subjectId})`,
+    `Failed to get episodes (Subject ID: ${subjectId})`
   );
 
-export const getSubjectStatus = (id: number) =>
-  invokeWithErrorHandling<SubjectStatus>(
+export const getSubjectStatus = async (id: number) =>
+  call<SubjectStatus>(
     "get_subject_status",
     { id },
-    `获取番剧状态失败 (ID: ${id})`,
+    `Failed to get subject status (ID: ${id})`
   );
 
-export const searchSubject = (
-  keywords: string,
-  subjectType?: number[],
-  sort?: string,
-  tag?: string[],
-  airDate?: string[],
-  rating?: string[],
-  ratingCount?: string[],
-  rank?: string[],
-  nsfw?: boolean,
-  limit?: number,
-  offset?: number,
-) =>
-  invokeWithErrorHandling<{
-    total: number;
-    limit: number;
-    offset: number;
-    data: Anime[];
-  }>(
-    "search_subject",
-    {
-      keywords,
-      subjectType,
-      sort,
-      tag,
-      airDate,
-      rating,
-      ratingCount,
-      rank,
-      nsfw,
-      limit,
-      offset,
-    },
-    `搜索番剧失败: ${keywords}`,
-  );
-
-export const getMikanResources = (subjectId: number) =>
-  invokeWithErrorHandling<MikanResourcesResponse>(
-    "get_mikan_resources",
-    { subjectId },
-    `获取 Mikan 资源失败 (Subject ID: ${subjectId})`,
-  );
-
-export const searchSubjectQ = (params: {
+export const searchSubject = async (params: {
   keywords: string;
   subjectType?: number[];
   sort?: string;
@@ -139,65 +99,45 @@ export const searchSubjectQ = (params: {
   nsfw?: boolean;
   limit?: number;
   offset?: number;
-}) => invoke<SearchResponse>("search_subject", params);
+}) => call<SearchResponse>("search_subject", params, `Search failed: ${params.keywords}`);
 
-export const addTorrentAndTrack = (
-  url: string,
-  subjectId: number,
-  episode: number | null,
-  metaJson: string | null,
-) =>
-  invokeWithErrorHandling(
-    "add_torrent_and_track",
-    { url, subjectId, episode, metaJson },
-    "添加下载任务失败",
+// --- Mikan ---
+
+export const getMikanResources = async (subjectId: number) =>
+  call<MikanResourcesResponse>(
+    "get_mikan_resources",
+    { subjectId },
+    `Failed to get Mikan resources (Subject ID: ${subjectId})`
   );
 
-export const getSubscriptions = () =>
-  invoke<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]>(
-    "sub_list",
-  ).then((data) => (Array.isArray(data) ? data : []));
+// --- Subscriptions ---
 
-export const getSubscriptionIds = () =>
-  invoke<number[]>("sub_list_ids").then((data) =>
-    Array.isArray(data) ? data : [],
+export const getSubscriptions = async () => {
+  const data = await call<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]>(
+    "sub_list"
   );
+  return Array.isArray(data) ? data : [];
+};
 
-export const hasSubscription = (id: number) =>
-  invoke<boolean>("sub_has", { id }).then((res) => !!res);
+export const getSubscriptionIds = async () => {
+  const data = await call<number[]>("sub_list_ids");
+  return Array.isArray(data) ? data : [];
+};
 
-export const toggleSubscription = (id: number) =>
-  invoke<boolean>("sub_toggle", { id }).then((res) => !!res);
+export const hasSubscription = async (id: number) => {
+  const res = await call<boolean>("sub_has", { id });
+  return !!res;
+};
 
-export const clearSubscriptions = () => invoke<void>("sub_clear");
+export const toggleSubscription = async (id: number) => {
+  const res = await call<boolean>("sub_toggle", { id });
+  return !!res;
+};
 
-export const querySubscriptions = (
-  keywords: string,
-  sort: string,
-  genres: string[],
-  minRating: number,
-  maxRating: number,
-  statusCode: SubjectStatusCode | null,
-  limit: number,
-  offset: number,
-) =>
-  invoke<{ total: number; limit: number; offset: number; data: Anime[] }>(
-    "sub_query",
-    {
-      params: {
-        keywords,
-        sort,
-        genres,
-        min_rating: minRating,
-        max_rating: maxRating,
-        status_code: statusCode,
-        limit,
-        offset,
-      },
-    },
-  );
+export const clearSubscriptions = async () =>
+  call<void>("sub_clear");
 
-export const querySubscriptionsQ = (params: {
+export const querySubscriptions = async (params: {
   keywords: string | null;
   sort: string | null;
   genres: string[] | null;
@@ -206,4 +146,4 @@ export const querySubscriptionsQ = (params: {
   status_code: SubjectStatusCode | null;
   limit: number | null;
   offset: number | null;
-}) => invoke<SearchResponse>("sub_query", { params });
+}) => call<SearchResponse>("sub_query", { params }, "Failed to query subscriptions");

@@ -1,5 +1,5 @@
 import { getAnimeDetail } from '../lib/api';
-import { Anime } from '../types/bangumi';
+import { Anime } from '../types/gen/bangumi';
 import { useSimpleQuery } from './use-simple-query';
 
 export const useAnimeDetail = (id: string | undefined) => {

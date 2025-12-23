@@ -1,4 +1,4 @@
-import { CalendarDay } from "../types/bangumi";
+import { CalendarDay } from "../types/gen/bangumi";
 import { getCalendar } from "../lib/api";
 import { useSimpleQuery } from "./use-simple-query";
 

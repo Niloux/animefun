@@ -1,5 +1,5 @@
 import { useSearchCore } from "./use-search-core";
-import { searchSubjectQ } from "../lib/api";
+import { searchSubject } from "../lib/api";
 
 export type SearchFilters = {
   sort: string;
@@ -31,7 +31,7 @@ export const useSearch = (options?: UseSearchOptions) => {
           `<=${filters.maxRating}`,
         ]
         : undefined;
-      const data = await searchSubjectQ({
+      const data = await searchSubject({
         keywords: debouncedKeywords,
         subjectType,
         sort: filters.sort,

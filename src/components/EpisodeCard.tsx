@@ -1,11 +1,11 @@
 import { Eye, Clock } from "lucide-react";
-import type { Episode as BEpisode } from "../types/bangumi";
+import type { Episode } from "../types/gen/bangumi";
 
 export function EpisodeCard({
   episode,
   onOpen,
 }: {
-  episode: BEpisode;
+  episode: Episode;
   onOpen: (id: number) => void;
 }) {
   return (
@@ -40,13 +40,11 @@ export function EpisodeCard({
         <div className="pt-3 mt-auto border-t border-gray-100 dark:border-slate-700 flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
             <Eye className="w-3 h-3" aria-hidden="true" />
-            <span>
-              {episode.comment_str || episode.comment.toLocaleString()}
-            </span>
+            <span>{episode.comment.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
             <Clock className="w-3 h-3" aria-hidden="true" />
-            <span>{episode.duration_display || episode.duration || "N/A"}</span>
+            <span>{episode.duration || "N/A"}</span>
           </div>
         </div>
       </div>

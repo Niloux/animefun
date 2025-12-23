@@ -143,7 +143,7 @@ const AnimeDetailPage = () => {
             <div className="flex h-5 items-center space-x-4 text-sm">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span>{anime.date || anime.air_date}</span>
+                <span>{anime.date || "未知"}</span>
               </div>
               <Separator orientation="vertical" />
               <div className="flex items-center gap-2">

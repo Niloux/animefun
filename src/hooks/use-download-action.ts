@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { addTorrentAndTrack } from "../lib/api";
-import { Episode as BEpisode } from "../types/bangumi";
+import { Episode } from "../types/gen/bangumi";
 
 interface UseDownloadActionProps {
   subjectId?: number;
   subjectCover?: string;
-  episode?: BEpisode | null;
+  episode?: Episode | null;
 }
 
 export function useDownloadAction({

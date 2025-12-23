@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { SubjectStatusCode } from "@/types/bangumi";
+import type { SubjectStatusCode } from "@/types/gen/bangumi";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import {

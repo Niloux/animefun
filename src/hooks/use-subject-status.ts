@@ -1,5 +1,5 @@
 import { getSubjectStatus } from '../lib/api';
-import type { SubjectStatus } from '../types/bangumi';
+import type { SubjectStatus } from '../types/gen/bangumi';
 import { useSimpleQuery } from './use-simple-query';
 
 export function useSubjectStatus(id: number | undefined) {

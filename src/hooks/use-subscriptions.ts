@@ -6,7 +6,7 @@ import {
   toggleSubscription,
   clearSubscriptions,
 } from '../lib/api';
-import { Anime } from '../types/bangumi';
+import { Anime } from '../types/gen/bangumi';
 
 type SubscriptionItem = {
   id: number;

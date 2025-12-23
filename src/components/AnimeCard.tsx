@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Anime, CalendarItem } from "../types/bangumi";
+import { Anime, CalendarItem } from "../types/gen/bangumi";
 import { getRatingColorClass } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../constants/routes";
@@ -76,9 +76,9 @@ export const AnimeCard = React.memo(
           <h3 className="text-sm font-semibold line-clamp-1 hover:text-primary">
             {anime.name_cn || anime.name}
           </h3>
-          {anime.air_date && (
+          {('air_date' in anime ? anime.air_date : anime.date) && (
             <div className="text-xs text-muted-foreground mt-2">
-              {anime.air_date}
+              {'air_date' in anime ? anime.air_date : anime.date}
             </div>
           )}
         </div>

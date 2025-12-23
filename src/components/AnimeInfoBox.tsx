@@ -1,8 +1,8 @@
 import React from "react";
-import { InfoBoxItem } from "../types/bangumi";
+import { InfoItem } from "../types/gen/bangumi";
 
 interface AnimeInfoBoxProps {
-  items?: InfoBoxItem[];
+  items?: InfoItem[];
 }
 
 const AnimeInfoBoxBase: React.FC<AnimeInfoBoxProps> = ({ items }) => {

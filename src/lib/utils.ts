@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Anime } from "../types/bangumi";
+import { Anime } from "../types/gen/bangumi";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -23,7 +23,7 @@ export function getWeekdayId(date: Date = new Date()): number {
 export function scoreCandidate(a: Anime): number {
   const s1 = a.rating?.score || 0;
   const s2 = a.rating?.rank ? (10000 - a.rating.rank) / 10000 : 0;
-  const d = a.air_date || a.date || "";
+  const d = a.date || "";
   const y = d.split("-")[0];
   const yr = y ? parseInt(y, 10) : 0;
   const cy = new Date().getFullYear();

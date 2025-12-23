@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { MikanResourcesResponse, MikanResourceItem } from "../types/gen/mikan";
-import type { Episode } from "../types/bangumi";
+import type { Episode } from "../types/gen/bangumi";
 
 function epNoOf(e: Episode | null): number | null {
   if (!e) return null;

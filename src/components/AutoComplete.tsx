@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Anime } from "../types/bangumi";
+import { Anime } from "../types/gen/bangumi";
 import { searchSubject, querySubscriptions } from "../lib/api";
 import { scoreCandidate, matchTier } from "../lib/utils";
 import { Star } from "lucide-react";
@@ -43,20 +43,24 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
       const trimmed = query.trim();
       const data =
         source === "subscriptions"
-          ? await querySubscriptions(trimmed, "match", [], 0, 10, null, 20, 0)
-          : await searchSubject(
-              trimmed,
-              [2],
-              "match",
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              false,
-              20,
-              0
-            );
+          ? await querySubscriptions({
+              keywords: trimmed,
+              sort: "match",
+              genres: [],
+              min_rating: 0,
+              max_rating: 10,
+              status_code: null,
+              limit: 20,
+              offset: 0,
+            })
+          : await searchSubject({
+              keywords: trimmed,
+              subjectType: [2],
+              sort: "match",
+              nsfw: false,
+              limit: 20,
+              offset: 0,
+            });
       return data;
     },
     select: (data) => {
@@ -242,7 +246,7 @@ function highlight(q: string, text: string) {
 }
 
 function getYear(a: Anime) {
-  const d = a.air_date || a.date || "";
+  const d = a.date || "";
   const y = d.split("-")[0];
   return y || "";
 }

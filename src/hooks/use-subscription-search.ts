@@ -1,5 +1,5 @@
-import { querySubscriptionsQ } from "../lib/api";
-import type { SubjectStatusCode } from "@/types/bangumi";
+import { querySubscriptions } from "../lib/api";
+import type { SubjectStatusCode } from "@/types/gen/bangumi";
 import { useSearchCore } from "./use-search-core";
 
 export type SubscriptionSearchFilters = {
@@ -30,7 +30,7 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
     },
     queryFn: async ({ debouncedKeywords, filters, limit, offset }) => {
       const normalizedGenres = [...filters.genres].sort();
-      const data = await querySubscriptionsQ({
+      const data = await querySubscriptions({
         keywords: debouncedKeywords || null,
         sort: filters.sort || null,
         genres: normalizedGenres,

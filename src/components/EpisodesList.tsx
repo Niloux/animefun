@@ -10,7 +10,6 @@ import {
 } from "./ui/dropdown-menu";
 import { useEpisodes } from "../hooks/use-episodes";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
-import type { Episode as BEpisode } from "../types/bangumi";
 import { EpisodeCard } from "./EpisodeCard";
 import { ResourceDialog } from "./ResourceDialog";
 
@@ -140,7 +139,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
               {episodes.map((episode) => (
                 <EpisodeCard
                   key={episode.id}
-                  episode={episode as BEpisode}
+                  episode={episode}
                   onOpen={(id) => {
                     setSelectedId(id);
                     setOpen(true);
@@ -175,7 +174,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
       <ResourceDialog
         open={open}
         onOpenChange={setOpen}
-        episode={selectedEpisode as BEpisode | null}
+        episode={selectedEpisode}
         resources={resources ?? null}
         isSingle={totalEpisodes === 1}
         loading={resourcesLoading}
