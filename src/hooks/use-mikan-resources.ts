@@ -1,36 +1,25 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMikanResources } from "../lib/api";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
-import { useToastOnError } from "./use-toast-on-error";
+import { useSimpleQuery } from "./use-simple-query";
 
 export function useMikanResources(subjectId: number | undefined) {
-  const queryClient = useQueryClient();
-
-  const query = useQuery<MikanResourcesResponse | null>({
+  const { data, isFetching, error, reload } = useSimpleQuery<MikanResourcesResponse | null>({
     queryKey: ["mikan", subjectId],
-    enabled: !!subjectId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    retry: 1,
     queryFn: async () => {
       if (!subjectId) return null;
-      const data = await getMikanResources(subjectId);
-      return data;
+      return getMikanResources(subjectId);
     },
+    enabled: !!subjectId,
+    retry: 1,
     placeholderData: (prev) => prev,
-  });
-
-  useToastOnError({
-    error: query.error,
-    title: "资源拉取失败",
-    onRetry: () => queryClient.refetchQueries({ queryKey: ["mikan", subjectId], exact: true }),
+    errorTitle: "资源拉取失败",
   });
 
   return {
-    data: query.data ?? null,
-    loading: query.isFetching,
-    error: query.error ? (query.error as Error).message : null,
-    refetch: query.refetch,
+    data,
+    loading: isFetching, // 原代码使用 isFetching
+    error,
+    refetch: reload,
   };
 }
 

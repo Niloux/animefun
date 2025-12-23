@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Anime } from "../types/bangumi";
+import { useQueryClient } from '@tanstack/react-query';
+import { useSimpleQuery } from './use-simple-query';
 import {
   getSubscriptions,
   getSubscriptionIds,
   toggleSubscription,
   clearSubscriptions,
-} from "../lib/api";
+} from '../lib/api';
+import { Anime } from '../types/bangumi';
 
 type SubscriptionItem = {
   id: number;
@@ -14,78 +15,60 @@ type SubscriptionItem = {
   notify?: boolean;
 };
 
-export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
-  const mode = opts?.mode ?? "full";
-  const [items, setItems] = useState<SubscriptionItem[]>([]);
-  const [idSet, setIdSet] = useState<Set<number>>(new Set());
+export function useSubscriptions(opts?: { mode?: 'full' | 'ids' }) {
+  const mode = opts?.mode ?? 'full';
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        if (mode === "full") {
-          const data = await getSubscriptions();
-          if (mounted) {
-            const arr = Array.isArray(data) ? data : [];
-            setItems(arr);
-            setIdSet(new Set(arr.map((x) => x.id)));
-          }
-        } else {
-          const data = await getSubscriptionIds();
-          if (mounted) setIdSet(new Set(Array.isArray(data) ? data : []));
-        }
-      } catch (e) {
-        console.error(e);
-        if (mounted) {
-          setItems([]);
-          setIdSet(new Set());
-        }
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [mode]);
+  // 查询完整列表
+  const fullQuery = useSimpleQuery<SubscriptionItem[]>({
+    queryKey: ['subscriptions', 'full'],
+    queryFn: getSubscriptions,
+    enabled: mode === 'full',
+  });
 
-  const isSubscribed = useCallback((id: number) => idSet.has(id), [idSet]);
+  // 查询 ID 列表
+  const idsQuery = useSimpleQuery<number[]>({
+    queryKey: ['subscriptions', 'ids'],
+    queryFn: getSubscriptionIds,
+    enabled: mode === 'ids',
+  });
 
-  const toggle = useCallback(async (anime: Anime): Promise<boolean> => {
-    const subscribed = await toggleSubscription(anime.id);
-    if (subscribed) {
-      setItems((prev) => [
-        { id: anime.id, anime, addedAt: Date.now() },
-        ...prev.filter((x) => x.id !== anime.id),
-      ]);
-      setIdSet((prev) => {
-        const next = new Set(prev);
-        next.add(anime.id);
-        return next;
-      });
-    } else {
-      setItems((prev) => prev.filter((x) => x.id !== anime.id));
-      setIdSet((prev) => {
-        const next = new Set(prev);
-        next.delete(anime.id);
-        return next;
-      });
+  // 计算当前的 ID 列表用于判断
+  const currentIds =
+    mode === 'full'
+      ? fullQuery.data?.map((x) => x.id) ?? []
+      : idsQuery.data ?? [];
+
+  const items = fullQuery.data ?? [];
+
+  const isSubscribed = (id: number) => currentIds.includes(id);
+
+  const toggle = async (anime: Anime) => {
+    try {
+      const result = await toggleSubscription(anime.id);
+      // Invalidate both queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+      return result;
+    } catch (e) {
+      console.error(e);
+      return false;
     }
-    return subscribed;
-  }, []);
+  };
 
-  const list = useMemo(() => items.map((x) => x.anime), [items]);
+  const clear = async () => {
+    try {
+      await clearSubscriptions();
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-  const clear = useCallback(() => {
-    (async () => {
-      try {
-        await clearSubscriptions();
-        setItems([]);
-        setIdSet(new Set());
-      } catch (e) {
-        console.error(e);
-      }
-    })();
-  }, []);
-
-  return { items, list, isSubscribed, toggle, clear };
+  return {
+    items,
+    list: items.map((x) => x.anime),
+    isSubscribed,
+    toggle,
+    clear,
+  };
 }
