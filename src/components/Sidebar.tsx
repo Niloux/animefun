@@ -57,7 +57,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
   // 使用Set存储展开的菜单标题，支持多菜单展开
-  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set(["资源"]));
+  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
 
   // 检查路径是否激活
   const isActive = (path: string) => location.pathname === path;
@@ -106,12 +106,8 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
     },
     {
       title: "资源",
+      url: ROUTES.RESOURCES,
       icon: Folder,
-      children: [
-        { title: "全部", url: ROUTES.RESOURCES.ALL },
-        { title: "下载中", url: ROUTES.RESOURCES.DOWNLOADING },
-        { title: "已下载", url: ROUTES.RESOURCES.DOWNLOADED },
-      ],
     },
     {
       title: "设置",

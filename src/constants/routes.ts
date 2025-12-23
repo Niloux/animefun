@@ -2,11 +2,7 @@ export const ROUTES = {
   HOME: '/home',
   SEARCH: '/search',
   SUBSCRIBE: '/subscribe',
-  RESOURCES: {
-    ALL: '/resources/all',
-    DOWNLOADING: '/resources/downloading',
-    DOWNLOADED: '/resources/downloaded',
-  },
+  RESOURCES: '/resources',
   SETTINGS: '/settings',
   ANIME_DETAIL: '/anime/:id',
 };
