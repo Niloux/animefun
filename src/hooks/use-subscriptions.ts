@@ -33,15 +33,14 @@ export function useSubscriptions(opts?: { mode?: 'full' | 'ids' }) {
     enabled: mode === 'ids',
   });
 
-  // 计算当前的 ID 列表用于判断
-  const currentIds =
-    mode === 'full'
-      ? fullQuery.data?.map((x) => x.id) ?? []
-      : idsQuery.data ?? [];
-
   const items = fullQuery.data ?? [];
 
-  const isSubscribed = (id: number) => currentIds.includes(id);
+  const isSubscribed = (id: number) => {
+    if (mode === 'full') {
+      return items.some((x) => x.id === id);
+    }
+    return idsQuery.data?.includes(id) ?? false;
+  };
 
   const toggle = async (anime: Anime) => {
     try {

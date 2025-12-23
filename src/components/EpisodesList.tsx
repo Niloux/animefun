@@ -1,15 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-  PaginationEllipsis,
-} from "./ui/pagination";
+import { PaginationBar } from "./PaginationBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { useEpisodes } from "../hooks/use-episodes";
-import { visiblePages } from "../lib/pagination";
 import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode as BEpisode } from "../types/bangumi";
 import { EpisodeCard } from "./EpisodeCard";
@@ -59,10 +50,6 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
   const handleReload = () => {
     reload();
   };
-  const pages = useMemo(
-    () => visiblePages(Math.max(1, totalPages), currentPage + 1),
-    [totalPages, currentPage]
-  );
 
   // 生成快速跳页的页码项
   const pageItems = useMemo(() => {
@@ -171,65 +158,11 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
             </div>
 
             {totalPages > 1 && (
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      className={
-                        currentPage === 0 || loading
-                          ? "pointer-events-none opacity-50"
-                          : undefined
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage > 0 && !loading) {
-                          jumpToPage(currentPage - 1);
-                        }
-                      }}
-                    />
-                  </PaginationItem>
-                  {pages.map((p, idx) =>
-                    p === "ellipsis" ? (
-                      <PaginationItem key={`e-${idx}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    ) : (
-                      <PaginationItem key={p}>
-                        <PaginationLink
-                          href="#"
-                          isActive={p === currentPage + 1}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            const target = p - 1;
-                            if (!loading && target !== currentPage) {
-                              jumpToPage(target);
-                            }
-                          }}
-                        >
-                          {p}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      className={
-                        currentPage + 1 >= totalPages || loading
-                          ? "pointer-events-none opacity-50"
-                          : undefined
-                      }
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage + 1 < totalPages && !loading) {
-                          jumpToPage(currentPage + 1);
-                        }
-                      }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <PaginationBar
+                currentPage={currentPage + 1}
+                totalPages={totalPages}
+                onPageChange={(p) => jumpToPage(p - 1)}
+              />
             )}
           </>
         ) : !loading && episodes.length === 0 ? (

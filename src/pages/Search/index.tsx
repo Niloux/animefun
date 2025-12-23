@@ -8,18 +8,10 @@ import AutoComplete from "../../components/AutoComplete";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../constants/routes";
 import { useSearch } from "../../hooks/use-search";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationPrevious,
-  PaginationNext,
-  PaginationEllipsis,
-} from "../../components/ui/pagination";
-import { visiblePages } from "@/lib/pagination";
+import { PaginationBar } from "../../components/PaginationBar";
 
 const SearchPage = () => {
+  const navigate = useNavigate();
   const {
     query,
     setQuery,
@@ -32,11 +24,17 @@ const SearchPage = () => {
     filters,
     setFilters,
     setPage,
-    submitted,
     submit,
-  } = useSearch({ subjectType: [2], limit: 20 });
+    submitted,
+  } = useSearch();
   const [isFiltersOpen, setIsFiltersOpen] = useState<boolean>(false);
-  const navigate = useNavigate();
+
+  const hasActiveFilters =
+    filters.genres.length > 0 ||
+    filters.minRating > 0 ||
+    filters.maxRating < 10;
+
+  const searchMode = submitted && (query.trim().length > 0 || hasActiveFilters);
 
   const handleFilterChange = (newFilters: typeof filters) => {
     setFilters(newFilters);
@@ -61,7 +59,6 @@ const SearchPage = () => {
   };
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
-  const getVisiblePages = (): (number | "ellipsis")[] => visiblePages(totalPages, page);
 
   return (
     <div className="px-4 py-0">
@@ -209,59 +206,13 @@ const SearchPage = () => {
         ))}
 
       {/* Pagination */}
-      {submitted && !isLoading && total > limit && (
-        <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  href="#"
-                  className={
-                    page === 1 ? "pointer-events-none opacity-50" : undefined
-                  }
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (page > 1) setPage(page - 1);
-                  }}
-                />
-              </PaginationItem>
-              {getVisiblePages().map((p, idx) =>
-                p === "ellipsis" ? (
-                  <PaginationItem key={`e-${idx}`}>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                ) : (
-                  <PaginationItem key={p}>
-                    <PaginationLink
-                      href="#"
-                      isActive={p === page}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (p !== page) setPage(p);
-                      }}
-                    >
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
-              )}
-              <PaginationItem>
-                <PaginationNext
-                  href="#"
-                  className={
-                    page >= totalPages
-                      ? "pointer-events-none opacity-50"
-                      : undefined
-                  }
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (page < totalPages) setPage(page + 1);
-                  }}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+      {searchMode && !isLoading && total > limit && (
+        <PaginationBar
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          className="mt-6"
+        />
       )}
     </div>
   );
