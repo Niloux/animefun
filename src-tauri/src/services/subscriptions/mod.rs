@@ -27,40 +27,14 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
     let exists = repo::has(id).await?;
     if exists {
         repo::remove(id).await?;
-        tauri::async_runtime::spawn(async move {
-            if let Err(e) = index_repo::index_delete(id).await {
-                tracing::error!("Failed to delete subscription index for {}: {}", id, e);
-            }
-        });
+        index_repo::index_delete(id).await?;
         Ok(false)
     } else {
         let n = notify.unwrap_or(false);
         repo::add(id, n).await?;
-        tauri::async_runtime::spawn(async move {
-            match (
-                crate::services::bangumi::fetch_subject(id).await,
-                get_status_cached(id).await,
-            ) {
-                (Ok(sj), Ok(st)) => {
-                    if let Err(e) =
-                        index_repo::index_upsert(id, crate::infra::time::now_secs(), sj, st.code)
-                            .await
-                    {
-                        tracing::error!("Failed to upsert subscription index for {}: {}", id, e);
-                    }
-                }
-                (Err(e), _) => {
-                    tracing::error!(
-                        "Failed to fetch subject for subscription index {}: {}",
-                        id,
-                        e
-                    );
-                }
-                (_, Err(e)) => {
-                    tracing::error!("Failed to get status for subscription index {}: {}", id, e);
-                }
-            }
-        });
+        let sj = crate::services::bangumi::fetch_subject(id).await?;
+        let st = get_status_cached(id).await?;
+        index_repo::index_upsert(id, crate::infra::time::now_secs(), sj, st.code).await?;
         Ok(true)
     }
 }
