@@ -114,74 +114,142 @@ pub async fn add_torrent_and_track(
     Ok(())
 }
 
-async fn ensure_metadata(t: &repo::TrackedDownload) -> (String, String, Option<String>) {
-    // 1. 尝试解析现有的 meta_json
-    if let Some(meta_str) = &t.meta_json {
-        if let Ok(meta) = serde_json::from_str::<serde_json::Value>(meta_str) {
-            let title = meta
-                .get("resource_title")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let cover = meta.get("cover_url").and_then(|v| v.as_str()).unwrap_or("");
-            if !title.is_empty() && !cover.is_empty() {
-                return (title.to_string(), cover.to_string(), None);
+async fn batch_ensure_metadata(
+    tracked: &[repo::TrackedDownload],
+) -> Vec<(String, String, Option<String>)> {
+    use std::collections::HashMap;
+
+    // 1. 尝试从本地索引批量获取
+    let subject_ids: Vec<u32> = tracked.iter().map(|t| t.subject_id).collect();
+    let index_metadata = crate::services::subscriptions::batch_get_metadata(&subject_ids)
+        .await
+        .unwrap_or_else(|_| HashMap::new());
+
+    // 2. 找出缺失的 subject_id
+    let missing_ids: Vec<u32> = tracked
+        .iter()
+        .filter(|t| {
+            !index_metadata.contains_key(&t.subject_id)
+                || t.meta_json.as_ref().map_or(true, |meta| {
+                    let parsed = serde_json::from_str::<serde_json::Value>(meta).ok();
+                    parsed.and_then(|v| {
+                        let title = v.get("resource_title").and_then(|s| s.as_str());
+                        let cover = v.get("cover_url").and_then(|s| s.as_str());
+                        Some(title.unwrap_or("").is_empty() || cover.unwrap_or("").is_empty())
+                    }).unwrap_or(true)
+                })
+        })
+        .map(|t| t.subject_id)
+        .collect();
+
+    // 3. 批量从 API 获取缺失的元数据
+    let mut fetched_metadata: HashMap<u32, (String, String, String)> = HashMap::new();
+    if !missing_ids.is_empty() {
+        for subject_id in &missing_ids {
+            if let Ok(subject) = crate::services::bangumi::api::fetch_subject(*subject_id).await {
+                let title = if subject.name_cn.is_empty() {
+                    subject.name.clone()
+                } else {
+                    subject.name_cn.clone()
+                };
+                let cover = subject.images.large.clone();
+                let new_meta = serde_json::json!({
+                    "resource_title": title,
+                    "cover_url": cover
+                })
+                .to_string();
+
+                fetched_metadata.insert(*subject_id, (title, cover, new_meta));
             }
         }
     }
 
-    // 2. 降级方案：从 API 获取
-    // FIXME: 如果多个项目缺少元数据，这将导致 N+1 API 调用。
-    // 应该由后台工作线程处理或在摄入时批量处理。
-    // 优先级较低，暂不处理。
-    if let Ok(subject) = crate::services::bangumi::api::fetch_subject(t.subject_id).await {
-        let title = if subject.name_cn.is_empty() {
-            subject.name
-        } else {
-            subject.name_cn
-        };
-        let cover = subject.images.large;
-
-        let new_meta = serde_json::json!({
-            "resource_title": title,
-            "cover_url": cover
-        })
-        .to_string();
-
-        // 副作用：更新数据库
-        let _ = repo::update_meta(t.hash.clone(), new_meta.clone()).await;
-
-        return (title, cover, Some(new_meta));
+    // 4. 批量更新数据库
+    for (subject_id, (_, _, meta)) in &fetched_metadata {
+        for t in tracked {
+            if t.subject_id == *subject_id && t.meta_json.as_ref().map_or(true, |m| {
+                let parsed = serde_json::from_str::<serde_json::Value>(m).ok();
+                parsed.and_then(|v| {
+                    let title = v.get("resource_title").and_then(|s| s.as_str());
+                    let cover = v.get("cover_url").and_then(|s| s.as_str());
+                    Some(title.unwrap_or("").is_empty() || cover.unwrap_or("").is_empty())
+                }).unwrap_or(true)
+            }) {
+                let _ = repo::update_meta(t.hash.clone(), meta.clone()).await;
+            }
+        }
     }
 
-    ("Unknown".to_string(), String::new(), None)
+    // 5. 组装结果
+    tracked
+        .iter()
+        .map(|t| {
+            // 先检查 meta_json 是否已有效
+            if let Some(meta_str) = &t.meta_json {
+                if let Ok(meta) = serde_json::from_str::<serde_json::Value>(meta_str) {
+                    let title = meta
+                        .get("resource_title")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    let cover = meta.get("cover_url").and_then(|v| v.as_str()).unwrap_or("");
+                    if !title.is_empty() && !cover.is_empty() {
+                        return (title.to_string(), cover.to_string(), Some(meta_str.clone()));
+                    }
+                }
+            }
+
+            // 从索引获取
+            if let Some(meta) = index_metadata.get(&t.subject_id) {
+                let title = if meta.name_cn.is_empty() {
+                    meta.name.clone()
+                } else {
+                    meta.name_cn.clone()
+                };
+                if !title.is_empty() && !meta.cover_url.is_empty() {
+                    let new_meta = serde_json::json!({
+                        "resource_title": title,
+                        "cover_url": meta.cover_url
+                    })
+                    .to_string();
+                    return (title, meta.cover_url.clone(), Some(new_meta));
+                }
+            }
+
+            // 从 API 获取
+            if let Some((title, cover, meta)) = fetched_metadata.get(&t.subject_id) {
+                return (title.clone(), cover.clone(), Some(meta.clone()));
+            }
+
+            ("Unknown".to_string(), String::new(), None)
+        })
+        .collect()
 }
 
 #[tauri::command]
 pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
     let tracked = repo::list().await?;
 
-    // 并行处理所有项目
-    let tasks: Vec<_> = tracked
+    // 批量获取元数据
+    let metadata_list = batch_ensure_metadata(&tracked).await;
+
+    let items = tracked
         .into_iter()
-        .map(|t| async move {
-            let (title, cover, new_meta) = ensure_metadata(&t).await;
-            DownloadItem {
-                hash: t.hash,
-                subject_id: t.subject_id,
-                episode: t.episode,
-                status: t.status,
-                progress: 0.0,
-                dlspeed: 0,
-                eta: 0,
-                title,
-                cover,
-                meta_json: new_meta.or(t.meta_json),
-            }
+        .zip(metadata_list.into_iter())
+        .map(|(t, (title, cover, new_meta))| DownloadItem {
+            hash: t.hash,
+            subject_id: t.subject_id,
+            episode: t.episode,
+            status: t.status,
+            progress: 0.0,
+            dlspeed: 0,
+            eta: 0,
+            title,
+            cover,
+            meta_json: new_meta.or(t.meta_json),
         })
         .collect();
 
-    let result = futures::future::join_all(tasks).await;
-    Ok(result)
+    Ok(items)
 }
 
 #[tauri::command]

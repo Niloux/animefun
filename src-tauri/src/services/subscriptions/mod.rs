@@ -10,6 +10,8 @@ pub use worker::spawn_refresh_worker;
 use crate::error::AppError;
 use crate::models::bangumi::SubjectResponse;
 
+pub use index_repo::{batch_get_metadata, SubjectMetadata};
+
 pub async fn list_ids() -> Result<Vec<u32>, AppError> {
     repo::list_ids().await
 }

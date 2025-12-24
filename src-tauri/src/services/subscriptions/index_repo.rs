@@ -3,6 +3,7 @@ use rusqlite::{params, Connection};
 use crate::error::AppError;
 use crate::infra::time::now_secs;
 use crate::models::bangumi::{Images, SubjectRating, SubjectResponse, SubjectStatusCode};
+use std::collections::HashMap;
 
 fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
     conn.execute(
@@ -393,4 +394,56 @@ pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppEr
         })
         .await??;
     Ok(rows)
+}
+
+pub struct SubjectMetadata {
+    pub subject_id: u32,
+    pub name: String,
+    pub name_cn: String,
+    pub cover_url: String,
+}
+
+pub async fn batch_get_metadata(subject_ids: &[u32]) -> Result<HashMap<u32, SubjectMetadata>, AppError> {
+    if subject_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let pool = crate::infra::db::data_pool()?;
+    let conn = pool.get().await?;
+
+    let ids: Vec<i64> = subject_ids.iter().map(|&id| id as i64).collect();
+    let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+
+    let metadata = conn.interact(move |conn| -> Result<HashMap<u32, SubjectMetadata>, rusqlite::Error> {
+        ensure_table(conn)?;
+        let mut stmt = conn.prepare(&format!(
+            "SELECT subject_id, name, name_cn, cover_url FROM subjects_index WHERE subject_id IN ({})",
+            placeholders
+        ))?;
+
+        let mut rows = stmt.query(rusqlite::params_from_iter(ids.iter()))?;
+        let mut metadata: HashMap<u32, SubjectMetadata> = HashMap::new();
+
+        while let Some(row) = rows.next()? {
+            let id: u32 = row.get::<_, i64>(0)? as u32;
+            let name: String = row.get(1)?;
+            let name_cn: String = row.get(2)?;
+            let cover_url: String = row.get(3)?;
+
+            metadata.insert(
+                id,
+                SubjectMetadata {
+                    subject_id: id,
+                    name,
+                    name_cn,
+                    cover_url,
+                },
+            );
+        }
+
+        Ok(metadata)
+    })
+    .await??;
+
+    Ok(metadata)
 }
