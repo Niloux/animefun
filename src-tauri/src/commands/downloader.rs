@@ -2,6 +2,7 @@ use crate::error::AppError;
 use crate::error::CommandResult;
 use crate::infra::http::{wait_api_limit, CLIENT};
 use crate::services::downloader::{client, config, repo};
+use futures::StreamExt;
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -46,6 +47,8 @@ pub async fn add_torrent_and_track(
     episode: Option<u32>,
     meta_json: Option<String>,
 ) -> CommandResult<()> {
+    const MAX_TORRENT_SIZE: usize = 20 * 1024 * 1024;
+
     // 1. 准备哈希和数据
     let (hash, torrent_data) = if url.starts_with("magnet:") {
         let hash = client::parse_magnet_btih(&url)
@@ -56,22 +59,31 @@ pub async fn add_torrent_and_track(
         let resp = CLIENT.get(&url).send().await?;
         resp.error_for_status_ref()?;
 
-        // 安全检查：防止下载大文件占用过多内存
+        // 先检查 Content-Length（如果存在）
         if let Some(len) = resp.content_length() {
-            if len > 20 * 1024 * 1024 {
-                // 限制 .torrent 文件大小为 20MB
+            if len > MAX_TORRENT_SIZE as u64 {
                 return Err(AppError::Any("torrent_file_too_large".into()));
             }
         }
 
-        let bytes = resp.bytes().await?.to_vec();
-        // 下载后再次检查大小
-        if bytes.len() > 20 * 1024 * 1024 {
-            return Err(AppError::Any("torrent_file_too_large".into()));
+        // 流式读取，限制最大大小
+        let mut bytes_stream = resp.bytes_stream();
+        let mut buffer = Vec::new();
+        let mut total_size = 0usize;
+
+        while let Some(chunk_result) = bytes_stream.next().await {
+            let chunk = chunk_result?;
+            total_size += chunk.len();
+
+            if total_size > MAX_TORRENT_SIZE {
+                return Err(AppError::Any("torrent_file_too_large".into()));
+            }
+
+            buffer.extend_from_slice(&chunk);
         }
 
-        let hash = client::calculate_info_hash(&bytes)?;
-        (hash, Some(bytes))
+        let hash = client::calculate_info_hash(&buffer)?;
+        (hash, Some(buffer))
     };
 
     // 2. 先记录到数据库

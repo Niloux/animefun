@@ -28,6 +28,7 @@ reqwest = { version = "0.12", features = [
     "gzip",
     "deflate",
     "multipart",
+    "stream",
 ] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 thiserror = "2.0.17"
