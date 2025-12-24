@@ -13,7 +13,6 @@ use ts_rs::TS;
 struct SessionState {
     cookie: String,
     config_hash: u64,
-    is_v5: bool,
 }
 
 static SESSION: Lazy<Mutex<Option<SessionState>>> = Lazy::new(|| Mutex::new(None));
@@ -21,7 +20,6 @@ static SESSION: Lazy<Mutex<Option<SessionState>>> = Lazy::new(|| Mutex::new(None
 pub struct QbitClient {
     base_url: String,
     cookie: Option<String>,
-    is_v5: Option<bool>,
     config: DownloaderConfig,
 }
 
@@ -64,7 +62,6 @@ impl QbitClient {
         Self {
             base_url: config.api_url.clone().trim_end_matches('/').to_string(),
             cookie: None,
-            is_v5: None,
             config,
         }
     }
@@ -78,7 +75,6 @@ impl QbitClient {
             if let Some(s) = &*session {
                 if s.config_hash == current_hash {
                     self.cookie = Some(s.cookie.clone());
-                    self.is_v5 = Some(s.is_v5);
                     return Ok(());
                 }
             }
@@ -107,47 +103,16 @@ impl QbitClient {
             }
         }
 
-        // 3. 确定版本（并缓存）
-        let is_v5 = self.check_version_is_v5().await?;
-        self.is_v5 = Some(is_v5);
-
-        // 4. 更新全局会话
+        // 3. 更新全局会话
         if !cookie_val.is_empty() {
             let mut session = SESSION.lock().await;
             *session = Some(SessionState {
                 cookie: cookie_val,
                 config_hash: current_hash,
-                is_v5,
             });
         }
 
         Ok(())
-    }
-
-    // 登录流程辅助函数
-    async fn check_version_is_v5(&self) -> Result<bool, AppError> {
-        let url = format!("{}/api/v2/app/version", self.base_url);
-        let resp = crate::infra::http::CLIENT.get(&url).send().await?;
-        resp.error_for_status_ref()?;
-        let v = resp.text().await?;
-        let ver = v.trim().trim_start_matches('v');
-        let major = ver
-            .split('.')
-            .next()
-            .unwrap_or("0")
-            .parse::<u32>()
-            .unwrap_or(0);
-        Ok(major >= 5)
-    }
-
-    async fn version_is_v5(&mut self) -> Result<bool, AppError> {
-        if let Some(v) = self.is_v5 {
-            return Ok(v);
-        }
-        // 如果未设置则回退（如果已调用登录不应发生）
-        let isv5 = self.check_version_is_v5().await?;
-        self.is_v5 = Some(isv5);
-        Ok(isv5)
     }
 
     fn request(&self, method: reqwest::Method, path: &str) -> reqwest::RequestBuilder {
@@ -216,35 +181,21 @@ impl QbitClient {
     }
 
     pub async fn pause(&mut self, hash: &str) -> Result<(), AppError> {
-        let is_v5 = self.version_is_v5().await?;
-        let resp = if is_v5 {
-            self.request(reqwest::Method::POST, "/api/v2/torrents/stop")
-                .form(&[("hashes", hash)])
-                .send()
-                .await?
-        } else {
-            self.request(reqwest::Method::GET, "/api/v2/torrents/pause")
-                .query(&[("hashes", hash)])
-                .send()
-                .await?
-        };
+        let resp = self
+            .request(reqwest::Method::POST, "/api/v2/torrents/stop")
+            .form(&[("hashes", hash)])
+            .send()
+            .await?;
         resp.error_for_status_ref()?;
         Ok(())
     }
 
     pub async fn resume(&mut self, hash: &str) -> Result<(), AppError> {
-        let is_v5 = self.version_is_v5().await?;
-        let resp = if is_v5 {
-            self.request(reqwest::Method::POST, "/api/v2/torrents/start")
-                .form(&[("hashes", hash)])
-                .send()
-                .await?
-        } else {
-            self.request(reqwest::Method::GET, "/api/v2/torrents/resume")
-                .query(&[("hashes", hash)])
-                .send()
-                .await?
-        };
+        let resp = self
+            .request(reqwest::Method::POST, "/api/v2/torrents/start")
+            .form(&[("hashes", hash)])
+            .send()
+            .await?;
         resp.error_for_status_ref()?;
         Ok(())
     }
