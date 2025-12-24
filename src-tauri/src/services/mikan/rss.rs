@@ -9,29 +9,42 @@ use reqwest::header::{ETAG, LAST_MODIFIED};
 use reqwest::StatusCode;
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::{watch, Mutex};
 use tracing::{info, warn};
 
 const RSS_TTL_SECS: i64 = 6 * 3600;
+const TASK_TTL_SECS: u64 = 300;
 
-static TASKS: Lazy<Mutex<HashMap<u32, watch::Sender<Option<String>>>>> =
+struct FetchTask {
+    tx: watch::Sender<Option<String>>,
+    expires_at: Instant,
+}
+
+static TASKS: Lazy<Mutex<HashMap<u32, Arc<FetchTask>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 enum Claim {
-    Owner(watch::Sender<Option<String>>),
+    Owner(Arc<FetchTask>),
     Subscriber(watch::Receiver<Option<String>>),
 }
 
 async fn claim_or_subscribe(id: u32) -> Claim {
     let mut m = TASKS.lock().await;
-    if let Some(tx) = m.get(&id) {
-        Claim::Subscriber(tx.subscribe())
-    } else {
-        let (tx, _rx) = watch::channel(None);
-        m.insert(id, tx.clone());
-        Claim::Owner(tx)
+    if let Some(task) = m.get(&id).cloned() {
+        if task.expires_at > Instant::now() {
+            return Claim::Subscriber(task.tx.subscribe());
+        }
     }
+
+    let (tx, _rx) = watch::channel(None);
+    let task = Arc::new(FetchTask {
+        tx,
+        expires_at: Instant::now() + Duration::from_secs(TASK_TTL_SECS),
+    });
+    m.insert(id, task.clone());
+    Claim::Owner(task)
 }
 
 fn extract_meta(headers: &reqwest::header::HeaderMap) -> (Option<String>, Option<String>) {
@@ -83,7 +96,7 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
                 break String::new();
             }
         },
-        Claim::Owner(tx) => {
+        Claim::Owner(task) => {
             let net_start = Instant::now();
             let mut out = String::new();
             match req.send().await {
@@ -114,12 +127,25 @@ async fn get_xml_from_cache_or_net(mid: u32) -> String {
                     warn!(error = %e, bangumi_id = mid, "mikan rss request error");
                 }
             }
-            let _ = tx.send(Some(out.clone()));
-            let mut m = TASKS.lock().await;
-            m.remove(&mid);
+            let _ = task.tx.send(Some(out.clone()));
             out
         }
     }
+}
+
+async fn cleanup_expired_tasks() {
+    let mut m = TASKS.lock().await;
+    let now = Instant::now();
+    m.retain(|_, task| task.expires_at > now);
+}
+
+pub async fn spawn_cleanup_worker() {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(60)).await;
+            cleanup_expired_tasks().await;
+        }
+    });
 }
 
 fn parse_rss_channel(mid: u32, xml: &str) -> Option<rss::Channel> {

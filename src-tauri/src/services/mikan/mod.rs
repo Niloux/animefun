@@ -64,6 +64,7 @@ pub async fn get_mikan_resources(subject_id: u32) -> Result<MikanResourcesRespon
 }
 
 pub use preheat::spawn_preheat_worker;
+pub use rss::spawn_cleanup_worker;
 
 pub mod preheat;
 pub mod resolver;
