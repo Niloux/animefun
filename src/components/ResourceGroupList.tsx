@@ -5,16 +5,22 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { Download } from "lucide-react";
 import type { MikanResourceItem } from "../types/gen/mikan";
 import { formatBytes } from "../lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface ResourceGroupListProps {
   groups: { group: string; items: MikanResourceItem[] }[];
   onDownload: (url: string, title: string) => void;
+  isConnected?: boolean;
+  isCheckingConnection?: boolean;
 }
 
 export const ResourceGroupList: FC<ResourceGroupListProps> = ({
   groups,
   onDownload,
+  isConnected = true,
+  isCheckingConnection = false,
 }) => {
+  const navigate = useNavigate();
   return (
     <div className="space-y-4">
       {groups.map((g) => (
@@ -67,10 +73,21 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                         className="cursor-pointer"
                         variant="outline"
                         size="sm"
-                        onClick={() => onDownload(it.torrent_url!, it.title)}
+                        disabled={!isConnected || isCheckingConnection}
+                        onClick={() => {
+                          if (!isConnected) {
+                            navigate("/settings");
+                          } else {
+                            onDownload(it.torrent_url!, it.title);
+                          }
+                        }}
                       >
                         <Download className="w-4 h-4 mr-1" />
-                        种子
+                        {isCheckingConnection
+                          ? "检查中..."
+                          : isConnected
+                            ? "种子"
+                            : "未连接"}
                       </Button>
                     )}
                     {it.magnet && (
@@ -78,10 +95,21 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                         className="cursor-pointer"
                         variant="outline"
                         size="sm"
-                        onClick={() => onDownload(it.magnet!, it.title)}
+                        disabled={!isConnected || isCheckingConnection}
+                        onClick={() => {
+                          if (!isConnected) {
+                            navigate("/settings");
+                          } else {
+                            onDownload(it.magnet!, it.title);
+                          }
+                        }}
                       >
                         <Download className="w-4 h-4 mr-1" />
-                        磁力
+                        {isCheckingConnection
+                          ? "检查中..."
+                          : isConnected
+                            ? "磁力"
+                            : "未连接"}
                       </Button>
                     )}
                   </div>

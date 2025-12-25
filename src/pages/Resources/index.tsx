@@ -45,27 +45,13 @@ const ResourcesPage: FC = () => {
     }
   };
 
-  const isCompleted = (item: DownloadItem) => {
-    return (
-      item.progress >= 100 ||
-      [
-        "uploading",
-        "stalledUP",
-        "completed",
-        "pausedUP",
-        "queuedUP",
-        "checkingUP",
-      ].includes(item.status)
-    );
-  };
-
   const downloadingItems = useMemo(
-    () => items.filter((item) => !isCompleted(item)),
-    [items]
+    () => items.filter((item) => item.progress < 100),
+    [items],
   );
   const downloadedItems = useMemo(
-    () => items.filter((item) => isCompleted(item)),
-    [items]
+    () => items.filter((item) => item.progress >= 100),
+    [items],
   );
 
   const renderList = (list: DownloadItem[], emptyMsg: string) => {

@@ -20,6 +20,7 @@ import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode } from "../types/gen/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
 import { useDownloadAction } from "../hooks/use-download-action";
+import { useDownloaderConnection } from "../hooks/use-downloader-connection";
 import { ResourceGroupList } from "./ResourceGroupList";
 
 export function ResourceDialog({
@@ -44,7 +45,7 @@ export function ResourceDialog({
   const { matched, mapped } = useEpisodeResources(
     resources ?? null,
     episode ?? null,
-    isSingle
+    isSingle,
   );
 
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
@@ -56,6 +57,9 @@ export function ResourceDialog({
     subjectCover,
     episode,
   });
+
+  const { isConnected, isChecking: isCheckingConnection } =
+    useDownloaderConnection();
 
   const groupOptions = useMemo(() => {
     const s = new Set<string>();
@@ -192,6 +196,8 @@ export function ResourceDialog({
                 <ResourceGroupList
                   groups={filteredGrouped}
                   onDownload={handleDownload}
+                  isConnected={isConnected}
+                  isCheckingConnection={isCheckingConnection}
                 />
               </ScrollArea>
             ) : resources && !mapped ? (

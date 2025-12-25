@@ -62,6 +62,7 @@ export function useDownloadList() {
     } catch (e) {
       console.error("Connection check failed:", e);
       setIsConnectionError(true);
+      setItems([]);
     } finally {
       setIsCheckingConnection(false);
       setLoading(false);

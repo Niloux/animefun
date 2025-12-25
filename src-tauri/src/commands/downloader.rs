@@ -12,12 +12,12 @@ pub struct DownloadItem {
     pub hash: String,
     pub subject_id: u32,
     pub episode: Option<u32>,
-    pub status: String,
     pub progress: f64,
     pub dlspeed: i64,
     pub eta: i64,
     pub title: String,
     pub cover: String,
+    pub status: String,
     #[ts(optional)]
     pub meta_json: Option<String>,
 }
@@ -91,8 +91,6 @@ pub async fn add_torrent_and_track(
         &hash,
         subject_id,
         episode,
-        "downloading",
-        None,
         meta_json.as_deref(),
     )
     .await?;
@@ -250,12 +248,12 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
             hash: t.hash,
             subject_id: t.subject_id,
             episode: t.episode,
-            status: t.status,
             progress: 0.0,
             dlspeed: 0,
             eta: 0,
             title,
             cover,
+            status: String::new(),
             meta_json: new_meta.or(t.meta_json),
         })
         .collect();
@@ -265,13 +263,14 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
 
 #[tauri::command]
 pub async fn get_live_download_info() -> CommandResult<Vec<client::TorrentInfo>> {
+    let qb = get_client().await?;
+
     let tracked = repo::list().await?;
     if tracked.is_empty() {
         return Ok(vec![]);
     }
     let hashes: Vec<String> = tracked.iter().map(|t| t.hash.clone()).collect();
 
-    let qb = get_client().await?;
     let infos = qb.get_torrents_info(hashes).await?;
     Ok(infos)
 }
@@ -280,7 +279,6 @@ pub async fn get_live_download_info() -> CommandResult<Vec<client::TorrentInfo>>
 pub async fn pause_download(hash: String) -> CommandResult<()> {
     let mut qb = get_client().await?;
     qb.pause(&hash).await?;
-    repo::update_status(hash, "paused".to_string(), None).await?;
     Ok(())
 }
 
@@ -288,7 +286,6 @@ pub async fn pause_download(hash: String) -> CommandResult<()> {
 pub async fn resume_download(hash: String) -> CommandResult<()> {
     let mut qb = get_client().await?;
     qb.resume(&hash).await?;
-    repo::update_status(hash, "downloading".to_string(), None).await?;
     Ok(())
 }
 
