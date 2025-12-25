@@ -198,23 +198,56 @@ async fn batch_ensure_metadata(
 pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
     let tracked = repo::list().await?;
 
+    if tracked.is_empty() {
+        return Ok(vec![]);
+    }
+
     // 批量获取元数据
     let metadata_list = batch_ensure_metadata(&tracked).await;
 
+    // 获取实时状态
+    let live_infos = match get_client().await {
+        Ok(qb) => {
+            let hashes: Vec<String> = tracked.iter().map(|t| t.hash.clone()).collect();
+            qb.get_torrents_info(hashes).await.unwrap_or_default()
+        }
+        Err(_) => vec![],
+    };
+
+    // 合并数据（与 monitor 中的 merge_items 逻辑一致）
     let items = tracked
         .into_iter()
         .zip(metadata_list.into_iter())
-        .map(|(t, (title, cover, new_meta))| DownloadItem {
-            hash: t.hash,
-            subject_id: t.subject_id,
-            episode: t.episode,
-            status: String::new(),
-            progress: 0.0,
-            dlspeed: 0,
-            eta: 0,
-            title,
-            cover,
-            meta_json: new_meta.or(t.meta_json),
+        .map(|(t, (title, cover, new_meta))| {
+            let live = live_infos.iter().find(|l| l.hash == t.hash);
+
+            if let Some(l) = live {
+                DownloadItem {
+                    hash: t.hash,
+                    subject_id: t.subject_id,
+                    episode: t.episode,
+                    status: l.state.clone(),
+                    progress: l.progress * 100.0,
+                    dlspeed: l.dlspeed,
+                    eta: l.eta,
+                    title,
+                    cover,
+                    meta_json: new_meta.or(t.meta_json),
+                }
+            } else {
+                DownloadItem {
+                    hash: t.hash,
+                    subject_id: t.subject_id,
+                    episode: t.episode,
+                    status: "stopped".to_string(),
+                    progress: 0.0,
+                    dlspeed: 0,
+                    eta: 0,
+                    title,
+                    cover,
+                    meta_json: new_meta.or(t.meta_json),
+                }
+            }
         })
         .collect();
 
