@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { DownloadItem } from "@/types/gen/downloader";
 import {
@@ -16,47 +16,63 @@ export function useDownloadList() {
   const [isConnected, setIsConnected] = useState(false);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 
-  useEffect(() => {
-    let unlisten: UnlistenFn | null = null;
+  const refresh = useCallback(async () => {
+    try {
+      setIsCheckingConnection(true);
+      const initial = await getTrackedDownloads();
+      setItems(initial);
 
-    const init = async () => {
+      // Check connection
       try {
-        setIsCheckingConnection(true);
-        const initial = await getTrackedDownloads();
-        setItems(initial);
+        await getLiveDownloadInfo();
+        setIsConnected(true);
+      } catch (e) {
+        console.warn("Downloader connection check failed:", e);
+        setIsConnected(false);
+      }
+    } catch (e) {
+      console.error("Refresh failed:", e);
+    } finally {
+      setLoading(false);
+      setIsCheckingConnection(false);
+    }
+  }, []);
 
-        // Check connection
-        try {
-          await getLiveDownloadInfo();
-          setIsConnected(true);
-        } catch (e) {
-          console.warn("Downloader connection check failed:", e);
-          setIsConnected(false);
-        }
+  useEffect(() => {
+    let unlistenStatus: UnlistenFn | null = null;
+    let unlistenConnection: UnlistenFn | null = null;
 
-        setLoading(false);
-        setIsCheckingConnection(false);
+    const initListener = async () => {
+      refresh();
 
-        unlisten = await listen<DownloadItem[]>(
+      try {
+        unlistenStatus = await listen<DownloadItem[]>(
           "download-status-updated",
           (event) => {
             setItems(event.payload);
-            setIsConnected(true);
+            // 这里不再盲目设置 isConnected(true)
+            // 连接状态由 "downloader-connection-state" 事件或 refresh 中的检测决定
+          },
+        );
+
+        unlistenConnection = await listen<boolean>(
+          "downloader-connection-state",
+          (event) => {
+            setIsConnected(event.payload);
           },
         );
       } catch (e) {
-        console.error("Init failed:", e);
-        setLoading(false);
-        setIsCheckingConnection(false);
+        console.error("Listener init failed:", e);
       }
     };
 
-    init();
+    initListener();
 
     return () => {
-      unlisten?.();
+      unlistenStatus?.();
+      unlistenConnection?.();
     };
-  }, []);
+  }, [refresh]);
 
   const handlePause = async (hash: string) => {
     try {
@@ -93,6 +109,7 @@ export function useDownloadList() {
     loading,
     isConnected,
     isCheckingConnection,
+    refresh,
     handlePause,
     handleResume,
     handleDelete,

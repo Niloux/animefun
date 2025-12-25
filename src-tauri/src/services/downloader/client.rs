@@ -66,6 +66,16 @@ impl QbitClient {
         }
     }
 
+    pub async fn get_app_version(&self) -> Result<String, AppError> {
+        let resp = self
+            .request(reqwest::Method::GET, "/api/v2/app/version")
+            .send()
+            .await?;
+        resp.error_for_status_ref()?;
+        let txt = resp.text().await?;
+        Ok(txt)
+    }
+
     pub async fn login(&mut self) -> Result<(), AppError> {
         let current_hash = calculate_config_hash(&self.config);
 

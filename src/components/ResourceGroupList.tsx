@@ -2,7 +2,7 @@ import { FC } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download } from "lucide-react";
+import { Download, WifiOff } from "lucide-react";
 import type { MikanResourceItem } from "../types/gen/mikan";
 import { formatBytes } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -71,9 +71,9 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                     {it.torrent_url && (
                       <Button
                         className="cursor-pointer"
-                        variant="outline"
+                        variant={isConnected ? "outline" : "secondary"}
                         size="sm"
-                        disabled={!isConnected || isCheckingConnection}
+                        disabled={isCheckingConnection}
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -82,20 +82,24 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           }
                         }}
                       >
-                        <Download className="w-4 h-4 mr-1" />
+                        {isConnected ? (
+                          <Download className="w-4 h-4 mr-1" />
+                        ) : (
+                          <WifiOff className="w-4 h-4 mr-1 opacity-70" />
+                        )}
                         {isCheckingConnection
                           ? "检查中..."
                           : isConnected
                             ? "种子"
-                            : "未连接"}
+                            : "去配置"}
                       </Button>
                     )}
                     {it.magnet && (
                       <Button
                         className="cursor-pointer"
-                        variant="outline"
+                        variant={isConnected ? "outline" : "secondary"}
                         size="sm"
-                        disabled={!isConnected || isCheckingConnection}
+                        disabled={isCheckingConnection}
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -104,12 +108,16 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           }
                         }}
                       >
-                        <Download className="w-4 h-4 mr-1" />
+                        {isConnected ? (
+                          <Download className="w-4 h-4 mr-1" />
+                        ) : (
+                          <WifiOff className="w-4 h-4 mr-1 opacity-70" />
+                        )}
                         {isCheckingConnection
                           ? "检查中..."
                           : isConnected
                             ? "磁力"
-                            : "未连接"}
+                            : "去配置"}
                       </Button>
                     )}
                   </div>

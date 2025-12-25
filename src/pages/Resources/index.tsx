@@ -1,10 +1,13 @@
 import { FC, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DownloadItem } from "@/types/gen/downloader";
 import {
   HardDriveDownload,
   Download,
   CheckCircle2,
   ListFilter,
+  WifiOff,
+  Loader2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -19,12 +22,22 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useDownloadList } from "@/hooks/use-download-list";
 import { DownloadCard } from "../../components/DownloadCard";
 
 const ResourcesPage: FC = () => {
-  const { items, loading, handlePause, handleResume, handleDelete } =
-    useDownloadList();
+  const navigate = useNavigate();
+  const {
+    items,
+    loading,
+    isConnected,
+    isCheckingConnection,
+    refresh,
+    handlePause,
+    handleResume,
+    handleDelete,
+  } = useDownloadList();
   const [itemToDelete, setItemToDelete] = useState<DownloadItem | null>(null);
 
   const confirmDelete = async () => {
@@ -37,11 +50,11 @@ const ResourcesPage: FC = () => {
 
   const downloadingItems = useMemo(
     () => items.filter((item) => item.progress < 100),
-    [items],
+    [items]
   );
   const downloadedItems = useMemo(
     () => items.filter((item) => item.progress >= 100),
-    [items],
+    [items]
   );
 
   // 计算总下载速度
@@ -57,10 +70,45 @@ const ResourcesPage: FC = () => {
     return parseFloat((speed / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  if (isCheckingConnection && items.length === 0) {
+    return (
+      <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="size-8 animate-spin text-primary/50" />
+        <span className="text-sm font-medium">正在连接下载服务...</span>
+      </div>
+    );
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-6 text-center animate-in fade-in-50 duration-500">
+        <div className="rounded-full bg-muted/50 p-8">
+          <WifiOff className="size-12 text-muted-foreground/50" />
+        </div>
+        <div className="space-y-2 max-w-sm">
+          <h3 className="text-xl font-semibold tracking-tight">
+            无法连接到下载服务
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            请检查 qBittorrent 是否已启动且配置正确。
+            <br />
+            需要保持后台服务运行以管理下载任务。
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => refresh()} className="gap-2">
+            重试连接
+          </Button>
+          <Button onClick={() => navigate("/settings")}>前往配置</Button>
+        </div>
+      </div>
+    );
+  }
+
   const renderList = (
     list: DownloadItem[],
     emptyMsg: string,
-    icon?: React.ReactNode,
+    icon?: React.ReactNode
   ) => {
     if (loading && items.length === 0) {
       return (
@@ -153,14 +201,14 @@ const ResourcesPage: FC = () => {
               {renderList(
                 downloadingItems,
                 "暂无进行中的下载任务",
-                <Download className="size-10 opacity-40" />,
+                <Download className="size-10 opacity-40" />
               )}
             </TabsContent>
             <TabsContent value="downloaded" className="mt-0 outline-none">
               {renderList(
                 downloadedItems,
                 "暂无已完成的资源",
-                <CheckCircle2 className="size-10 opacity-40" />,
+                <CheckCircle2 className="size-10 opacity-40" />
               )}
             </TabsContent>
             <TabsContent value="all" className="mt-0 outline-none">
