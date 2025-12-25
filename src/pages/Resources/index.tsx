@@ -37,11 +37,11 @@ const ResourcesPage: FC = () => {
 
   const downloadingItems = useMemo(
     () => items.filter((item) => item.progress < 100),
-    [items]
+    [items],
   );
   const downloadedItems = useMemo(
     () => items.filter((item) => item.progress >= 100),
-    [items]
+    [items],
   );
 
   // 计算总下载速度
@@ -60,7 +60,7 @@ const ResourcesPage: FC = () => {
   const renderList = (
     list: DownloadItem[],
     emptyMsg: string,
-    icon?: React.ReactNode
+    icon?: React.ReactNode,
   ) => {
     if (loading && items.length === 0) {
       return (
@@ -99,10 +99,10 @@ const ResourcesPage: FC = () => {
 
   return (
     <>
-      <div className="container mx-auto max-w-5xl px-4 py-0 space-y-4">
+      <div className="container mx-auto w-full px-4 py-0 space-y-4">
         <Tabs defaultValue="downloading" className="w-full">
           <div className="flex items-center justify-between mb-6">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-xs md:max-w-md grid-cols-3">
               <TabsTrigger value="downloading" className="gap-2">
                 <Download className="size-4" />
                 下载中
@@ -153,14 +153,14 @@ const ResourcesPage: FC = () => {
               {renderList(
                 downloadingItems,
                 "暂无进行中的下载任务",
-                <Download className="size-10 opacity-40" />
+                <Download className="size-10 opacity-40" />,
               )}
             </TabsContent>
             <TabsContent value="downloaded" className="mt-0 outline-none">
               {renderList(
                 downloadedItems,
                 "暂无已完成的资源",
-                <CheckCircle2 className="size-10 opacity-40" />
+                <CheckCircle2 className="size-10 opacity-40" />,
               )}
             </TabsContent>
             <TabsContent value="all" className="mt-0 outline-none">

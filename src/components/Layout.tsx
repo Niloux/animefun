@@ -14,7 +14,7 @@ export function Layout({ preloadMap }: LayoutProps) {
       <div className="flex w-full h-svh overflow-auto">
         <AppSidebar preloadMap={preloadMap} />
         <SidebarInset>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             <Suspense
               fallback={
                 <div className="flex h-full w-full items-center justify-center gap-2">

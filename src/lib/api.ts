@@ -7,7 +7,7 @@ import {
   PagedEpisode,
   SubjectStatus,
   SubjectStatusCode,
-} from "../types/bangumi";
+} from "../types/gen/bangumi";
 import type { MikanResourcesResponse } from "@/types/gen/mikan";
 import type { SearchResponse } from "@/types/gen/bangumi";
 

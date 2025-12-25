@@ -3,6 +3,7 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { DownloadItem } from "@/types/gen/downloader";
 import {
   getTrackedDownloads,
+  getLiveDownloadInfo,
   pauseDownload,
   resumeDownload,
   deleteDownload,
@@ -12,25 +13,41 @@ import { toast } from "sonner";
 export function useDownloadList() {
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
 
     const init = async () => {
       try {
+        setIsCheckingConnection(true);
         const initial = await getTrackedDownloads();
         setItems(initial);
+
+        // Check connection
+        try {
+          await getLiveDownloadInfo();
+          setIsConnected(true);
+        } catch (e) {
+          console.warn("Downloader connection check failed:", e);
+          setIsConnected(false);
+        }
+
         setLoading(false);
+        setIsCheckingConnection(false);
 
         unlisten = await listen<DownloadItem[]>(
           "download-status-updated",
           (event) => {
             setItems(event.payload);
+            setIsConnected(true);
           },
         );
       } catch (e) {
         console.error("Init failed:", e);
         setLoading(false);
+        setIsCheckingConnection(false);
       }
     };
 
@@ -74,6 +91,8 @@ export function useDownloadList() {
   return {
     items,
     loading,
+    isConnected,
+    isCheckingConnection,
     handlePause,
     handleResume,
     handleDelete,

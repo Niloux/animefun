@@ -13,7 +13,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "./ui/alert-dialog";
-import type { Anime } from "@/types/bangumi";
+import type { Anime } from "@/types/gen/bangumi";
 
 type SubscribeButtonProps = {
   anime: Anime;
@@ -23,7 +23,13 @@ type SubscribeButtonProps = {
   className?: string;
 };
 
-export function SubscribeButton({ anime, isSubscribed, toggle, size = "lg", className }: SubscribeButtonProps) {
+export function SubscribeButton({
+  anime,
+  isSubscribed,
+  toggle,
+  size = "lg",
+  className,
+}: SubscribeButtonProps) {
   const [loading, setLoading] = React.useState(false);
 
   const handleSubscribe = async () => {
@@ -85,7 +91,9 @@ export function SubscribeButton({ anime, isSubscribed, toggle, size = "lg", clas
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleUnsubscribe}>确认</AlertDialogAction>
+            <AlertDialogAction onClick={handleUnsubscribe}>
+              确认
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -107,4 +115,3 @@ export function SubscribeButton({ anime, isSubscribed, toggle, size = "lg", clas
     </Button>
   );
 }
-

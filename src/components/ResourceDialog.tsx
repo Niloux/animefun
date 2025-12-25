@@ -45,7 +45,7 @@ export function ResourceDialog({
   const { matched, mapped } = useEpisodeResources(
     resources ?? null,
     episode ?? null,
-    isSingle,
+    isSingle
   );
 
   const [groupFilter, setGroupFilter] = useState<string | null>(null);

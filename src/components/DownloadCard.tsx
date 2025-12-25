@@ -85,13 +85,13 @@ export const DownloadCard = memo<DownloadCardProps>(
               <Progress value={item.progress} className="h-1.5" />
 
               {/* Stats */}
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-primary">
+              <div className="flex items-center justify-between text-xs min-w-0">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className="font-semibold text-primary shrink-0">
                     {item.progress.toFixed(1)}%
                   </span>
                   {!isCompleted && (
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground truncate">
                       <span className="font-medium text-foreground">
                         {formatBytes(item.dlspeed)}/s
                       </span>
@@ -99,12 +99,12 @@ export const DownloadCard = memo<DownloadCardProps>(
                   )}
                 </div>
                 {!isCompleted && item.eta > 0 && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                     <span>剩余 {formatDuration(item.eta)}</span>
                   </div>
                 )}
                 {isCompleted && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                     <span>已完成</span>
                   </div>
                 )}
@@ -123,7 +123,7 @@ export const DownloadCard = memo<DownloadCardProps>(
       prev.item.dlspeed === next.item.dlspeed &&
       prev.item.eta === next.item.eta
     );
-  }
+  },
 );
 
 DownloadCard.displayName = "DownloadCard";
