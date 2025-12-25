@@ -5,8 +5,6 @@ use crate::services::downloader::{client, config, repo};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::LazyLock;
-use tokio::sync::Mutex;
 use ts_rs::TS;
 
 #[derive(Serialize, TS)]
@@ -55,21 +53,9 @@ fn build_metadata(title: String, cover: String) -> String {
     .to_string()
 }
 
-// 配置缓存（避免重复读取配置文件）
-static CONFIG_CACHE: LazyLock<Mutex<Option<config::DownloaderConfig>>> = LazyLock::new(|| Mutex::new(None));
-
-// 辅助函数：获取已认证的客户端（带配置缓存）
+// 辅助函数：获取已认证的客户端
 async fn get_client() -> CommandResult<client::QbitClient> {
-    let conf = {
-        let mut cache = CONFIG_CACHE.lock().await;
-        if let Some(ref conf) = *cache {
-            conf.clone()
-        } else {
-            let conf = config::get_config().await?;
-            *cache = Some(conf.clone());
-            conf
-        }
-    };
+    let conf = config::get_config().await?;
     let mut qb = client::QbitClient::new(conf);
     qb.login().await?;
     Ok(qb)
