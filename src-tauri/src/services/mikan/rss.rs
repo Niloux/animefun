@@ -7,45 +7,11 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::header::{ETAG, LAST_MODIFIED};
 use reqwest::StatusCode;
-use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::sync::{watch, Mutex};
+use std::time::Instant;
 use tracing::{info, warn};
 
 const RSS_TTL_SECS: i64 = 6 * 3600;
-const TASK_TTL_SECS: u64 = 300;
-
-struct FetchTask {
-    tx: watch::Sender<Option<String>>,
-    expires_at: Instant,
-}
-
-static TASKS: Lazy<Mutex<HashMap<u32, Arc<FetchTask>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
-
-enum Claim {
-    Owner(Arc<FetchTask>),
-    Subscriber(watch::Receiver<Option<String>>),
-}
-
-async fn claim_or_subscribe(id: u32) -> Claim {
-    let mut m = TASKS.lock().await;
-    if let Some(task) = m.get(&id).cloned() {
-        if task.expires_at > Instant::now() {
-            return Claim::Subscriber(task.tx.subscribe());
-        }
-    }
-
-    let (tx, _rx) = watch::channel(None);
-    let task = Arc::new(FetchTask {
-        tx,
-        expires_at: Instant::now() + Duration::from_secs(TASK_TTL_SECS),
-    });
-    m.insert(id, task.clone());
-    Claim::Owner(task)
-}
 
 fn extract_meta(headers: &reqwest::header::HeaderMap) -> (Option<String>, Option<String>) {
     let new_etag = headers
@@ -65,7 +31,53 @@ async fn cache_body_and_meta(key: &str, body: String, headers: &reqwest::header:
 }
 
 pub async fn fetch_rss(mid: u32) -> Result<Vec<MikanResourceItem>, AppError> {
-    let xml = get_xml_from_cache_or_net(mid).await;
+    let key = format!("mikan:rss:{}", mid);
+    let url = format!("{}/RSS/Bangumi?bangumiId={}", MIKAN_HOST, mid);
+
+    let xml = if let Ok(Some((body, _etag, _last_modified))) = cache::get_entry(&key).await {
+        info!(bangumi_id = mid, xml_len = body.len(), source = "cache", "mikan rss xml ready");
+        body
+    } else {
+        info!(bangumi_id = mid, "mikan rss cache miss, fetching from network");
+
+        crate::infra::http::wait_api_limit().await;
+        let net_start = Instant::now();
+
+        let resp = CLIENT.get(&url).send().await?;
+        resp.error_for_status_ref()?;
+        let headers = resp.headers().clone();
+        let status = resp.status();
+
+        let body = if status == StatusCode::NOT_MODIFIED {
+            info!(bangumi_id = mid, net_ms = %net_start.elapsed().as_millis(), status = 304, "mikan rss not modified");
+
+            match cache::get_entry(&key).await {
+                Ok(Some((cached_body, _, _))) => cached_body,
+                Ok(None) => {
+                    warn!(bangumi_id = mid, "mikan rss 304 but no cached body, returning empty");
+                    String::new()
+                }
+                Err(e) => {
+                    warn!(error = %e, bangumi_id = mid, "mikan rss 304 but cache read error");
+                    String::new()
+                }
+            }
+        } else {
+            let body = resp.text().await?;
+            info!(
+                bangumi_id = mid,
+                net_ms = %net_start.elapsed().as_millis(),
+                xml_len = body.len(),
+                status = %status.as_u16(),
+                "mikan rss fetched"
+            );
+            cache_body_and_meta(&key, body.clone(), &headers).await;
+            body
+        };
+
+        body
+    };
+
     let parse_start = Instant::now();
     let ch = match parse_rss_channel(mid, &xml) {
         Some(c) => c,
@@ -76,76 +88,6 @@ pub async fn fetch_rss(mid: u32) -> Result<Vec<MikanResourceItem>, AppError> {
     let out = parse_rss_items(&ch);
     info!(bangumi_id = mid, items = out.len(), build_ms = %build_start.elapsed().as_millis(), "mikan rss items built");
     Ok(out)
-}
-
-async fn get_xml_from_cache_or_net(mid: u32) -> String {
-    let key = format!("mikan:rss:{}", mid);
-    let url = format!("{}/RSS/Bangumi?bangumiId={}", MIKAN_HOST, mid);
-    let cached = cache::get_entry(&key).await;
-    if let Ok(Some((b, _e, _l))) = cached {
-        info!(bangumi_id = mid, key = %key, xml_len = b.len(), source = "cache", "mikan rss xml ready");
-        return b;
-    }
-    let req = CLIENT.get(&url);
-    match claim_or_subscribe(mid).await {
-        Claim::Subscriber(mut rx) => loop {
-            if let Some(v) = rx.borrow().clone() {
-                break v;
-            }
-            if rx.changed().await.is_err() {
-                break String::new();
-            }
-        },
-        Claim::Owner(task) => {
-            let net_start = Instant::now();
-            let mut out = String::new();
-            match req.send().await {
-                Ok(resp) => {
-                    if resp.status() == StatusCode::OK {
-                        let headers = resp.headers().clone();
-                        match resp.text().await {
-                            Ok(body) => {
-                                cache_body_and_meta(&key, body.clone(), &headers).await;
-                                info!(bangumi_id = mid, status = 200, net_ms = %net_start.elapsed().as_millis(), xml_len = body.len(), "mikan rss fetched and cached");
-                                out = body;
-                            }
-                            Err(e) => {
-                                warn!(error = %e, bangumi_id = mid, "mikan rss read body error");
-                            }
-                        }
-                    } else if resp.status() == StatusCode::NOT_MODIFIED {
-                        info!(bangumi_id = mid, status = 304, net_ms = %net_start.elapsed().as_millis(), "mikan rss not modified");
-                    } else {
-                        warn!(
-                            status = resp.status().as_u16(),
-                            bangumi_id = mid,
-                            "mikan rss non-OK status"
-                        );
-                    }
-                }
-                Err(e) => {
-                    warn!(error = %e, bangumi_id = mid, "mikan rss request error");
-                }
-            }
-            let _ = task.tx.send(Some(out.clone()));
-            out
-        }
-    }
-}
-
-async fn cleanup_expired_tasks() {
-    let mut m = TASKS.lock().await;
-    let now = Instant::now();
-    m.retain(|_, task| task.expires_at > now);
-}
-
-pub async fn spawn_cleanup_worker() {
-    tokio::spawn(async move {
-        loop {
-            tokio::time::sleep(Duration::from_secs(60)).await;
-            cleanup_expired_tasks().await;
-        }
-    });
 }
 
 fn parse_rss_channel(mid: u32, xml: &str) -> Option<rss::Channel> {

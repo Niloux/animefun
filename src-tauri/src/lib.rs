@@ -20,7 +20,6 @@ pub fn run() {
             ));
             crate::services::subscriptions::spawn_refresh_worker();
             crate::services::mikan::spawn_preheat_worker();
-            let _ = crate::services::mikan::spawn_cleanup_worker();
 
             Ok(())
         })
