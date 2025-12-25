@@ -15,6 +15,7 @@ pub static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
     reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .default_headers(headers)
+        .pool_max_idle_per_host(10)
         .timeout(Duration::from_secs(HTTP_TIMEOUT_SECS))
         .gzip(true)
         .deflate(true)
