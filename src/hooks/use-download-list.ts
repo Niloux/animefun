@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { DownloadItem } from "@/types/gen/downloader";
+import type { TorrentInfo } from "@/types/gen/torrent_info";
 import {
   getTrackedDownloads,
   getLiveDownloadInfo,
@@ -9,10 +10,30 @@ import {
 } from "@/lib/api";
 import { toast } from "sonner";
 
+const POLL_INTERVAL = 2000;
+
+function mergeLiveInfo(
+  items: DownloadItem[],
+  liveInfos: TorrentInfo[],
+): DownloadItem[] {
+  return items.map((item) => {
+    const live = liveInfos.find((l) => l.hash === item.hash);
+    if (live) {
+      return {
+        ...item,
+        progress: live.progress * 100,
+        dlspeed: live.dlspeed,
+        eta: live.eta,
+        status: live.state,
+      };
+    }
+    return item;
+  });
+}
+
 export function useDownloadList() {
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [loading, setLoading] = useState(true);
-  // 新增：连接检查状态，初始为 true，检查完成后变为 false
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
   const [isConnectionError, setIsConnectionError] = useState(false);
 
@@ -41,24 +62,9 @@ export function useDownloadList() {
         toast.error("Failed to load downloads list");
       }
 
-      // 3. 立即应用一次实时数据（如果有）
-      // 注意：这里不需要再调 updateLiveInfo，因为我们已经拿到了 liveInfoResult
+      // 3. 立即应用一次实时数据
       const liveInfos = liveInfoResult.value;
-      setItems((prev) => {
-        return prev.map((item) => {
-          const live = liveInfos.find((l) => l.hash === item.hash);
-          if (live) {
-            return {
-              ...item,
-              progress: live.progress * 100,
-              dlspeed: live.dlspeed,
-              eta: live.eta,
-              status: live.state,
-            };
-          }
-          return item;
-        });
-      });
+      setItems((prev) => mergeLiveInfo(prev, liveInfos));
     } catch (e) {
       console.error("Connection check failed:", e);
       setIsConnectionError(true);
@@ -72,27 +78,10 @@ export function useDownloadList() {
   const updateLiveInfo = useCallback(async () => {
     try {
       const liveInfos = await getLiveDownloadInfo();
-      // 如果调用成功，说明连接正常
       setIsConnectionError(false);
-
-      setItems((prev) => {
-        return prev.map((item) => {
-          const live = liveInfos.find((l) => l.hash === item.hash);
-          if (live) {
-            return {
-              ...item,
-              progress: live.progress * 100, // qbit returns 0-1
-              dlspeed: live.dlspeed,
-              eta: live.eta,
-              status: live.state,
-            };
-          }
-          return item;
-        });
-      });
+      setItems((prev) => mergeLiveInfo(prev, liveInfos));
     } catch (e) {
       console.error(e);
-      // getLiveDownloadInfo 失败通常意味着连接问题（如配置错误或服务未启动）
       setIsConnectionError(true);
     }
   }, []);
@@ -106,7 +95,7 @@ export function useDownloadList() {
   useEffect(() => {
     if (isCheckingConnection || isConnectionError) return;
 
-    const timer = window.setInterval(updateLiveInfo, 2000);
+    const timer = window.setInterval(updateLiveInfo, POLL_INTERVAL);
     return () => window.clearInterval(timer);
   }, [updateLiveInfo, isCheckingConnection, isConnectionError]);
 
@@ -147,7 +136,8 @@ export function useDownloadList() {
     loading,
     isCheckingConnection,
     isConnectionError,
-    retryConnection: init, // 暴露重试方法
+    isConnected: !isConnectionError && !isCheckingConnection, // 暴露连接状态
+    retryConnection: init,
     handlePause,
     handleResume,
     handleDelete,

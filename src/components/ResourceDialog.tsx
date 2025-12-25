@@ -20,7 +20,7 @@ import type { MikanResourcesResponse } from "../types/gen/mikan";
 import type { Episode } from "../types/gen/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
 import { useDownloadAction } from "../hooks/use-download-action";
-import { useDownloaderConnection } from "../hooks/use-downloader-connection";
+import { useDownloadList } from "../hooks/use-download-list";
 import { ResourceGroupList } from "./ResourceGroupList";
 
 export function ResourceDialog({
@@ -58,8 +58,7 @@ export function ResourceDialog({
     episode,
   });
 
-  const { isConnected, isChecking: isCheckingConnection } =
-    useDownloaderConnection();
+  const { isConnected, isCheckingConnection } = useDownloadList();
 
   const groupOptions = useMemo(() => {
     const s = new Set<string>();

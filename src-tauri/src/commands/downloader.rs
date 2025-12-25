@@ -3,7 +3,8 @@ use crate::error::CommandResult;
 use crate::infra::http::{wait_api_limit, CLIENT};
 use crate::services::downloader::{client, config, repo};
 use futures::StreamExt;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use ts_rs::TS;
 
 #[derive(Serialize, TS)]
@@ -20,6 +21,36 @@ pub struct DownloadItem {
     pub status: String,
     #[ts(optional)]
     pub meta_json: Option<String>,
+}
+
+// 元数据辅助结构
+#[derive(Debug, Clone, Deserialize)]
+struct Metadata {
+    resource_title: String,
+    cover_url: String,
+}
+
+fn parse_metadata(meta_str: &str) -> Option<(String, String)> {
+    let meta: Metadata = serde_json::from_str(meta_str).ok()?;
+    if meta.resource_title.is_empty() || meta.cover_url.is_empty() {
+        return None;
+    }
+    Some((meta.resource_title, meta.cover_url))
+}
+
+fn is_metadata_valid(meta_str: &Option<String>) -> bool {
+    meta_str
+        .as_ref()
+        .and_then(|s| parse_metadata(s))
+        .is_some()
+}
+
+fn build_metadata(title: String, cover: String) -> String {
+    serde_json::json!({
+        "resource_title": title,
+        "cover_url": cover
+    })
+    .to_string()
 }
 
 // 辅助函数：获取已认证的客户端
@@ -105,7 +136,9 @@ pub async fn add_torrent_and_track(
 
     // 4. 失败时回滚
     if let Err(e) = result {
-        let _ = repo::delete(hash.clone()).await;
+        if let Err(del_err) = repo::delete(hash.clone()).await {
+            tracing::error!("回滚下载失败 hash={}, error={}", hash, del_err);
+        }
         return Err(e);
     }
 
@@ -115,11 +148,11 @@ pub async fn add_torrent_and_track(
 async fn batch_ensure_metadata(
     tracked: &[repo::TrackedDownload],
 ) -> Vec<(String, String, Option<String>)> {
-    use std::collections::HashMap;
+    use crate::services::subscriptions::SubjectMetadata;
 
-    // 1. 尝试从本地索引批量获取
+    // 1. 从本地索引批量获取
     let subject_ids: Vec<u32> = tracked.iter().map(|t| t.subject_id).collect();
-    let index_metadata = match crate::services::subscriptions::batch_get_metadata(&subject_ids).await {
+    let index_metadata: HashMap<u32, SubjectMetadata> = match crate::services::subscriptions::batch_get_metadata(&subject_ids).await {
         Ok(meta) => meta,
         Err(e) => {
             tracing::warn!("从索引批量获取元数据失败: {}, 降级到逐个获取", e);
@@ -127,19 +160,11 @@ async fn batch_ensure_metadata(
         }
     };
 
-    // 2. 找出缺失的 subject_id
+    // 2. 找出缺失的 subject_id（索引中没有，或数据库元数据无效）
     let missing_ids: Vec<u32> = tracked
         .iter()
         .filter(|t| {
-            !index_metadata.contains_key(&t.subject_id)
-                || t.meta_json.as_ref().map_or(true, |meta| {
-                    let parsed = serde_json::from_str::<serde_json::Value>(meta).ok();
-                    parsed.and_then(|v| {
-                        let title = v.get("resource_title").and_then(|s| s.as_str());
-                        let cover = v.get("cover_url").and_then(|s| s.as_str());
-                        Some(title.unwrap_or("").is_empty() || cover.unwrap_or("").is_empty())
-                    }).unwrap_or(true)
-                })
+            !index_metadata.contains_key(&t.subject_id) || !is_metadata_valid(&t.meta_json)
         })
         .map(|t| t.subject_id)
         .collect();
@@ -156,13 +181,8 @@ async fn batch_ensure_metadata(
                         subject.name_cn.clone()
                     };
                     let cover = subject.images.large.clone();
-                    let new_meta = serde_json::json!({
-                        "resource_title": title,
-                        "cover_url": cover
-                    })
-                    .to_string();
-
-                    fetched_metadata.insert(*subject_id, (title, cover, new_meta));
+                    let meta_json = build_metadata(title.clone(), cover.clone());
+                    fetched_metadata.insert(*subject_id, (title, cover, meta_json));
                 }
                 Err(e) => {
                     tracing::warn!("获取 subject_id={} 元数据失败: {}", subject_id, e);
@@ -171,18 +191,11 @@ async fn batch_ensure_metadata(
         }
     }
 
-    // 4. 批量更新数据库
-    for (subject_id, (_, _, meta)) in &fetched_metadata {
+    // 4. 批量更新数据库（优化：每个 subject_id 只更新一次）
+    for (subject_id, (_, _, meta_json)) in &fetched_metadata {
         for t in tracked {
-            if t.subject_id == *subject_id && t.meta_json.as_ref().map_or(true, |m| {
-                let parsed = serde_json::from_str::<serde_json::Value>(m).ok();
-                parsed.and_then(|v| {
-                    let title = v.get("resource_title").and_then(|s| s.as_str());
-                    let cover = v.get("cover_url").and_then(|s| s.as_str());
-                    Some(title.unwrap_or("").is_empty() || cover.unwrap_or("").is_empty())
-                }).unwrap_or(true)
-            }) {
-                if let Err(e) = repo::update_meta(t.hash.clone(), meta.clone()).await {
+            if t.subject_id == *subject_id && !is_metadata_valid(&t.meta_json) {
+                if let Err(e) = repo::update_meta(t.hash.clone(), meta_json.clone()).await {
                     tracing::warn!("更新下载元数据失败 hash={}, subject_id={}, error={}", t.hash, subject_id, e);
                 }
             }
@@ -193,21 +206,12 @@ async fn batch_ensure_metadata(
     tracked
         .iter()
         .map(|t| {
-            // 先检查 meta_json 是否已有效
-            if let Some(meta_str) = &t.meta_json {
-                if let Ok(meta) = serde_json::from_str::<serde_json::Value>(meta_str) {
-                    let title = meta
-                        .get("resource_title")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    let cover = meta.get("cover_url").and_then(|v| v.as_str()).unwrap_or("");
-                    if !title.is_empty() && !cover.is_empty() {
-                        return (title.to_string(), cover.to_string(), Some(meta_str.clone()));
-                    }
-                }
+            // 优先级 1: 使用数据库中的有效元数据
+            if let Some((title, cover)) = t.meta_json.as_ref().and_then(|m| parse_metadata(m)) {
+                return (title, cover, t.meta_json.clone());
             }
 
-            // 从索引获取
+            // 优先级 2: 使用索引元数据
             if let Some(meta) = index_metadata.get(&t.subject_id) {
                 let title = if meta.name_cn.is_empty() {
                     meta.name.clone()
@@ -215,18 +219,14 @@ async fn batch_ensure_metadata(
                     meta.name_cn.clone()
                 };
                 if !title.is_empty() && !meta.cover_url.is_empty() {
-                    let new_meta = serde_json::json!({
-                        "resource_title": title,
-                        "cover_url": meta.cover_url
-                    })
-                    .to_string();
-                    return (title, meta.cover_url.clone(), Some(new_meta));
+                    let meta_json = build_metadata(title.clone(), meta.cover_url.clone());
+                    return (title, meta.cover_url.clone(), Some(meta_json));
                 }
             }
 
-            // 从 API 获取
-            if let Some((title, cover, meta)) = fetched_metadata.get(&t.subject_id) {
-                return (title.clone(), cover.clone(), Some(meta.clone()));
+            // 优先级 3: 使用 API 获取的元数据
+            if let Some((title, cover, meta_json)) = fetched_metadata.get(&t.subject_id) {
+                return (title.clone(), cover.clone(), Some(meta_json.clone()));
             }
 
             ("Unknown".to_string(), String::new(), None)
