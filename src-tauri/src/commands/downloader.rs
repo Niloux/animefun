@@ -5,6 +5,8 @@ use crate::services::downloader::{client, config, repo};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::LazyLock;
+use tokio::sync::Mutex;
 use ts_rs::TS;
 
 #[derive(Serialize, TS)]
@@ -13,12 +15,12 @@ pub struct DownloadItem {
     pub hash: String,
     pub subject_id: u32,
     pub episode: Option<u32>,
+    pub status: String,
     pub progress: f64,
     pub dlspeed: i64,
     pub eta: i64,
     pub title: String,
     pub cover: String,
-    pub status: String,
     #[ts(optional)]
     pub meta_json: Option<String>,
 }
@@ -53,9 +55,21 @@ fn build_metadata(title: String, cover: String) -> String {
     .to_string()
 }
 
-// 辅助函数：获取已认证的客户端
+// 配置缓存（避免重复读取配置文件）
+static CONFIG_CACHE: LazyLock<Mutex<Option<config::DownloaderConfig>>> = LazyLock::new(|| Mutex::new(None));
+
+// 辅助函数：获取已认证的客户端（带配置缓存）
 async fn get_client() -> CommandResult<client::QbitClient> {
-    let conf = config::get_config().await?;
+    let conf = {
+        let mut cache = CONFIG_CACHE.lock().await;
+        if let Some(ref conf) = *cache {
+            conf.clone()
+        } else {
+            let conf = config::get_config().await?;
+            *cache = Some(conf.clone());
+            conf
+        }
+    };
     let mut qb = client::QbitClient::new(conf);
     qb.login().await?;
     Ok(qb)
@@ -191,12 +205,16 @@ async fn batch_ensure_metadata(
         }
     }
 
-    // 4. 批量更新数据库（优化：每个 subject_id 只更新一次）
-    for (subject_id, (_, _, meta_json)) in &fetched_metadata {
-        for t in tracked {
-            if t.subject_id == *subject_id && !is_metadata_valid(&t.meta_json) {
-                if let Err(e) = repo::update_meta(t.hash.clone(), meta_json.clone()).await {
-                    tracing::warn!("更新下载元数据失败 hash={}, subject_id={}, error={}", t.hash, subject_id, e);
+    // 4. 批量更新数据库（优化：避免嵌套循环和重复更新）
+    let mut updated_hashes = std::collections::HashSet::new();
+    for t in tracked {
+        if !is_metadata_valid(&t.meta_json) {
+            if let Some((_, _, meta_json)) = fetched_metadata.get(&t.subject_id) {
+                if !updated_hashes.contains(&t.hash) {
+                    if let Err(e) = repo::update_meta(t.hash.clone(), meta_json.clone()).await {
+                        tracing::warn!("更新下载元数据失败 hash={}, subject_id={}, error={}", t.hash, t.subject_id, e);
+                    }
+                    updated_hashes.insert(t.hash.clone());
                 }
             }
         }
@@ -248,12 +266,12 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
             hash: t.hash,
             subject_id: t.subject_id,
             episode: t.episode,
+            status: String::new(),
             progress: 0.0,
             dlspeed: 0,
             eta: 0,
             title,
             cover,
-            status: String::new(),
             meta_json: new_meta.or(t.meta_json),
         })
         .collect();
