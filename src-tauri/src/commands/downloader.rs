@@ -1,56 +1,14 @@
 use crate::error::AppError;
 use crate::error::CommandResult;
 use crate::infra::http::{wait_api_limit, CLIENT};
-use crate::services::downloader::{client, config, repo};
+use crate::services::downloader::{
+    build_metadata, client, config, parse_metadata, repo, DownloadItem,
+};
 use futures::StreamExt;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use ts_rs::TS;
-
-#[derive(Serialize, TS)]
-#[ts(export, export_to = "../../src/types/gen/downloader.ts")]
-pub struct DownloadItem {
-    pub hash: String,
-    pub subject_id: u32,
-    pub episode: Option<u32>,
-    pub status: String,
-    pub progress: f64,
-    pub dlspeed: i64,
-    pub eta: i64,
-    pub title: String,
-    pub cover: String,
-    #[ts(optional)]
-    pub meta_json: Option<String>,
-}
-
-// 元数据辅助结构
-#[derive(Debug, Clone, Deserialize)]
-struct Metadata {
-    resource_title: String,
-    cover_url: String,
-}
-
-fn parse_metadata(meta_str: &str) -> Option<(String, String)> {
-    let meta: Metadata = serde_json::from_str(meta_str).ok()?;
-    if meta.resource_title.is_empty() || meta.cover_url.is_empty() {
-        return None;
-    }
-    Some((meta.resource_title, meta.cover_url))
-}
 
 fn is_metadata_valid(meta_str: &Option<String>) -> bool {
-    meta_str
-        .as_ref()
-        .and_then(|s| parse_metadata(s))
-        .is_some()
-}
-
-fn build_metadata(title: String, cover: String) -> String {
-    serde_json::json!({
-        "resource_title": title,
-        "cover_url": cover
-    })
-    .to_string()
+    meta_str.as_ref().and_then(|s| parse_metadata(s)).is_some()
 }
 
 // 辅助函数：获取已认证的客户端
@@ -118,13 +76,7 @@ pub async fn add_torrent_and_track(
     };
 
     // 2. 先记录到数据库
-    repo::insert(
-        &hash,
-        subject_id,
-        episode,
-        meta_json.as_deref(),
-    )
-    .await?;
+    repo::insert(&hash, subject_id, episode, meta_json.as_deref()).await?;
 
     // 3. 添加到 qBittorrent
     let qb = get_client().await?;
@@ -152,20 +104,19 @@ async fn batch_ensure_metadata(
 
     // 1. 从本地索引批量获取
     let subject_ids: Vec<u32> = tracked.iter().map(|t| t.subject_id).collect();
-    let index_metadata: HashMap<u32, SubjectMetadata> = match crate::services::subscriptions::batch_get_metadata(&subject_ids).await {
-        Ok(meta) => meta,
-        Err(e) => {
-            tracing::warn!("从索引批量获取元数据失败: {}, 降级到逐个获取", e);
-            HashMap::new()
-        }
-    };
+    let index_metadata: HashMap<u32, SubjectMetadata> =
+        match crate::services::subscriptions::batch_get_metadata(&subject_ids).await {
+            Ok(meta) => meta,
+            Err(e) => {
+                tracing::warn!("从索引批量获取元数据失败: {}, 降级到逐个获取", e);
+                HashMap::new()
+            }
+        };
 
     // 2. 找出缺失的 subject_id（索引中没有，或数据库元数据无效）
     let missing_ids: Vec<u32> = tracked
         .iter()
-        .filter(|t| {
-            !index_metadata.contains_key(&t.subject_id) || !is_metadata_valid(&t.meta_json)
-        })
+        .filter(|t| !index_metadata.contains_key(&t.subject_id) || !is_metadata_valid(&t.meta_json))
         .map(|t| t.subject_id)
         .collect();
 
@@ -198,7 +149,12 @@ async fn batch_ensure_metadata(
             if let Some((_, _, meta_json)) = fetched_metadata.get(&t.subject_id) {
                 if !updated_hashes.contains(&t.hash) {
                     if let Err(e) = repo::update_meta(t.hash.clone(), meta_json.clone()).await {
-                        tracing::warn!("更新下载元数据失败 hash={}, subject_id={}, error={}", t.hash, t.subject_id, e);
+                        tracing::warn!(
+                            "更新下载元数据失败 hash={}, subject_id={}, error={}",
+                            t.hash,
+                            t.subject_id,
+                            e
+                        );
                     }
                     updated_hashes.insert(t.hash.clone());
                 }

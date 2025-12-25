@@ -145,7 +145,11 @@ mod tests {
         INIT.get_or_init(|| {
             crate::infra::log::init();
             let base = std::env::temp_dir().join("animefun-tests");
-            crate::infra::db::init_pools(base).expect("failed to init db pools");
+            tauri::async_runtime::block_on(async {
+                crate::infra::db::init_pools(base)
+                    .await
+                    .expect("failed to init db pools");
+            });
         });
     }
 

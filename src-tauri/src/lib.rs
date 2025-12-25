@@ -20,6 +20,7 @@ pub fn run() {
             ));
             crate::services::subscriptions::spawn_refresh_worker();
             crate::services::mikan::spawn_preheat_worker();
+            crate::services::downloader::monitor::spawn_status_monitor(app.handle().clone());
 
             Ok(())
         })

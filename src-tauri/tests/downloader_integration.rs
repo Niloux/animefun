@@ -142,15 +142,13 @@ async fn test_qbit_add_pause_resume_delete() -> Result<(), AppError> {
 #[tokio::test]
 async fn test_repo_roundtrip() -> Result<(), AppError> {
     let base = std::env::temp_dir().join("animefun-tests");
-    animefun_lib::infra::db::init_pools(base.clone())?;
+    animefun_lib::infra::db::init_pools(base.clone()).await?;
 
     let h = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-    repo::insert(h, 1, Some(1), "downloading", None, None).await?;
+    repo::insert(h, 1, Some(1), None).await?;
     let list1 = repo::list().await?;
     assert!(list1.iter().any(|x| x.hash == h));
-    repo::update_status(h.to_string(), "paused".to_string(), None).await?;
-    let list2 = repo::list().await?;
-    assert!(list2.iter().any(|x| x.hash == h && x.status == "paused"));
+
     repo::delete(h.to_string()).await?;
     let list3 = repo::list().await?;
     assert!(!list3.iter().any(|x| x.hash == h));
