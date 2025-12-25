@@ -10,8 +10,11 @@ pub fn run() {
         .setup(|app| {
             crate::infra::log::init();
             let base = crate::infra::path::app_base_dir(app.handle());
-            crate::infra::db::init_pools(base.clone())
-                .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
+            tauri::async_runtime::block_on(async move {
+                crate::infra::db::init_pools(base.clone())
+                    .await
+                    .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })
+            })?;
             tauri::async_runtime::spawn(crate::commands::cache::cleanup_images(
                 app.handle().clone(),
             ));

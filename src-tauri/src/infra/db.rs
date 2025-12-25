@@ -10,49 +10,108 @@ static DATA_DB_POOL: OnceCell<DbPool> = OnceCell::new();
 static CACHE_DB_PATH: OnceCell<Mutex<Option<PathBuf>>> = OnceCell::new();
 static DATA_DB_PATH: OnceCell<Mutex<Option<PathBuf>>> = OnceCell::new();
 
-/// 通用数据库初始化函数
-fn init_db(
-    pool_cell: &'static OnceCell<DbPool>,
-    path_cell: &'static OnceCell<Mutex<Option<PathBuf>>>,
-    base_dir: PathBuf,
-    filename: &str,
-) -> Result<(), AppError> {
-    std::fs::create_dir_all(&base_dir)?;
-    let file = base_dir.join(filename);
-
-    // 检查是否已初始化，如果已初始化则验证路径是否匹配
-    if let Some(path_mutex) = path_cell.get() {
-        let existing_path = path_mutex.lock().unwrap();
-        if let Some(existing) = existing_path.as_ref() {
-            if existing != &file {
-                return Err(AppError::Any(format!(
-                    "database already initialized with different path: {} vs {}",
-                    existing.display(),
-                    file.display()
-                )));
-            }
-            // 路径相同，幂等返回
-            return Ok(());
-        }
-    }
-
-    let cfg = DbConfig::new(file.to_string_lossy().to_string());
-    let pool = cfg.create_pool(DbRuntime::Tokio1)?;
-
-    // 记录路径
-    let _ = path_cell.get_or_init(|| Mutex::new(Some(file.clone())));
-
-    // 设置连接池
-    pool_cell
-        .set(pool)
-        .map_err(|_| AppError::Any("database already initialized".to_string()))?;
-
+async fn create_cache_tables(pool: &DbPool) -> Result<(), AppError> {
+    let conn = pool.get().await?;
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS cache (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                etag TEXT,
+                last_modified TEXT,
+                updated_at INTEGER NOT NULL,
+                expires_at INTEGER NOT NULL
+            )",
+            [],
+        )?;
+        Ok(())
+    })
+    .await??;
     Ok(())
 }
 
-pub fn init_pools(base_dir: PathBuf) -> Result<(), AppError> {
+async fn create_data_tables(pool: &DbPool) -> Result<(), AppError> {
+    let conn = pool.get().await?;
+    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS subscriptions (
+                subject_id INTEGER PRIMARY KEY,
+                added_at   INTEGER NOT NULL,
+                notify     INTEGER NOT NULL DEFAULT 0
+            )",
+            [],
+        )?;
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS subjects_index (
+                subject_id    INTEGER PRIMARY KEY,
+                added_at      INTEGER NOT NULL DEFAULT 0,
+                updated_at    INTEGER NOT NULL,
+                name          TEXT    NOT NULL,
+                name_cn       TEXT    NOT NULL,
+                tags_csv      TEXT    NOT NULL DEFAULT '',
+                meta_tags_csv TEXT    NOT NULL DEFAULT '',
+                rating_score  REAL,
+                rating_rank   INTEGER,
+                rating_total  INTEGER,
+                status_code   INTEGER NOT NULL,
+                status_ord    INTEGER NOT NULL,
+                cover_url     TEXT    NOT NULL DEFAULT ''
+            )",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_subjects_name ON subjects_index(LOWER(name))",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_subjects_name_cn ON subjects_index(LOWER(name_cn))",
+            [],
+        )?;
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_subjects_tags ON subjects_index(tags_csv)",
+            [],
+        )?;
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS mikan_bangumi_map (
+                bgm_subject_id   INTEGER PRIMARY KEY,
+                mikan_bangumi_id INTEGER NOT NULL,
+                confidence       REAL    NOT NULL,
+                source           TEXT    NOT NULL,
+                locked           INTEGER NOT NULL DEFAULT 0,
+                updated_at       INTEGER NOT NULL
+            )",
+            [],
+        )?;
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS tracked_downloads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                hash TEXT NOT NULL UNIQUE,
+                subject_id INTEGER NOT NULL,
+                episode INTEGER,
+                status TEXT NOT NULL,
+                file_path TEXT,
+                meta_json TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )",
+            [],
+        )?;
+        Ok(())
+    })
+    .await??;
+    Ok(())
+}
+
+pub async fn init_pools(base_dir: PathBuf) -> Result<(), AppError> {
     init_db(&CACHE_DB_POOL, &CACHE_DB_PATH, base_dir.clone(), "cache.sqlite")?;
     init_db(&DATA_DB_POOL, &DATA_DB_PATH, base_dir, "data.sqlite")?;
+
+    let cache_pool = cache_pool()?;
+    let data_pool = data_pool()?;
+
+    create_cache_tables(cache_pool).await?;
+    create_data_tables(data_pool).await?;
+
     Ok(())
 }
 
@@ -66,4 +125,39 @@ pub fn data_pool() -> Result<&'static DbPool, AppError> {
     DATA_DB_POOL
         .get()
         .ok_or_else(|| std::io::Error::other("pool_uninit").into())
+}
+
+fn init_db(
+    pool_cell: &'static OnceCell<DbPool>,
+    path_cell: &'static OnceCell<Mutex<Option<PathBuf>>>,
+    base_dir: PathBuf,
+    filename: &str,
+) -> Result<(), AppError> {
+    std::fs::create_dir_all(&base_dir)?;
+    let file = base_dir.join(filename);
+
+    if let Some(path_mutex) = path_cell.get() {
+        let existing_path = path_mutex.lock().unwrap();
+        if let Some(existing) = existing_path.as_ref() {
+            if existing != &file {
+                return Err(AppError::Any(format!(
+                    "database already initialized with different path: {} vs {}",
+                    existing.display(),
+                    file.display()
+                )));
+            }
+            return Ok(());
+        }
+    }
+
+    let cfg = DbConfig::new(file.to_string_lossy().to_string());
+    let pool = cfg.create_pool(DbRuntime::Tokio1)?;
+
+    let _ = path_cell.get_or_init(|| Mutex::new(Some(file.clone())));
+
+    pool_cell
+        .set(pool)
+        .map_err(|_| AppError::Any("database already initialized".to_string()))?;
+
+    Ok(())
 }

@@ -1,22 +1,7 @@
-use rusqlite::{params, Connection};
+use rusqlite::params;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
-
-fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS mikan_bangumi_map (
-            bgm_subject_id   INTEGER PRIMARY KEY,
-            mikan_bangumi_id INTEGER NOT NULL,
-            confidence       REAL    NOT NULL,
-            source           TEXT    NOT NULL,
-            locked           INTEGER NOT NULL DEFAULT 0,
-            updated_at       INTEGER NOT NULL
-        )",
-        [],
-    )?;
-    Ok(())
-}
 
 pub async fn get(subject_id: u32) -> Result<Option<u32>, AppError> {
     let pool = crate::infra::db::data_pool()?;
@@ -24,7 +9,6 @@ pub async fn get(subject_id: u32) -> Result<Option<u32>, AppError> {
     let conn = pool.get().await?;
     let out = conn
         .interact(move |conn| -> Result<Option<u32>, rusqlite::Error> {
-            ensure_table(conn)?;
             let mut stmt = conn.prepare(
                 "SELECT mikan_bangumi_id FROM mikan_bangumi_map WHERE bgm_subject_id = ?1",
             )?;
@@ -56,7 +40,6 @@ pub async fn upsert(
     let conn = pool.get().await?;
     conn
         .interact(move |conn| -> Result<(), rusqlite::Error> {
-            ensure_table(conn)?;
             let now = now_secs();
             conn.execute(
                 "INSERT INTO mikan_bangumi_map(bgm_subject_id, mikan_bangumi_id, confidence, source, locked, updated_at) VALUES(?1, ?2, ?3, ?4, ?5, ?6)

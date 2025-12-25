@@ -1,35 +1,9 @@
-use rusqlite::{params, Connection};
+use rusqlite::params;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
 use crate::models::bangumi::{Images, SubjectRating, SubjectResponse, SubjectStatusCode};
 use std::collections::HashMap;
-
-fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS subjects_index (
-            subject_id    INTEGER PRIMARY KEY,
-            added_at      INTEGER NOT NULL DEFAULT 0,
-            updated_at    INTEGER NOT NULL,
-            name          TEXT    NOT NULL,
-            name_cn       TEXT    NOT NULL,
-            tags_csv      TEXT    NOT NULL DEFAULT '',
-            meta_tags_csv TEXT    NOT NULL DEFAULT '',
-            rating_score  REAL,
-            rating_rank   INTEGER,
-            rating_total  INTEGER,
-            status_code   INTEGER NOT NULL,
-            status_ord    INTEGER NOT NULL,
-            cover_url     TEXT    NOT NULL DEFAULT ''
-        )",
-        [],
-    )?;
-    let _ = conn.execute(
-        "ALTER TABLE subjects_index ADD COLUMN cover_url TEXT NOT NULL DEFAULT ''",
-        [],
-    );
-    Ok(())
-}
 
 fn status_ord(code: &SubjectStatusCode) -> i64 {
     match code {
@@ -100,7 +74,6 @@ async fn index_upsert_rows(
     let conn = pool.get().await?;
     let n = conn
         .interact(move |conn| -> Result<usize, rusqlite::Error> {
-            ensure_table(conn)?;
             let name = subject.name.clone();
             let name_cn = subject.name_cn.clone();
             let tags_csv = build_tags_csv(&subject);
@@ -167,7 +140,6 @@ pub async fn index_delete(id: u32) -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     conn.interact(move |conn| -> Result<(), rusqlite::Error> {
-        ensure_table(conn)?;
         conn.execute(
             "DELETE FROM subjects_index WHERE subject_id = ?1",
             params![id as i64],
@@ -182,7 +154,6 @@ pub async fn index_clear() -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     conn.interact(|conn| -> Result<(), rusqlite::Error> {
-        ensure_table(conn)?;
         conn.execute("DELETE FROM subjects_index", [])?;
         Ok(())
     })
@@ -246,7 +217,6 @@ pub async fn query_full(
     let conn = pool.get().await?;
     let (items, total) = conn
         .interact(move |conn| -> Result<(Vec<SubjectResponse>, u32), rusqlite::Error> {
-            ensure_table(conn)?;
             let mut sql_where = String::new();
             let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
             if let Some(k) = params.keywords.as_ref() {
@@ -360,7 +330,6 @@ pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppEr
     let conn = pool.get().await?;
     let rows = conn
         .interact(|conn| -> Result<Vec<(u32, i64, bool, SubjectResponse)>, rusqlite::Error> {
-            ensure_table(conn)?;
             let mut stmt = conn.prepare(
                 "SELECT s.subject_id, s.added_at, s.notify, i.name, i.name_cn, i.rating_score, i.rating_rank, i.rating_total, i.cover_url
                  FROM subscriptions s
@@ -415,7 +384,6 @@ pub async fn batch_get_metadata(subject_ids: &[u32]) -> Result<HashMap<u32, Subj
     let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
 
     let metadata = conn.interact(move |conn| -> Result<HashMap<u32, SubjectMetadata>, rusqlite::Error> {
-        ensure_table(conn)?;
         let mut stmt = conn.prepare(&format!(
             "SELECT subject_id, name, name_cn, cover_url FROM subjects_index WHERE subject_id IN ({})",
             placeholders

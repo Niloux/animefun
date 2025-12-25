@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection};
+use rusqlite::params;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
@@ -6,21 +6,6 @@ use tracing::{debug, info};
 
 type CacheResult<T = ()> = Result<T, rusqlite::Error>;
 type CacheValue = (String, Option<String>, Option<String>);
-
-fn ensure_table(conn: &Connection) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS cache (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL,
-            etag TEXT,
-            last_modified TEXT,
-            updated_at INTEGER NOT NULL,
-            expires_at INTEGER NOT NULL
-        )",
-        [],
-    )?;
-    Ok(())
-}
 
 pub async fn get_entry(
     key: &str,
@@ -30,7 +15,6 @@ pub async fn get_entry(
     let conn = pool.get().await?;
     let out = conn
         .interact(move |conn| -> CacheResult<Option<CacheValue>> {
-            ensure_table(conn)?;
             let mut stmt = conn.prepare(
                 "SELECT value, expires_at, etag, last_modified FROM cache WHERE key = ?1",
             )?;
@@ -67,7 +51,6 @@ pub async fn set_entry(
     let key = key.to_string();
     let conn = pool.get().await?;
     conn.interact(move |conn| -> Result<(), rusqlite::Error> {
-        ensure_table(conn)?;
         let now = now_secs();
         let ttl = if ttl_secs <= 0 { 1 } else { ttl_secs };
         let expires = now + ttl;
