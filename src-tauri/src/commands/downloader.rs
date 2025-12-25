@@ -121,9 +121,13 @@ async fn batch_ensure_metadata(
 
     // 1. 尝试从本地索引批量获取
     let subject_ids: Vec<u32> = tracked.iter().map(|t| t.subject_id).collect();
-    let index_metadata = crate::services::subscriptions::batch_get_metadata(&subject_ids)
-        .await
-        .unwrap_or_else(|_| HashMap::new());
+    let index_metadata = match crate::services::subscriptions::batch_get_metadata(&subject_ids).await {
+        Ok(meta) => meta,
+        Err(e) => {
+            tracing::warn!("从索引批量获取元数据失败: {}, 降级到逐个获取", e);
+            HashMap::new()
+        }
+    };
 
     // 2. 找出缺失的 subject_id
     let missing_ids: Vec<u32> = tracked
@@ -146,20 +150,25 @@ async fn batch_ensure_metadata(
     let mut fetched_metadata: HashMap<u32, (String, String, String)> = HashMap::new();
     if !missing_ids.is_empty() {
         for subject_id in &missing_ids {
-            if let Ok(subject) = crate::services::bangumi::api::fetch_subject(*subject_id).await {
-                let title = if subject.name_cn.is_empty() {
-                    subject.name.clone()
-                } else {
-                    subject.name_cn.clone()
-                };
-                let cover = subject.images.large.clone();
-                let new_meta = serde_json::json!({
-                    "resource_title": title,
-                    "cover_url": cover
-                })
-                .to_string();
+            match crate::services::bangumi::api::fetch_subject(*subject_id).await {
+                Ok(subject) => {
+                    let title = if subject.name_cn.is_empty() {
+                        subject.name.clone()
+                    } else {
+                        subject.name_cn.clone()
+                    };
+                    let cover = subject.images.large.clone();
+                    let new_meta = serde_json::json!({
+                        "resource_title": title,
+                        "cover_url": cover
+                    })
+                    .to_string();
 
-                fetched_metadata.insert(*subject_id, (title, cover, new_meta));
+                    fetched_metadata.insert(*subject_id, (title, cover, new_meta));
+                }
+                Err(e) => {
+                    tracing::warn!("获取 subject_id={} 元数据失败: {}", subject_id, e);
+                }
             }
         }
     }
@@ -175,7 +184,9 @@ async fn batch_ensure_metadata(
                     Some(title.unwrap_or("").is_empty() || cover.unwrap_or("").is_empty())
                 }).unwrap_or(true)
             }) {
-                let _ = repo::update_meta(t.hash.clone(), meta.clone()).await;
+                if let Err(e) = repo::update_meta(t.hash.clone(), meta.clone()).await {
+                    tracing::warn!("更新下载元数据失败 hash={}, subject_id={}, error={}", t.hash, subject_id, e);
+                }
             }
         }
     }
