@@ -30,6 +30,15 @@ pub async fn set_downloader_config(config: config::DownloaderConfig) -> CommandR
 }
 
 #[tauri::command]
+pub async fn test_downloader_connection() -> CommandResult<String> {
+    let conf = config::get_config().await?;
+    let mut qb = client::QbitClient::new(conf);
+    qb.login().await?;
+    let version = qb.get_app_version().await?;
+    Ok(version)
+}
+
+#[tauri::command]
 pub async fn add_torrent_and_track(
     url: String,
     subject_id: u32,

@@ -51,6 +51,13 @@ export const setDownloaderConfig = async (config: DownloaderConfig) =>
     "Failed to save downloader config",
   );
 
+export const testDownloaderConnection = async () =>
+  call<string>(
+    "test_downloader_connection",
+    undefined,
+    "Failed to test connection",
+  );
+
 export const getTrackedDownloads = async () =>
   call<DownloadItem[]>(
     "get_tracked_downloads",

@@ -41,6 +41,7 @@ pub fn run() {
             commands::mikan::get_mikan_resources,
             commands::downloader::get_downloader_config,
             commands::downloader::set_downloader_config,
+            commands::downloader::test_downloader_connection,
             commands::downloader::add_torrent_and_track,
             commands::downloader::get_tracked_downloads,
             commands::downloader::get_live_download_info,
