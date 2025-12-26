@@ -19,19 +19,20 @@ export function useDownloadList() {
   const refresh = useCallback(async () => {
     try {
       setIsCheckingConnection(true);
+
       const initial = await getTrackedDownloads();
       setItems(initial);
-
-      // Check connection
-      try {
-        await getLiveDownloadInfo();
-        setIsConnected(true);
-      } catch (e) {
-        console.warn("Downloader connection check failed:", e);
-        setIsConnected(false);
-      }
     } catch (e) {
-      console.error("Refresh failed:", e);
+      console.error("Failed to get tracked downloads:", e);
+      setItems([]);
+    }
+
+    try {
+      await getLiveDownloadInfo();
+      setIsConnected(true);
+    } catch (e) {
+      console.warn("Downloader connection check failed:", e);
+      setIsConnected(false);
     } finally {
       setLoading(false);
       setIsCheckingConnection(false);

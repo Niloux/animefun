@@ -1,14 +1,3 @@
-import { FC, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { DownloadItem } from "@/types/gen/downloader";
-import {
-  HardDriveDownload,
-  Download,
-  CheckCircle2,
-  ListFilter,
-  WifiOff,
-  Loader2,
-} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,11 +8,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDownloadList } from "@/hooks/use-download-list";
+import { DownloadItem } from "@/types/gen/downloader";
+import {
+  CheckCircle2,
+  Download,
+  HardDriveDownload,
+  ListFilter,
+  Loader2,
+  WifiOff,
+} from "lucide-react";
+import { FC, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DownloadCard } from "../../components/DownloadCard";
 
 const ResourcesPage: FC = () => {
@@ -50,11 +50,11 @@ const ResourcesPage: FC = () => {
 
   const downloadingItems = useMemo(
     () => items.filter((item) => item.progress < 100),
-    [items]
+    [items],
   );
   const downloadedItems = useMemo(
     () => items.filter((item) => item.progress >= 100),
-    [items]
+    [items],
   );
 
   // 计算总下载速度
@@ -69,15 +69,6 @@ const ResourcesPage: FC = () => {
     const i = Math.floor(Math.log(speed) / Math.log(k));
     return parseFloat((speed / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
-
-  if (isCheckingConnection && items.length === 0) {
-    return (
-      <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
-        <Loader2 className="size-8 animate-spin text-primary/50" />
-        <span className="text-sm font-medium">正在连接下载服务...</span>
-      </div>
-    );
-  }
 
   if (!isConnected) {
     return (
@@ -96,8 +87,20 @@ const ResourcesPage: FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => refresh()} className="gap-2">
-            重试连接
+          <Button
+            variant="outline"
+            onClick={() => refresh()}
+            className="gap-2"
+            disabled={isCheckingConnection}
+          >
+            {isCheckingConnection ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                连接中...
+              </>
+            ) : (
+              "重试连接"
+            )}
           </Button>
           <Button onClick={() => navigate("/settings")}>前往配置</Button>
         </div>
@@ -108,7 +111,7 @@ const ResourcesPage: FC = () => {
   const renderList = (
     list: DownloadItem[],
     emptyMsg: string,
-    icon?: React.ReactNode
+    icon?: React.ReactNode,
   ) => {
     if (loading && items.length === 0) {
       return (
@@ -201,14 +204,14 @@ const ResourcesPage: FC = () => {
               {renderList(
                 downloadingItems,
                 "暂无进行中的下载任务",
-                <Download className="size-10 opacity-40" />
+                <Download className="size-10 opacity-40" />,
               )}
             </TabsContent>
             <TabsContent value="downloaded" className="mt-0 outline-none">
               {renderList(
                 downloadedItems,
                 "暂无已完成的资源",
-                <CheckCircle2 className="size-10 opacity-40" />
+                <CheckCircle2 className="size-10 opacity-40" />,
               )}
             </TabsContent>
             <TabsContent value="all" className="mt-0 outline-none">
