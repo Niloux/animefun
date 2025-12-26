@@ -1,8 +1,12 @@
 use crate::error::AppError;
 use crate::infra::path::default_app_dir;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
+use tokio::sync::Notify;
 use ts_rs::TS;
+
+pub static CONFIG_CHANGED: Lazy<Notify> = Lazy::new(Notify::const_new);
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export, export_to = "../../src/types/gen/downloader_config.ts")]
@@ -40,5 +44,6 @@ pub async fn save_config(config: DownloaderConfig) -> Result<(), AppError> {
     let path = dir.join("downloader.json");
     let content = serde_json::to_string_pretty(&config)?;
     fs::write(path, content).await?;
+    CONFIG_CHANGED.notify_waiters();
     Ok(())
 }

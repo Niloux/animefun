@@ -9,9 +9,9 @@ pub fn spawn_status_monitor(app_handle: AppHandle) {
         let mut last_connection_state = false;
 
         loop {
-            ticker.tick().await;
-
-            // 1. 获取数据库中的追踪项
+            tokio::select! {
+                _ = ticker.tick() => {
+                    // 1. 获取数据库中的追踪项
             let tracked = match repo::list().await {
                 Ok(t) => t,
                 Err(e) => {
@@ -96,6 +96,12 @@ pub fn spawn_status_monitor(app_handle: AppHandle) {
             } else {
                 // 如果为空，也推送空列表，清空前端
                 let _ = app_handle.emit("download-status-updated", Vec::<DownloadItem>::new());
+            }
+                }
+                _ = config::CONFIG_CHANGED.notified() => {
+                    tracing::info!("Downloader config changed, reinitializing client");
+                    client = None;
+                }
             }
         }
     });

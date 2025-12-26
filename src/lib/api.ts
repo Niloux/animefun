@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { DownloadItem } from "@/types/gen/downloader";
+import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import { TorrentInfo } from "@/types/gen/torrent_info";
 import {
   CalendarDay,
@@ -35,6 +36,20 @@ async function call<T>(
 }
 
 // --- Downloader ---
+
+export const getDownloaderConfig = async () =>
+  call<DownloaderConfig>(
+    "get_downloader_config",
+    undefined,
+    "Failed to get downloader config",
+  );
+
+export const setDownloaderConfig = async (config: DownloaderConfig) =>
+  call<void>(
+    "set_downloader_config",
+    { config },
+    "Failed to save downloader config",
+  );
 
 export const getTrackedDownloads = async () =>
   call<DownloadItem[]>(

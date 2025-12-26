@@ -99,6 +99,8 @@ impl QbitClient {
 
         let resp = crate::infra::http::CLIENT
             .post(&url)
+            .header(ORIGIN, &self.base_url)
+            .header(REFERER, &self.base_url)
             .form(&params)
             .send()
             .await?;
