@@ -3,7 +3,7 @@ import { lazy, LazyExoticComponent } from "react";
 type ComponentModule<T> = { default: T };
 
 export function lazyWithPreload<T extends React.ComponentType>(
-  importFn: () => Promise<ComponentModule<T>>
+  importFn: () => Promise<ComponentModule<T>>,
 ): LazyExoticComponent<T> & { preload: () => Promise<void> } {
   let loaded: Promise<ComponentModule<T>> | undefined;
   const load = () => {

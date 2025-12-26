@@ -18,7 +18,7 @@ import type { SearchResponse } from "@/types/gen/bangumi";
 async function call<T>(
   command: string,
   args?: Record<string, unknown>,
-  defaultErrorMsg?: string
+  defaultErrorMsg?: string,
 ): Promise<T> {
   try {
     return await invoke<T>(command, args);
@@ -26,7 +26,10 @@ async function call<T>(
     // Ideally, we just rethrow the error.
     // The previous implementation logged it, which is bad practice for a library function.
     // We wrap it in an Error object if it's not already one, or just propagate string errors.
-    const msg = typeof error === 'string' ? error : (error as Error).message || "Unknown error";
+    const msg =
+      typeof error === "string"
+        ? error
+        : (error as Error).message || "Unknown error";
     throw new Error(defaultErrorMsg ? `${defaultErrorMsg}: ${msg}` : msg);
   }
 }
@@ -34,10 +37,18 @@ async function call<T>(
 // --- Downloader ---
 
 export const getTrackedDownloads = async () =>
-  call<DownloadItem[]>("get_tracked_downloads", undefined, "Failed to get downloads");
+  call<DownloadItem[]>(
+    "get_tracked_downloads",
+    undefined,
+    "Failed to get downloads",
+  );
 
 export const getLiveDownloadInfo = async () =>
-  call<TorrentInfo[]>("get_live_download_info", undefined, "Failed to get download info");
+  call<TorrentInfo[]>(
+    "get_live_download_info",
+    undefined,
+    "Failed to get download info",
+  );
 
 export const pauseDownload = async (hash: string) =>
   call<void>("pause_download", { hash }, "Failed to pause download");
@@ -46,7 +57,11 @@ export const resumeDownload = async (hash: string) =>
   call<void>("resume_download", { hash }, "Failed to resume download");
 
 export const deleteDownload = async (hash: string, deleteFiles: boolean) =>
-  call<void>("delete_download", { hash, deleteFiles }, "Failed to delete download");
+  call<void>(
+    "delete_download",
+    { hash, deleteFiles },
+    "Failed to delete download",
+  );
 
 export const addTorrentAndTrack = async (
   url: string,
@@ -57,7 +72,7 @@ export const addTorrentAndTrack = async (
   call<void>(
     "add_torrent_and_track",
     { url, subjectId, episode, metaJson },
-    "Failed to add download task"
+    "Failed to add download task",
   );
 
 // --- Bangumi ---
@@ -77,14 +92,14 @@ export const getEpisodes = async (
   call<PagedEpisode>(
     "get_episodes",
     { subjectId, epType, limit, offset },
-    `Failed to get episodes (Subject ID: ${subjectId})`
+    `Failed to get episodes (Subject ID: ${subjectId})`,
   );
 
 export const getSubjectStatus = async (id: number) =>
   call<SubjectStatus>(
     "get_subject_status",
     { id },
-    `Failed to get subject status (ID: ${id})`
+    `Failed to get subject status (ID: ${id})`,
   );
 
 export const searchSubject = async (params: {
@@ -99,7 +114,12 @@ export const searchSubject = async (params: {
   nsfw?: boolean;
   limit?: number;
   offset?: number;
-}) => call<SearchResponse>("search_subject", params, `Search failed: ${params.keywords}`);
+}) =>
+  call<SearchResponse>(
+    "search_subject",
+    params,
+    `Search failed: ${params.keywords}`,
+  );
 
 // --- Mikan ---
 
@@ -107,15 +127,16 @@ export const getMikanResources = async (subjectId: number) =>
   call<MikanResourcesResponse>(
     "get_mikan_resources",
     { subjectId },
-    `Failed to get Mikan resources (Subject ID: ${subjectId})`
+    `Failed to get Mikan resources (Subject ID: ${subjectId})`,
   );
 
 // --- Subscriptions ---
 
 export const getSubscriptions = async () => {
-  const data = await call<{ id: number; anime: Anime; addedAt: number; notify?: boolean }[]>(
-    "sub_list"
-  );
+  const data =
+    await call<
+      { id: number; anime: Anime; addedAt: number; notify?: boolean }[]
+    >("sub_list");
   return Array.isArray(data) ? data : [];
 };
 
@@ -134,8 +155,7 @@ export const toggleSubscription = async (id: number) => {
   return !!res;
 };
 
-export const clearSubscriptions = async () =>
-  call<void>("sub_clear");
+export const clearSubscriptions = async () => call<void>("sub_clear");
 
 export const querySubscriptions = async (params: {
   keywords: string | null;
@@ -146,4 +166,9 @@ export const querySubscriptions = async (params: {
   status_code: SubjectStatusCode | null;
   limit: number | null;
   offset: number | null;
-}) => call<SearchResponse>("sub_query", { params }, "Failed to query subscriptions");
+}) =>
+  call<SearchResponse>(
+    "sub_query",
+    { params },
+    "Failed to query subscriptions",
+  );

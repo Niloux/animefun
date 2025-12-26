@@ -15,7 +15,11 @@ type UseSearchOptions = {
 };
 
 export const useSearch = (options?: UseSearchOptions) => {
-  const { initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] }, subjectType = [2], limit = 20 } = options || {};
+  const {
+    initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [] },
+    subjectType = [2],
+    limit = 20,
+  } = options || {};
 
   return useSearchCore<SearchFilters>({
     initialFilters,
@@ -25,12 +29,10 @@ export const useSearch = (options?: UseSearchOptions) => {
     enablePredicate: (s) => s.submitted && s.keywords.trim().length > 0,
     queryFn: async ({ debouncedKeywords, filters, limit, offset }) => {
       const normalizedGenres = [...filters.genres].sort();
-      const rating = (filters.minRating > 0 || filters.maxRating < 10)
-        ? [
-          `>=${filters.minRating}`,
-          `<=${filters.maxRating}`,
-        ]
-        : undefined;
+      const rating =
+        filters.minRating > 0 || filters.maxRating < 10
+          ? [`>=${filters.minRating}`, `<=${filters.maxRating}`]
+          : undefined;
       const data = await searchSubject({
         keywords: debouncedKeywords,
         subjectType,

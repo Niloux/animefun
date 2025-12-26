@@ -64,7 +64,7 @@ export const AnimeCard = React.memo(
           {anime.rating && anime.rating.score !== 0 && (
             <Badge
               className={`absolute top-3 right-3 ${getRatingColorClass(
-                anime.rating.score
+                anime.rating.score,
               )} text-white rounded-full text-xs font-medium`}
             >
               {anime.rating.score.toFixed(1)}
@@ -76,9 +76,9 @@ export const AnimeCard = React.memo(
           <h3 className="text-sm font-semibold line-clamp-1 hover:text-primary">
             {anime.name_cn || anime.name}
           </h3>
-          {('air_date' in anime ? anime.air_date : anime.date) && (
+          {("air_date" in anime ? anime.air_date : anime.date) && (
             <div className="text-xs text-muted-foreground mt-2">
-              {'air_date' in anime ? anime.air_date : anime.date}
+              {"air_date" in anime ? anime.air_date : anime.date}
             </div>
           )}
         </div>
@@ -91,7 +91,7 @@ export const AnimeCard = React.memo(
       prev.index === next.index &&
       prev.anime.rating?.score === next.anime.rating?.score
     );
-  }
+  },
 );
 
 AnimeCard.displayName = "AnimeCard";

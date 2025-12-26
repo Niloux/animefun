@@ -133,7 +133,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <div className="space-y-2">
             <Label>排序方式</Label>
             <Select
-              value={!hasKeywords && filters.sort === "match" ? "heat" : filters.sort}
+              value={
+                !hasKeywords && filters.sort === "match" ? "heat" : filters.sort
+              }
               onValueChange={handleSortChange}
             >
               <SelectTrigger className="w-full border-border">

@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import type { MikanResourcesResponse, MikanResourceItem } from "../types/gen/mikan";
+import type {
+  MikanResourcesResponse,
+  MikanResourceItem,
+} from "../types/gen/mikan";
 import type { Episode } from "../types/gen/bangumi";
 
 function epNoOf(e: Episode | null): number | null {
@@ -26,7 +29,7 @@ function matchRange(range?: string, no?: number): boolean {
 export function useEpisodeResources(
   resources?: MikanResourcesResponse | null,
   episode?: Episode | null,
-  isSingle?: boolean
+  isSingle?: boolean,
 ) {
   const epNo = useMemo(() => epNoOf(episode ?? null), [episode]);
 
@@ -40,7 +43,7 @@ export function useEpisodeResources(
     });
     if (filtered.length === 0) {
       const hasEpisodeInfo = resources.items.some(
-        (it) => typeof it.episode === "number" || !!it.episode_range
+        (it) => typeof it.episode === "number" || !!it.episode_range,
       );
       if (!hasEpisodeInfo || isSingle) return resources.items;
     }

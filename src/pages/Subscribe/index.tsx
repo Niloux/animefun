@@ -48,7 +48,7 @@ const SubscribePage = () => {
 
   const sortedItems = useMemo(
     () => sortAnimeList(items, filters.sort),
-    [items, filters.sort]
+    [items, filters.sort],
   );
 
   return (
@@ -224,7 +224,7 @@ const SubscribePage = () => {
         <AnimeGrid
           items={sortedItems.slice(
             (safeListPage - 1) * limit,
-            safeListPage * limit
+            safeListPage * limit,
           )}
         />
       )}

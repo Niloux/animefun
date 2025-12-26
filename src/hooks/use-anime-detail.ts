@@ -1,10 +1,10 @@
-import { getAnimeDetail } from '../lib/api';
-import { Anime } from '../types/gen/bangumi';
-import { useSimpleQuery } from './use-simple-query';
+import { getAnimeDetail } from "../lib/api";
+import { Anime } from "../types/gen/bangumi";
+import { useSimpleQuery } from "./use-simple-query";
 
 export const useAnimeDetail = (id: string | undefined) => {
   const { data, loading, error, reload } = useSimpleQuery<Anime | null>({
-    queryKey: ['anime', id],
+    queryKey: ["anime", id],
     queryFn: async () => {
       if (!id) return null;
       return getAnimeDetail(Number(id));

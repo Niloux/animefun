@@ -33,7 +33,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const [popoverMaxHeight, setPopoverMaxHeight] = useState<number>(300);
 

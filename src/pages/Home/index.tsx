@@ -15,7 +15,7 @@ const HomePage = () => {
 
   // 直接查找选中日期数据（日历数据按星期几有序，查找效率高）
   const selectedDayData = calendarData.find(
-    (day) => day.weekday.id === selectedDay
+    (day) => day.weekday.id === selectedDay,
   );
 
   // 计算今天的 id

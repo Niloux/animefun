@@ -15,8 +15,19 @@ type UseSubscriptionSearchOptions = {
   limit?: number;
 };
 
-export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) => {
-  const { initialFilters = { sort: "heat", minRating: 0, maxRating: 10, genres: [], statusCode: null }, limit = 20 } = options || {};
+export const useSubscriptionSearch = (
+  options?: UseSubscriptionSearchOptions,
+) => {
+  const {
+    initialFilters = {
+      sort: "heat",
+      minRating: 0,
+      maxRating: 10,
+      genres: [],
+      statusCode: null,
+    },
+    limit = 20,
+  } = options || {};
 
   return useSearchCore<SubscriptionSearchFilters>({
     initialFilters,
@@ -24,7 +35,11 @@ export const useSubscriptionSearch = (options?: UseSubscriptionSearchOptions) =>
     queryKeyBase: "sub-search",
     enablePredicate: (s) => {
       const f = s.filters;
-      const hasActiveFilters = (f.genres.length > 0) || (f.minRating > 0) || (f.maxRating < 10) || !!(f.statusCode ?? null);
+      const hasActiveFilters =
+        f.genres.length > 0 ||
+        f.minRating > 0 ||
+        f.maxRating < 10 ||
+        !!(f.statusCode ?? null);
       const hasKeywords = s.keywords.trim().length > 0;
       return s.submitted && (hasKeywords || hasActiveFilters);
     },

@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { getEpisodes } from '../lib/api';
-import { useSimpleQuery } from './use-simple-query';
-import { Episode } from '../types/gen/bangumi';
+import { useState } from "react";
+import { getEpisodes } from "../lib/api";
+import { useSimpleQuery } from "./use-simple-query";
+import { Episode } from "../types/gen/bangumi";
 
 export const useEpisodes = (subjectId: number | undefined) => {
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 6;
 
   const { data, isFetching, error, reload } = useSimpleQuery({
-    queryKey: ['episodes', subjectId],
+    queryKey: ["episodes", subjectId],
     queryFn: async () => {
       if (!subjectId) return [];
       // 一次性加载 1000 条，假设这足以覆盖绝大多数番剧

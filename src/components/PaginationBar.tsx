@@ -65,7 +65,7 @@ export const PaginationBar = React.memo(
                     {p}
                   </PaginationLink>
                 </PaginationItem>
-              )
+              ),
             )}
 
             <PaginationItem>
@@ -86,7 +86,7 @@ export const PaginationBar = React.memo(
         </Pagination>
       </div>
     );
-  }
+  },
 );
 
 PaginationBar.displayName = "PaginationBar";

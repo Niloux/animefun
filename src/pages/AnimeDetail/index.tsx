@@ -36,7 +36,7 @@ const AnimeDetailPage = () => {
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
   const { status, loading: statusLoading } = useSubjectStatus(
-    id ? Number(id) : undefined
+    id ? Number(id) : undefined,
   );
   const mikan = useMikanResources(id ? Number(id) : undefined);
 
@@ -236,7 +236,7 @@ const AnimeDetailPage = () => {
                         >
                           {tag.name}
                         </span>
-                      )
+                      ),
                     )}
                   </div>
                 </div>

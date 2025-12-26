@@ -31,14 +31,14 @@ export function useDownloadAction({
           url,
           subjectId,
           episode?.sort ? Math.floor(episode.sort) : null,
-          JSON.stringify(meta)
+          JSON.stringify(meta),
         );
         toast.success("已添加到下载列表");
       } catch (e) {
         toast.error("添加下载失败: " + String(e));
       }
     },
-    [subjectId, subjectCover, episode]
+    [subjectId, subjectCover, episode],
   );
 
   return { handleDownload };

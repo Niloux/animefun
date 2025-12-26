@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { toast } from 'sonner';
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 type UseToastOnErrorOptions = {
   error: unknown;
@@ -9,12 +9,7 @@ type UseToastOnErrorOptions = {
 };
 
 export function useToastOnError(options: UseToastOnErrorOptions) {
-  const {
-    error,
-    onRetry,
-    duration = 5000,
-    title = '请求失败'
-  } = options;
+  const { error, onRetry, duration = 5000, title = "请求失败" } = options;
 
   useEffect(() => {
     if (error) {
@@ -23,10 +18,10 @@ export function useToastOnError(options: UseToastOnErrorOptions) {
         duration,
         ...(onRetry && {
           action: {
-            label: '重试',
-            onClick: onRetry
-          }
-        })
+            label: "重试",
+            onClick: onRetry,
+          },
+        }),
       };
 
       toast.error(`${title}: ${message}`, toastOptions);

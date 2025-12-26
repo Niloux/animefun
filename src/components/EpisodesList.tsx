@@ -42,7 +42,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selectedEpisode = useMemo(
     () => episodes.find((e) => e.id === selectedId) || null,
-    [episodes, selectedId]
+    [episodes, selectedId],
   );
 
   // 发生错误时重新加载
@@ -66,7 +66,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
               <span className="ml-2 w-2 h-2 rounded-full bg-primary"></span>
             )}
           </div>
-        </DropdownMenuItem>
+        </DropdownMenuItem>,
       );
     }
     return pages;
@@ -152,7 +152,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                     key={`ph-${idx}`}
                     className="invisible pointer-events-none relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 h-40"
                   />
-                )
+                ),
               )}
             </div>
 

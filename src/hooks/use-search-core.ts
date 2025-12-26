@@ -26,7 +26,14 @@ export function useSearchCore<TFilters>(options: {
     offset: number;
   }) => Promise<SearchResponse>;
 }) {
-  const { initialFilters, limit, queryKeyBase, queryKeyExtra, enablePredicate, queryFn } = options;
+  const {
+    initialFilters,
+    limit,
+    queryKeyBase,
+    queryKeyExtra,
+    enablePredicate,
+    queryFn,
+  } = options;
 
   const [state, setState] = useState<SearchState<TFilters>>({
     keywords: "",
@@ -66,12 +73,16 @@ export function useSearchCore<TFilters>(options: {
     placeholderData: undefined,
   });
 
-  const setQuery = (v: string) => setState((s) => ({ ...s, keywords: v, submitted: false }));
+  const setQuery = (v: string) =>
+    setState((s) => ({ ...s, keywords: v, submitted: false }));
   const setFilters = (f: TFilters) => setState((s) => ({ ...s, filters: f }));
   const setPage = (p: number) => setState((s) => ({ ...s, page: p }));
   const submit = () => setState((s) => ({ ...s, submitted: true, page: 1 }));
 
-  const hasKeywords = useMemo(() => state.keywords.trim().length > 0, [state.keywords]);
+  const hasKeywords = useMemo(
+    () => state.keywords.trim().length > 0,
+    [state.keywords],
+  );
 
   return {
     query: state.keywords,

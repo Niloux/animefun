@@ -1,5 +1,10 @@
-import { useQuery, useQueryClient, UseQueryOptions, QueryKey } from '@tanstack/react-query';
-import { useToastOnError } from './use-toast-on-error';
+import {
+  useQuery,
+  useQueryClient,
+  UseQueryOptions,
+  QueryKey,
+} from "@tanstack/react-query";
+import { useToastOnError } from "./use-toast-on-error";
 
 export type UseSimpleQueryOptions<TData, TError = unknown> = {
   queryKey: QueryKey;
@@ -9,11 +14,11 @@ export type UseSimpleQueryOptions<TData, TError = unknown> = {
   gcTime?: number;
   retry?: number;
   errorTitle?: string;
-  placeholderData?: UseQueryOptions<TData, TError>['placeholderData'];
+  placeholderData?: UseQueryOptions<TData, TError>["placeholderData"];
 };
 
 export function useSimpleQuery<TData = unknown, TError = unknown>(
-  options: UseSimpleQueryOptions<TData, TError>
+  options: UseSimpleQueryOptions<TData, TError>,
 ) {
   const queryClient = useQueryClient();
 
@@ -31,7 +36,7 @@ export function useSimpleQuery<TData = unknown, TError = unknown>(
     error: query.error,
     onRetry: () =>
       queryClient.refetchQueries({ queryKey: options.queryKey, exact: true }),
-    title: options.errorTitle ?? '请求失败',
+    title: options.errorTitle ?? "请求失败",
   });
 
   return {
@@ -39,9 +44,9 @@ export function useSimpleQuery<TData = unknown, TError = unknown>(
     loading: query.isPending,
     isFetching: query.isFetching,
     error: query.error
-      ? (query.error instanceof Error
+      ? query.error instanceof Error
         ? query.error.message
-        : String(query.error))
+        : String(query.error)
       : null,
     reload: query.refetch,
     query, // 暴露原始 query 以便获取更多状态
