@@ -23,15 +23,15 @@ import { useMikanResources } from "../../hooks/use-mikan-resources";
 const AnimeDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { anime, loading, error, reload } = useAnimeDetail(id);
+  const { data, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
   const { isSubscribed, toggle } = useSubscriptions({ mode: "ids" });
-  const rawImgSrc = anime
-    ? anime.images?.large ||
-      anime.images?.common ||
-      anime.images?.medium ||
-      anime.images?.small ||
+  const rawImgSrc = data
+    ? data.images?.large ||
+      data.images?.common ||
+      data.images?.medium ||
+      data.images?.small ||
       "https://lain.bgm.tv/img/no_icon_subject.png"
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
@@ -41,13 +41,13 @@ const AnimeDetailPage = () => {
   const mikan = useMikanResources(id ? Number(id) : undefined);
 
   useEffect(() => {
-    if (anime) {
-      const nextTitle = anime.name_cn || anime.name;
+    if (data) {
+      const nextTitle = data.name_cn || data.name;
       if (document.title !== nextTitle) {
         document.title = nextTitle;
       }
     }
-  }, [anime]);
+  }, [data]);
 
   useEffect(() => {
     const el = leftPanelRef.current;
@@ -62,7 +62,7 @@ const AnimeDetailPage = () => {
     return () => {
       ro.disconnect();
     };
-  }, [anime, leftPanelHeight]);
+  }, [data, leftPanelHeight]);
 
   if (loading) {
     return (
@@ -96,7 +96,7 @@ const AnimeDetailPage = () => {
     );
   }
 
-  if (!anime) {
+  if (!data) {
     return (
       <div className="p-8">
         <div className="text-center space-y-4">
@@ -118,7 +118,7 @@ const AnimeDetailPage = () => {
               <AspectRatio ratio={2 / 3}>
                 <img
                   src={(cachedSrc ?? rawImgSrc) as string}
-                  alt={anime.name}
+                  alt={data.name}
                   className="w-full h-full object-cover"
                   decoding="async"
                   fetchPriority="high"
@@ -132,10 +132,10 @@ const AnimeDetailPage = () => {
             {/* 标题区域 */}
             <div>
               <h1 className="text-3xl md:text-[2.25rem] font-bold text-gray-900 dark:text-white mb-2 leading-tight">
-                {anime.name_cn || anime.name}
+                {data.name_cn || data.name}
               </h1>
               <p className="text-sm md:text-base text-gray-600 dark:text-gray-400 font-medium">
-                {anime.name}
+                {data.name}
               </p>
             </div>
 
@@ -143,17 +143,17 @@ const AnimeDetailPage = () => {
             <div className="flex h-5 items-center space-x-4 text-sm">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span>{anime.date || "未知"}</span>
+                <span>{data.date || "未知"}</span>
               </div>
               <Separator orientation="vertical" />
               <div className="flex items-center gap-2">
                 <Tv2Icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span>{anime.platform || "未知"}</span>
+                <span>{data.platform || "未知"}</span>
               </div>
               <Separator orientation="vertical" />
               <div className="flex items-center gap-2">
                 <Film className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span>{anime.eps || anime.total_episodes || 0} 话</span>
+                <span>{data.eps || data.total_episodes || 0} 话</span>
               </div>
               <Separator orientation="vertical" />
               <div className="flex items-center gap-2">
@@ -181,9 +181,9 @@ const AnimeDetailPage = () => {
             </div>
 
             {/* 元标签 */}
-            {anime.meta_tags && anime.meta_tags.length > 0 && (
+            {data.meta_tags && data.meta_tags.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-2">
-                {anime.meta_tags.map((tag, idx) => (
+                {data.meta_tags.map((tag, idx) => (
                   <span
                     key={idx}
                     className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
@@ -196,8 +196,8 @@ const AnimeDetailPage = () => {
 
             <div className="flex flex-col md:flex-row gap-4 items-stretch pt-2 mt-auto">
               <SubscribeButton
-                anime={anime}
-                isSubscribed={isSubscribed(anime.id)}
+                anime={data}
+                isSubscribed={isSubscribed(data.id)}
                 toggle={toggle}
                 size="lg"
                 className="flex-1 md:flex-none cursor-pointer"
@@ -218,7 +218,7 @@ const AnimeDetailPage = () => {
                     剧情介绍
                   </h2>
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {anime.summary || "暂无简介"}
+                    {data.summary || "暂无简介"}
                   </p>
                 </div>
 
@@ -228,7 +228,7 @@ const AnimeDetailPage = () => {
                     标签
                   </h2>
                   <div className="flex flex-wrap gap-2">
-                    {(anime.tags?.slice(0, 15) || []).map(
+                    {(data.tags?.slice(0, 15) || []).map(
                       (tag: { name: string }, idx: number) => (
                         <span
                           key={idx}
@@ -255,7 +255,7 @@ const AnimeDetailPage = () => {
                     : undefined
                 }
               >
-                <AnimeInfoBox items={anime.infobox} />
+                <AnimeInfoBox items={data.infobox} />
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -267,7 +267,7 @@ const AnimeDetailPage = () => {
             subjectId={Number(id)}
             resources={mikan.data}
             resourcesLoading={mikan.loading}
-            subjectTitle={anime.name_cn || anime.name}
+            subjectTitle={data.name_cn || data.name}
             subjectCover={cachedSrc}
           />
         </div>

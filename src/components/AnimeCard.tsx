@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Anime, CalendarItem } from "../types/gen/bangumi";
-import { getRatingColorClass } from "../lib/utils";
+import { getRatingColorClass, navigateToAnimeDetail } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../constants/routes";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
 import { useCachedImage } from "../hooks/use-cached-image";
@@ -26,7 +25,7 @@ export const AnimeCard = React.memo(
     const { src: cachedSrc } = useCachedImage(rawImgSrc);
 
     const handleAnimeClick = () => {
-      navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
+      navigateToAnimeDetail(navigate, anime.id);
     };
 
     return (

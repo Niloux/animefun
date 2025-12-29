@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { NavigateFunction } from "react-router-dom";
 import { Anime } from "../types/gen/bangumi";
+import { ROUTES } from "../constants/routes";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -93,4 +95,8 @@ export function formatDuration(seconds: number | bigint) {
   if (sec > 0 && h === 0) parts.push(`${sec}s`); // Only show seconds if less than an hour to save space
 
   return parts.join(" ");
+}
+
+export function navigateToAnimeDetail(navigate: NavigateFunction, id: number | string) {
+  navigate(ROUTES.ANIME_DETAIL.replace(":id", id.toString()));
 }

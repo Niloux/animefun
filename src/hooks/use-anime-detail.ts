@@ -13,7 +13,7 @@ export const useAnimeDetail = (id: string | undefined) => {
   });
 
   return {
-    anime: data,
+    data,
     loading,
     error,
     reload,

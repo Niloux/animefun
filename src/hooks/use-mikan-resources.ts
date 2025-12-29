@@ -18,9 +18,9 @@ export function useMikanResources(subjectId: number | undefined) {
 
   return {
     data,
-    loading: isFetching, // 原代码使用 isFetching
+    loading: isFetching,
     error,
-    refetch: reload,
+    reload,
   };
 }
 

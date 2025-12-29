@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { AnimeGrid } from "../../components/AnimeGrid";
+import { AnimeGridSkeleton } from "../../components/AnimeGridSkeleton";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../constants/routes";
 import { useSubscriptionSearch } from "../../hooks/use-subscription-search";
 import AutoComplete from "../../components/AutoComplete";
 import FiltersPanel from "../../components/FiltersPanel";
 import { Loader2, Filter, X } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { PaginationBar } from "../../components/PaginationBar";
-import { sortAnimeList } from "@/lib/utils";
+import { sortAnimeList, navigateToAnimeDetail } from "@/lib/utils";
 
 const SubscribePage = () => {
   const navigate = useNavigate();
@@ -63,7 +63,7 @@ const SubscribePage = () => {
             }}
             onEnter={() => submit()}
             onSelect={(anime) => {
-              navigate(ROUTES.ANIME_DETAIL.replace(":id", anime.id.toString()));
+              navigateToAnimeDetail(navigate, anime.id);
             }}
             source="subscriptions"
           />
@@ -201,20 +201,7 @@ const SubscribePage = () => {
 
       {searchMode ? (
         isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-            {Array.from({ length: limit }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-card rounded-xl shadow-md overflow-hidden border border-border/60"
-              >
-                <div className="bg-muted h-60 animate-pulse" />
-                <div className="p-4 space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
-                  <div className="h-3 bg-muted rounded w-1/2 animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <AnimeGridSkeleton count={limit} />
         ) : (
           <AnimeGrid items={results} />
         )

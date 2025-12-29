@@ -41,9 +41,10 @@ export const useEpisodes = (subjectId: number | undefined) => {
   const loadPreviousPage = () => jumpToPage(currentPage - 1);
 
   return {
-    episodes: pageEpisodes,
+    data: pageEpisodes,
     loading: isFetching,
     error,
+    reload,
     currentPage,
     totalPages,
     totalEpisodes,
@@ -51,6 +52,5 @@ export const useEpisodes = (subjectId: number | undefined) => {
     loadNextPage,
     loadPreviousPage,
     jumpToPage,
-    reload,
   };
 };

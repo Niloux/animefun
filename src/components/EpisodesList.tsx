@@ -28,7 +28,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
   subjectCover,
 }) => {
   const {
-    episodes,
+    data,
     loading,
     error,
     reload,
@@ -41,8 +41,8 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selectedEpisode = useMemo(
-    () => episodes.find((e) => e.id === selectedId) || null,
-    [episodes, selectedId],
+    () => data.find((e) => e.id === selectedId) || null,
+    [data, selectedId],
   );
 
   // 发生错误时重新加载
@@ -128,15 +128,15 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
 
       {/* 剧集网格 */}
       <div className="p-6">
-        {loading && episodes.length === 0 ? (
+        {loading && data.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-12 h-12 border-4 border-gray-300 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600 dark:text-gray-400">加载中...</p>
           </div>
-        ) : episodes.length > 0 ? (
+        ) : data.length > 0 ? (
           <>
             <div className="grid grid-cols-3 gap-4 mb-4">
-              {episodes.map((episode) => (
+              {data.map((episode) => (
                 <EpisodeCard
                   key={episode.id}
                   episode={episode}
@@ -146,7 +146,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                   }}
                 />
               ))}
-              {Array.from({ length: Math.max(0, 6 - episodes.length) }).map(
+              {Array.from({ length: Math.max(0, 6 - data.length) }).map(
                 (_, idx) => (
                   <div
                     key={`ph-${idx}`}
@@ -164,7 +164,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
               />
             )}
           </>
-        ) : !loading && episodes.length === 0 ? (
+        ) : !loading && data.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-400">暂无剧集信息</p>
           </div>
