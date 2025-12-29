@@ -7,6 +7,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { Layout } from "./components/Layout";
 import { ROUTES } from "./constants/routes";
 import { Toaster } from "@/components/ui/sonner";
+import { ConnectionProvider } from "@/hooks/use-connection-state";
 
 // 从集中模块导入所有懒加载页面和预加载映射表
 import {
@@ -21,8 +22,9 @@ import {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+    <ConnectionProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
         <ErrorBoundary>
           <Toaster position="bottom-right" />
           <Routes>
@@ -40,6 +42,7 @@ function App() {
         </ErrorBoundary>
       </BrowserRouter>
     </QueryClientProvider>
+    </ConnectionProvider>
   );
 }
 

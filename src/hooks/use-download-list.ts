@@ -9,16 +9,20 @@ import {
   deleteDownload,
 } from "@/lib/api";
 import { toast } from "sonner";
+import { useConnectionState } from "./use-connection-state";
 
 export function useDownloadList() {
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 
+  // 使用统一的连接状态管理
+  const { isConnected, isChecking: isCheckingConnection, setIsConnected, setIsChecking } =
+    useConnectionState();
+
+  // 暴露给外部的 refresh 函数
   const refresh = useCallback(async () => {
     try {
-      setIsCheckingConnection(true);
+      setIsChecking(true);
 
       const initial = await getTrackedDownloads();
       setItems(initial);
@@ -35,31 +39,44 @@ export function useDownloadList() {
       setIsConnected(false);
     } finally {
       setLoading(false);
-      setIsCheckingConnection(false);
+      setIsChecking(false);
     }
-  }, []);
+  }, [setIsConnected, setIsChecking]);
 
+  // 初始化：只运行一次，避免监听器重复注册
   useEffect(() => {
     let unlistenStatus: UnlistenFn | null = null;
-    let unlistenConnection: UnlistenFn | null = null;
 
     const initListener = async () => {
-      refresh();
+      // 初始加载数据
+      try {
+        setIsChecking(true);
 
+        const initial = await getTrackedDownloads();
+        setItems(initial);
+      } catch (e) {
+        console.error("Failed to get tracked downloads:", e);
+        setItems([]);
+      }
+
+      // 检测连接状态
+      try {
+        await getLiveDownloadInfo();
+        setIsConnected(true);
+      } catch (e) {
+        console.warn("Downloader connection check failed:", e);
+        setIsConnected(false);
+      } finally {
+        setLoading(false);
+        setIsChecking(false);
+      }
+
+      // 监听下载状态更新事件
       try {
         unlistenStatus = await listen<DownloadItem[]>(
           "download-status-updated",
           (event) => {
             setItems(event.payload);
-            // 这里不再盲目设置 isConnected(true)
-            // 连接状态由 "downloader-connection-state" 事件或 refresh 中的检测决定
-          },
-        );
-
-        unlistenConnection = await listen<boolean>(
-          "downloader-connection-state",
-          (event) => {
-            setIsConnected(event.payload);
           },
         );
       } catch (e) {
@@ -71,9 +88,10 @@ export function useDownloadList() {
 
     return () => {
       unlistenStatus?.();
-      unlistenConnection?.();
     };
-  }, [refresh]);
+    // 依赖为空，只在挂载时运行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePause = async (hash: string) => {
     try {
@@ -97,7 +115,8 @@ export function useDownloadList() {
     try {
       await deleteDownload(hash, true);
       toast.success("Deleted");
-      setItems((prev) => prev.filter((i) => i.hash !== hash));
+      // 不再本地乐观更新，等待后端事件 "download-status-updated" 来更新列表
+      // 这样可以确保前后端状态一致
       return true;
     } catch {
       toast.error("Failed to delete");

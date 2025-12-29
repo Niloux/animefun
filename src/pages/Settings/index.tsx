@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { useDownloaderConnection } from "@/hooks/use-downloader-connection";
+import { useDownloaderConnection } from "@/hooks/use-connection-state";
 import { useSimpleQuery } from "@/hooks/use-simple-query";
 import { getDownloaderConfig, setDownloaderConfig } from "@/lib/api";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
