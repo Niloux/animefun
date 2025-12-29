@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFadeIn } from "@/hooks/use-fade-in";
 import { useDownloadList } from "@/hooks/use-download-list";
 import { DownloadItem } from "@/types/gen/downloader";
 import {
@@ -39,6 +40,9 @@ const ResourcesPage: FC = () => {
     handleDelete,
   } = useDownloadList();
   const [itemToDelete, setItemToDelete] = useState<DownloadItem | null>(null);
+
+  // 内容淡入动画：连接成功后触发
+  const isContentVisible = useFadeIn(isConnected);
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
@@ -150,7 +154,11 @@ const ResourcesPage: FC = () => {
 
   return (
     <>
-      <div className="container mx-auto w-full px-4 py-0 space-y-4">
+      <div
+        className={`container mx-auto w-full px-4 py-0 space-y-4 transition-opacity duration-300 ${
+          isContentVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
         <Tabs defaultValue="downloading" className="w-full">
           <div className="flex items-center justify-between mb-6">
             <TabsList className="grid w-full max-w-xs md:max-w-md grid-cols-3">

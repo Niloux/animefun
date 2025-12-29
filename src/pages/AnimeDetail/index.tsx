@@ -1,6 +1,7 @@
 import { Calendar, Tv2Icon, Film } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { useFadeIn } from "../../hooks/use-fade-in";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
@@ -39,6 +40,9 @@ const AnimeDetailPage = () => {
     id ? Number(id) : undefined,
   );
   const mikan = useMikanResources(id ? Number(id) : undefined);
+
+  // 内容淡入动画：数据加载完成后触发
+  const isContentVisible = useFadeIn(!loading && !error && !!data);
 
   useEffect(() => {
     if (data) {
@@ -109,7 +113,11 @@ const AnimeDetailPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-0">
+      <div
+        className={`p-0 transition-opacity duration-300 ${
+          isContentVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
         {/* 海报和基本信息区 */}
         <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8 shrink-0">
           {/* 左侧海报 */}

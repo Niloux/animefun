@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useFadeIn } from "@/hooks/use-fade-in";
 import { useDownloaderConnection } from "@/hooks/use-connection-state";
 import { useSimpleQuery } from "@/hooks/use-simple-query";
 import { getDownloaderConfig, setDownloaderConfig } from "@/lib/api";
@@ -56,6 +57,9 @@ const SettingsPage: FC = () => {
 
   const { isConnected, isTesting, lastCheck, testConnection } =
     useDownloaderConnection();
+
+  // 内容淡入动画：配置加载完成后触发
+  const isContentVisible = useFadeIn(!loading && !!config);
 
   const form = useForm<FormConfig>({
     defaultValues: {
@@ -100,7 +104,11 @@ const SettingsPage: FC = () => {
   };
 
   return (
-    <div className="container max-w-3xl mx-auto py-8 px-4">
+    <div
+      className={`container max-w-3xl mx-auto py-8 px-4 transition-opacity duration-300 ${
+        isContentVisible ? "opacity-100" : "opacity-0"
+      }`}
+    >
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
