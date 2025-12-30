@@ -74,36 +74,35 @@ pub fn spawn_preheat_worker() {
                                             "new episode detected"
                                         );
 
-                                        // Update last_seen_ep first to avoid duplicate notifications
-                                        match update_last_seen_ep(sid, new_max_ep).await {
-                                            Ok(_) => {
-                                                if notify {
-                                                    if let Some(name) = name_opt {
-                                                        info!(
-                                                            subject_id = sid,
-                                                            name = %name,
-                                                            episode = new_max_ep,
-                                                            "sending notification"
-                                                        );
-                                                        crate::infra::notification::notify_new_episode(
-                                                            &name, new_max_ep,
-                                                        );
-                                                        notified_clone.fetch_add(1, Ordering::Relaxed);
-                                                    } else {
-                                                        warn!(subject_id = sid, "anime name not found, skipping notification");
-                                                    }
-                                                } else {
-                                                    info!(subject_id = sid, "notification disabled for this subscription");
-                                                }
-                                            }
-                                            Err(e) => {
-                                                warn!(
+                                        // Send notification first, then update DB
+                                        // This ensures notification is delivered even if DB update fails
+                                        if notify {
+                                            if let Some(name) = name_opt {
+                                                info!(
                                                     subject_id = sid,
+                                                    name = %name,
                                                     episode = new_max_ep,
-                                                    error = %e,
-                                                    "failed to update last_seen_ep, notification not sent"
+                                                    "sending notification"
                                                 );
+                                                crate::infra::notification::notify_new_episode(
+                                                    &name, new_max_ep,
+                                                );
+                                                notified_clone.fetch_add(1, Ordering::Relaxed);
+                                            } else {
+                                                warn!(subject_id = sid, "anime name not found, skipping notification");
                                             }
+                                        } else {
+                                            info!(subject_id = sid, "notification disabled for this subscription");
+                                        }
+
+                                        // Update DB; failure is logged but doesn't affect notification
+                                        if let Err(e) = update_last_seen_ep(sid, new_max_ep).await {
+                                            warn!(
+                                                subject_id = sid,
+                                                episode = new_max_ep,
+                                                error = %e,
+                                                "failed to update last_seen_ep"
+                                            );
                                         }
                                     }
                                 }

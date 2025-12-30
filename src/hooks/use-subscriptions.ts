@@ -74,7 +74,7 @@ export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
   };
 
   const getNotify = (id: number) => {
-    return items.find((x) => x.id === id)?.notify ?? true;
+    return items.find((x) => x.id === id)?.notify ?? false;
   };
 
   return {
