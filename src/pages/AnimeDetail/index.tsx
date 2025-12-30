@@ -1,27 +1,25 @@
-import { Calendar, Tv2Icon, Film, Bell } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Bell, Calendar, Film, Tv2Icon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useFadeIn } from "../../hooks/use-fade-in";
-import { Button } from "../../components/ui/button";
-import { Spinner } from "../../components/ui/spinner";
-import { Switch } from "../../components/ui/switch";
-import { AspectRatio } from "../../components/ui/aspect-ratio";
-import { Separator } from "../../components/ui/separator";
+import { useNavigate, useParams } from "react-router-dom";
 import { AnimeInfoBox } from "../../components/AnimeInfoBox";
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "../../components/ui/resizable";
 import EpisodesList from "../../components/EpisodesList";
-import { useAnimeDetail } from "../../hooks/use-anime-detail";
-import { useSubscriptions } from "../../hooks/use-subscriptions";
-import { useCachedImage } from "../../hooks/use-cached-image";
-import { Badge } from "../../components/ui/badge";
-import { useSubjectStatus } from "../../hooks/use-subject-status";
 import { SubscribeButton } from "../../components/SubscribeButton";
+import { AspectRatio } from "../../components/ui/aspect-ratio";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "../../components/ui/resizable";
+import { Separator } from "../../components/ui/separator";
+import { Spinner } from "../../components/ui/spinner";
+import { useAnimeDetail } from "../../hooks/use-anime-detail";
+import { useCachedImage } from "../../hooks/use-cached-image";
+import { useFadeIn } from "../../hooks/use-fade-in";
 import { useMikanResources } from "../../hooks/use-mikan-resources";
-import { Label } from "../../components/ui/label";
+import { useSubjectStatus } from "../../hooks/use-subject-status";
+import { useSubscriptions } from "../../hooks/use-subscriptions";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -29,7 +27,9 @@ const AnimeDetailPage = () => {
   const { data, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
-  const { isSubscribed, toggle, getNotify, setNotify } = useSubscriptions({ mode: "full" });
+  const { isSubscribed, toggle, getNotify, setNotify } = useSubscriptions({
+    mode: "full",
+  });
   const rawImgSrc = data
     ? data.images?.large ||
       data.images?.common ||
@@ -213,22 +213,16 @@ const AnimeDetailPage = () => {
                 className="flex-1 md:flex-none cursor-pointer"
               />
               {isSubscribed(data.id) && (
-                <div className="flex items-center gap-3 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor="notify-toggle" className="text-sm font-medium cursor-pointer">
-                      更新提醒
-                    </Label>
-                    <span className="text-xs text-muted-foreground">
-                      {getNotify(data.id) ? "新资源发布时通知" : "通知已关闭"}
-                    </span>
-                  </div>
-                  <Switch
-                    id="notify-toggle"
-                    checked={getNotify(data.id)}
-                    onCheckedChange={(checked) => setNotify(data.id, checked)}
-                  />
-                </div>
+                <Button
+                  variant={getNotify(data.id) ? "default" : "outline"}
+                  size="lg"
+                  onClick={() => setNotify(data.id, !getNotify(data.id))}
+                  className="flex-1 md:flex-none cursor-pointer"
+                  title={getNotify(data.id) ? "点击关闭通知" : "点击开启通知"}
+                >
+                  <Bell className="h-4 w-4" />
+                  {getNotify(data.id) ? "已开启通知" : "未开启通知"}
+                </Button>
               )}
             </div>
           </div>
