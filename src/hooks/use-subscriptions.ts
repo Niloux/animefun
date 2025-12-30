@@ -4,6 +4,7 @@ import {
   getSubscriptions,
   getSubscriptionIds,
   toggleSubscription,
+  setSubscriptionNotify,
   clearSubscriptions,
 } from "../lib/api";
 import { Anime } from "../types/gen/bangumi";
@@ -63,11 +64,26 @@ export function useSubscriptions(opts?: { mode?: "full" | "ids" }) {
     }
   };
 
+  const setNotify = async (id: number, notify: boolean) => {
+    try {
+      await setSubscriptionNotify(id, notify);
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const getNotify = (id: number) => {
+    return items.find((x) => x.id === id)?.notify ?? true;
+  };
+
   return {
     items,
     list: items.map((x) => x.anime),
     isSubscribed,
     toggle,
     clear,
+    setNotify,
+    getNotify,
   };
 }

@@ -9,6 +9,7 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             crate::infra::log::init();
+            crate::infra::notification::init(app.handle().clone());
             let base = crate::infra::path::app_base_dir(app.handle());
             tauri::async_runtime::block_on(async move {
                 crate::infra::db::init_pools(base.clone())
@@ -25,6 +26,7 @@ pub fn run() {
             Ok(())
         })
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             commands::bangumi::get_calendar,
             commands::bangumi::get_episodes,
@@ -37,6 +39,8 @@ pub fn run() {
             commands::subscriptions::sub_toggle,
             commands::subscriptions::sub_has,
             commands::subscriptions::sub_clear,
+            commands::subscriptions::sub_set_notify,
+            commands::subscriptions::send_test_notification,
             commands::subscriptions::sub_query,
             commands::mikan::get_mikan_resources,
             commands::downloader::get_downloader_config,

@@ -32,6 +32,7 @@ import { getDownloaderConfig, setDownloaderConfig } from "@/lib/api";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import {
   AlertCircle,
+  Bell,
   CheckCircle2,
   Download,
   ExternalLink,
@@ -41,6 +42,9 @@ import {
 } from "lucide-react";
 import type { FC } from "react";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { sendTestNotification } from "@/lib/api";
+import { toast } from "sonner";
 
 type FormConfig = {
   api_url: string;
@@ -49,6 +53,8 @@ type FormConfig = {
 };
 
 const SettingsPage: FC = () => {
+  const [isTestingNotification, setIsTestingNotification] = useState(false);
+
   const { data: config, loading } = useSimpleQuery<DownloaderConfig>({
     queryKey: ["downloader-config"],
     queryFn: getDownloaderConfig,
@@ -84,6 +90,22 @@ const SettingsPage: FC = () => {
     };
     await setDownloaderConfig(configToSave);
     await testConnection();
+  };
+
+  const handleTestNotification = async () => {
+    setIsTestingNotification(true);
+    try {
+      await sendTestNotification();
+      toast.success("测试通知已发送", {
+        description: "如果您没有收到通知，请检查系统通知设置",
+      });
+    } catch {
+      toast.error("测试通知发送失败", {
+        description: "请检查系统权限设置",
+      });
+    } finally {
+      setIsTestingNotification(false);
+    }
   };
 
   if (loading) {
@@ -281,6 +303,42 @@ const SettingsPage: FC = () => {
               </div>
             </form>
           </Form>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>通知设置</CardTitle>
+          <CardDescription className="mt-1.5">
+            测试系统通知功能是否正常工作
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground">
+                当您订阅的番剧有新资源发布时，应用会发送系统通知。点击下方按钮测试通知功能。
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleTestNotification}
+              disabled={isTestingNotification}
+              className="shrink-0"
+            >
+              {isTestingNotification ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  发送中...
+                </>
+              ) : (
+                <>
+                  <Bell className="mr-2 h-4 w-4" />
+                  测试通知
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

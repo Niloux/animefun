@@ -47,9 +47,10 @@ async fn create_data_tables(pool: &DbPool) -> Result<(), AppError> {
         vec![
             r#"
                 CREATE TABLE IF NOT EXISTS subscriptions (
-                    subject_id INTEGER PRIMARY KEY,
-                    added_at   INTEGER NOT NULL,
-                    notify     INTEGER NOT NULL DEFAULT 0
+                    subject_id  INTEGER PRIMARY KEY,
+                    added_at    INTEGER NOT NULL,
+                    notify      INTEGER NOT NULL DEFAULT 0,
+                    last_seen_ep INTEGER NOT NULL DEFAULT 0
                 )
             "#
             .to_string(),

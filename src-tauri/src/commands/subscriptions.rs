@@ -55,6 +55,16 @@ pub async fn sub_clear() -> CommandResult<()> {
     subscriptions::clear().await
 }
 
+#[tauri::command]
+pub async fn sub_set_notify(id: u32, notify: bool) -> CommandResult<()> {
+    subscriptions::set_notify(id, notify).await
+}
+
+#[tauri::command]
+pub fn send_test_notification() {
+    crate::infra::notification::notify_test()
+}
+
 #[derive(serde::Serialize, serde::Deserialize, ts_rs::TS)]
 #[ts(export, export_to = "../../src/types/gen/bangumi.ts")]
 pub struct SubQueryParams {

@@ -1,21 +1,20 @@
+import { navigateToAnimeDetail, sortAnimeList } from "@/lib/utils";
+import { Filter, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Button } from "../../components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { AnimeGrid } from "../../components/AnimeGrid";
 import { AnimeGridSkeleton } from "../../components/AnimeGridSkeleton";
-import { useSubscriptions } from "../../hooks/use-subscriptions";
-import { useNavigate } from "react-router-dom";
-import { useSubscriptionSearch } from "../../hooks/use-subscription-search";
 import AutoComplete from "../../components/AutoComplete";
 import FiltersPanel from "../../components/FiltersPanel";
-import { Loader2, Filter, X } from "lucide-react";
-import { Badge } from "../../components/ui/badge";
 import { PaginationBar } from "../../components/PaginationBar";
-import { sortAnimeList, navigateToAnimeDetail } from "@/lib/utils";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { useSubscriptionSearch } from "../../hooks/use-subscription-search";
+import { useSubscriptions } from "../../hooks/use-subscriptions";
 
 const SubscribePage = () => {
   const navigate = useNavigate();
   const { list } = useSubscriptions();
-  const items = useMemo(() => list, [list]);
   const {
     query,
     setQuery,
@@ -36,7 +35,7 @@ const SubscribePage = () => {
   const [listPage, setListPage] = useState<number>(1);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
-  const totalListPages = Math.max(1, Math.ceil(items.length / limit));
+  const totalListPages = Math.max(1, Math.ceil(list.length / limit));
   const safeListPage = Math.min(listPage, totalListPages);
 
   const hasActiveFilters =
@@ -47,8 +46,8 @@ const SubscribePage = () => {
   const searchMode = submitted && (hasKeywords || hasActiveFilters);
 
   const sortedItems = useMemo(
-    () => sortAnimeList(items, filters.sort),
-    [items, filters.sort],
+    () => sortAnimeList(list, filters.sort),
+    [list, filters.sort],
   );
 
   return (
@@ -205,7 +204,7 @@ const SubscribePage = () => {
         ) : (
           <AnimeGrid items={results} />
         )
-      ) : items.length === 0 ? (
+      ) : list.length === 0 ? (
         <div className="text-muted-foreground">暂无订阅</div>
       ) : (
         <AnimeGrid
@@ -225,7 +224,7 @@ const SubscribePage = () => {
         />
       )}
 
-      {!searchMode && items.length > limit && (
+      {!searchMode && list.length > limit && (
         <PaginationBar
           currentPage={safeListPage}
           totalPages={totalListPages}

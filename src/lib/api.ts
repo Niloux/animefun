@@ -109,7 +109,13 @@ export const toggleSubscription = async (id: number) => {
   return !!res;
 };
 
+export const setSubscriptionNotify = (id: number, notify: boolean) =>
+  invoke<void>("sub_set_notify", { id, notify });
+
 export const clearSubscriptions = () => invoke<void>("sub_clear");
+
+export const sendTestNotification = () =>
+  invoke<void>("send_test_notification");
 
 export const querySubscriptions = (params: {
   keywords: string | null;

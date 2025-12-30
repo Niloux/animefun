@@ -12,6 +12,8 @@ use crate::models::bangumi::SubjectResponse;
 
 pub use index_repo::{batch_get_metadata, SubjectMetadata};
 
+pub use repo::{get_last_seen_ep, get_notify, set_notify, update_last_seen_ep};
+
 pub async fn list_ids() -> Result<Vec<u32>, AppError> {
     repo::list_ids().await
 }
@@ -32,7 +34,7 @@ pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
         index_repo::index_delete(id).await?;
         Ok(false)
     } else {
-        let n = notify.unwrap_or(false);
+        let n = notify.unwrap_or(true);
         repo::add(id, n).await?;
         let sj = crate::services::bangumi::fetch_subject(id).await?;
         let st = get_status_cached(id).await?;

@@ -1,7 +1,7 @@
 use crate::infra::tasks::{next_offset, round_robin_take};
 use crate::services::mikan::map_store;
 use crate::services::mikan::rss;
-use crate::services::subscriptions;
+use crate::services::subscriptions::{self, update_last_seen_ep};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -32,9 +32,8 @@ pub fn spawn_preheat_worker() {
             }
             let sem = Arc::new(Semaphore::new(PREHEAT_CONCURRENCY));
             let total = rows.len();
-            let cached_n = Arc::new(AtomicUsize::new(0));
-            let fetched_n = Arc::new(AtomicUsize::new(0));
             let no_map_n = Arc::new(AtomicUsize::new(0));
+            let notified_n = Arc::new(AtomicUsize::new(0));
             let mut cur_start = PREHEAT_OFFSET.load(std::sync::atomic::Ordering::Relaxed) % total;
             let mut total_processed: usize = 0;
             info!("开始同步 {} 个订阅剧集", total);
@@ -48,24 +47,64 @@ pub fn spawn_preheat_worker() {
                 cur_start = next_offset(total, cur_start, processed);
                 total_processed += processed;
                 let mut js: JoinSet<()> = JoinSet::new();
-                for (sid, _added_at, _notify) in slice.into_iter() {
+                for (sid, _added_at, notify, last_seen_ep, name_opt) in slice.into_iter() {
                     let sem_clone = Arc::clone(&sem);
-                    let cached_clone = Arc::clone(&cached_n);
-                    let fetched_clone = Arc::clone(&fetched_n);
                     let no_map_clone = Arc::clone(&no_map_n);
+                    let notified_clone = Arc::clone(&notified_n);
                     js.spawn(async move {
                         if let Ok(_permit) = sem_clone.acquire_owned().await {
                             if let Ok(Some(mid)) = map_store::get(sid).await {
-                                let key = format!("mikan:rss:{}", mid);
-                                match crate::infra::cache::get_entry(&key).await {
-                                    Ok(Some((_body, _etag, _lm))) => {
-                                        cached_clone.fetch_add(1, Ordering::Relaxed);
-                                        debug!(subject_id = sid, mid, "mikan preheat skip: cached");
-                                    }
-                                    _ => {
-                                        info!(subject_id = sid, mid, "mikan preheat fetch");
-                                        let _ = rss::fetch_rss(mid).await;
-                                        fetched_clone.fetch_add(1, Ordering::Relaxed);
+                                // Always fetch RSS to check for new episodes
+                                // The fetch_rss function handles cache internally
+                                if let Ok(items) = rss::fetch_rss(mid).await {
+                                    // Find max episode in the RSS
+                                    let new_max_ep = items
+                                        .iter()
+                                        .filter_map(|i| i.episode)
+                                        .max()
+                                        .unwrap_or(0);
+
+                                    // Check for new episode
+                                    if new_max_ep > last_seen_ep {
+                                        info!(
+                                            subject_id = sid,
+                                            old_ep = last_seen_ep,
+                                            new_ep = new_max_ep,
+                                            notify,
+                                            "new episode detected"
+                                        );
+
+                                        // Update last_seen_ep first to avoid duplicate notifications
+                                        match update_last_seen_ep(sid, new_max_ep).await {
+                                            Ok(_) => {
+                                                if notify {
+                                                    if let Some(name) = name_opt {
+                                                        info!(
+                                                            subject_id = sid,
+                                                            name = %name,
+                                                            episode = new_max_ep,
+                                                            "sending notification"
+                                                        );
+                                                        crate::infra::notification::notify_new_episode(
+                                                            &name, new_max_ep,
+                                                        );
+                                                        notified_clone.fetch_add(1, Ordering::Relaxed);
+                                                    } else {
+                                                        warn!(subject_id = sid, "anime name not found, skipping notification");
+                                                    }
+                                                } else {
+                                                    info!(subject_id = sid, "notification disabled for this subscription");
+                                                }
+                                            }
+                                            Err(e) => {
+                                                warn!(
+                                                    subject_id = sid,
+                                                    episode = new_max_ep,
+                                                    error = %e,
+                                                    "failed to update last_seen_ep, notification not sent"
+                                                );
+                                            }
+                                        }
                                     }
                                 }
                             } else {
@@ -77,12 +116,11 @@ pub fn spawn_preheat_worker() {
                 }
                 while js.join_next().await.is_some() {}
             }
-            let cached_n = cached_n.load(Ordering::Relaxed);
-            let fetched_n = fetched_n.load(Ordering::Relaxed);
             let no_map_n = no_map_n.load(Ordering::Relaxed);
+            let notified_n = notified_n.load(Ordering::Relaxed);
             info!(
-                "同步 {} 个订阅剧集完成，缓存 {} 个，获取 {} 个，无映射 {} 个",
-                total_processed, cached_n, fetched_n, no_map_n
+                "同步 {} 个订阅剧集完成，无映射 {} 个，发送通知 {} 个",
+                total_processed, no_map_n, notified_n
             );
             PREHEAT_OFFSET.store(cur_start, std::sync::atomic::Ordering::Relaxed);
             sleep(Duration::from_secs(PREHEAT_INTERVAL_SECS)).await;

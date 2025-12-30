@@ -47,7 +47,7 @@ pub fn spawn_refresh_worker() {
                 cur_start = next_offset(total, cur_start, processed);
                 total_processed += processed;
                 let mut handles = Vec::new();
-                for (id, added_at, _notify) in slice.into_iter() {
+                for (id, added_at, _notify, _last_seen_ep, _name_cn) in slice.into_iter() {
                     let sem_clone = Arc::clone(&sem);
                     let updated_clone = Arc::clone(&updated);
                     handles.push(tokio::spawn(async move {

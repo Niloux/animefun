@@ -1,9 +1,10 @@
-import { Calendar, Tv2Icon, Film } from "lucide-react";
+import { Calendar, Tv2Icon, Film, Bell } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useFadeIn } from "../../hooks/use-fade-in";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
+import { Switch } from "../../components/ui/switch";
 import { AspectRatio } from "../../components/ui/aspect-ratio";
 import { Separator } from "../../components/ui/separator";
 import { AnimeInfoBox } from "../../components/AnimeInfoBox";
@@ -20,6 +21,7 @@ import { Badge } from "../../components/ui/badge";
 import { useSubjectStatus } from "../../hooks/use-subject-status";
 import { SubscribeButton } from "../../components/SubscribeButton";
 import { useMikanResources } from "../../hooks/use-mikan-resources";
+import { Label } from "../../components/ui/label";
 
 const AnimeDetailPage = () => {
   const { id } = useParams();
@@ -27,7 +29,7 @@ const AnimeDetailPage = () => {
   const { data, loading, error, reload } = useAnimeDetail(id);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number>(0);
-  const { isSubscribed, toggle } = useSubscriptions({ mode: "ids" });
+  const { isSubscribed, toggle, getNotify, setNotify } = useSubscriptions({ mode: "full" });
   const rawImgSrc = data
     ? data.images?.large ||
       data.images?.common ||
@@ -210,6 +212,24 @@ const AnimeDetailPage = () => {
                 size="lg"
                 className="flex-1 md:flex-none cursor-pointer"
               />
+              {isSubscribed(data.id) && (
+                <div className="flex items-center gap-3 px-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="notify-toggle" className="text-sm font-medium cursor-pointer">
+                      更新提醒
+                    </Label>
+                    <span className="text-xs text-muted-foreground">
+                      {getNotify(data.id) ? "新资源发布时通知" : "通知已关闭"}
+                    </span>
+                  </div>
+                  <Switch
+                    id="notify-toggle"
+                    checked={getNotify(data.id)}
+                    onCheckedChange={(checked) => setNotify(data.id, checked)}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
