@@ -14,132 +14,124 @@ const TTL_SUBJECT_SECS: i64 = 24 * 3600;
 const TTL_SEARCH_SECS: i64 = 3600;
 const TTL_EPISODES_SECS: i64 = 3600;
 
-#[derive(Clone)]
-struct SearchParams {
-    keyword: String,
-    subject_type: Option<Vec<u8>>,
-    sort: Option<String>,
-    tag: Option<Vec<String>>,
-    air_date: Option<Vec<String>>,
-    rating: Option<Vec<String>>,
-    rating_count: Option<Vec<String>>,
-    rank: Option<Vec<String>>,
-    nsfw: Option<bool>,
-    limit: Option<u32>,
-    offset: Option<u32>,
-}
+/// Build cache key from search parameters (all fields sorted for consistency)
+fn build_search_key(
+    keyword: &str,
+    subject_type: &Option<Vec<u8>>,
+    sort: &Option<String>,
+    tag: &Option<Vec<String>>,
+    air_date: &Option<Vec<String>>,
+    rating: &Option<Vec<String>>,
+    rating_count: &Option<Vec<String>>,
+    rank: &Option<Vec<String>>,
+    nsfw: &Option<bool>,
+    limit: &Option<u32>,
+    offset: &Option<u32>,
+) -> String {
+    use std::collections::HashMap;
 
-fn sort_u8(v: &mut Option<Vec<u8>>) {
-    if let Some(x) = v.as_mut() {
-        x.sort();
+    let mut map = HashMap::new();
+    map.insert("keyword", keyword.to_string());
+    if let Some(v) = sort {
+        map.insert("sort", v.clone());
     }
-}
-
-fn sort_str(v: &mut Option<Vec<String>>) {
-    if let Some(x) = v.as_mut() {
-        x.sort();
+    if let Some(v) = nsfw {
+        map.insert("nsfw", v.to_string());
     }
-}
-
-fn canonicalize(p: &mut SearchParams) {
-    sort_u8(&mut p.subject_type);
-    sort_str(&mut p.tag);
-    sort_str(&mut p.air_date);
-    sort_str(&mut p.rating);
-    sort_str(&mut p.rating_count);
-    sort_str(&mut p.rank);
-}
-
-#[derive(serde::Serialize)]
-struct SearchKey {
-    keyword: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    subject_type: Option<Vec<u8>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sort: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    tag: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    air_date: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rating: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rating_count: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rank: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    limit: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    offset: Option<u32>,
-}
-
-#[derive(serde::Serialize)]
-struct FilterPayload {
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
-    subject_type: Option<Vec<u8>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    tag: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    air_date: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rating: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rating_count: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rank: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    nsfw: Option<bool>,
-}
-
-#[derive(serde::Serialize)]
-struct SearchPayload {
-    keyword: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sort: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    filter: Option<FilterPayload>,
-}
-
-impl From<&SearchParams> for SearchKey {
-    fn from(p: &SearchParams) -> Self {
-        SearchKey {
-            keyword: p.keyword.clone(),
-            subject_type: p.subject_type.clone(),
-            sort: p.sort.clone(),
-            tag: p.tag.clone(),
-            air_date: p.air_date.clone(),
-            rating: p.rating.clone(),
-            rating_count: p.rating_count.clone(),
-            rank: p.rank.clone(),
-            nsfw: p.nsfw,
-            limit: p.limit,
-            offset: p.offset,
-        }
+    if let Some(v) = limit {
+        map.insert("limit", v.to_string());
     }
+    if let Some(v) = offset {
+        map.insert("offset", v.to_string());
+    }
+
+    // Sort array fields for consistent caching
+    if let Some(mut v) = subject_type.clone() {
+        v.sort();
+        map.insert(
+            "subject_type",
+            serde_json::to_string(&v).unwrap_or_default(),
+        );
+    }
+    if let Some(mut v) = tag.clone() {
+        v.sort();
+        map.insert("tag", serde_json::to_string(&v).unwrap_or_default());
+    }
+    if let Some(mut v) = air_date.clone() {
+        v.sort();
+        map.insert("air_date", serde_json::to_string(&v).unwrap_or_default());
+    }
+    if let Some(mut v) = rating.clone() {
+        v.sort();
+        map.insert("rating", serde_json::to_string(&v).unwrap_or_default());
+    }
+    if let Some(mut v) = rating_count.clone() {
+        v.sort();
+        map.insert(
+            "rating_count",
+            serde_json::to_string(&v).unwrap_or_default(),
+        );
+    }
+    if let Some(mut v) = rank.clone() {
+        v.sort();
+        map.insert("rank", serde_json::to_string(&v).unwrap_or_default());
+    }
+
+    format!("search:{}", serde_json::to_string(&map).unwrap_or_default())
 }
 
-impl From<&SearchParams> for SearchPayload {
-    fn from(p: &SearchParams) -> Self {
-        SearchPayload {
-            keyword: p.keyword.clone(),
-            sort: p.sort.clone(),
-            filter: Some(FilterPayload {
-                subject_type: p.subject_type.clone(),
-                tag: p.tag.clone(),
-                air_date: p.air_date.clone(),
-                rating: p.rating.clone(),
-                rating_count: p.rating_count.clone(),
-                rank: p.rank.clone(),
-                nsfw: p.nsfw,
-            }),
-        }
+/// Build Bangumi API search payload directly
+fn build_search_payload(
+    keyword: &str,
+    sort: &Option<String>,
+    subject_type: &Option<Vec<u8>>,
+    tag: &Option<Vec<String>>,
+    air_date: &Option<Vec<String>>,
+    rating: &Option<Vec<String>>,
+    rating_count: &Option<Vec<String>>,
+    rank: &Option<Vec<String>>,
+    nsfw: &Option<bool>,
+) -> serde_json::Value {
+    let mut payload = serde_json::json!({ "keyword": keyword });
+
+    let obj = payload.as_object_mut().unwrap();
+    if let Some(v) = sort {
+        obj.insert("sort".into(), v.clone().into());
     }
+
+    // Build filter object only if we have filter params
+    let mut filter = serde_json::Map::new();
+    if let Some(v) = subject_type {
+        filter.insert("type".into(), v.clone().into());
+    }
+    if let Some(v) = tag {
+        filter.insert("tag".into(), v.clone().into());
+    }
+    if let Some(v) = air_date {
+        filter.insert("airDate".into(), v.clone().into());
+    }
+    if let Some(v) = rating {
+        filter.insert("rating".into(), v.clone().into());
+    }
+    if let Some(v) = rating_count {
+        filter.insert("ratingCount".into(), v.clone().into());
+    }
+    if let Some(v) = rank {
+        filter.insert("rank".into(), v.clone().into());
+    }
+    if let Some(v) = nsfw {
+        filter.insert("nsfw".into(), (*v).into());
+    }
+
+    if !filter.is_empty() {
+        obj.insert("filter".into(), filter.into());
+    }
+
+    payload
 }
 
 fn build_limit_offset(limit: Option<u32>, offset: Option<u32>) -> Vec<(&'static str, String)> {
-    let mut v: Vec<(&str, String)> = Vec::new();
+    let mut v = Vec::new();
     if let Some(l) = limit {
         v.push(("limit", l.to_string()));
     }
@@ -212,29 +204,33 @@ pub async fn search_subject(
     limit: Option<u32>,
     offset: Option<u32>,
 ) -> Result<SearchResponse, AppError> {
-    let mut params = SearchParams {
-        keyword: keywords.to_string(),
-        subject_type,
-        sort,
-        tag,
-        air_date,
-        rating,
-        rating_count,
-        rank,
-        nsfw,
-        limit,
-        offset,
-    };
-    canonicalize(&mut params);
-    let key_struct: SearchKey = (&params).into();
-    let key = format!(
-        "search:{}",
-        serde_json::to_string(&key_struct).map_err(AppError::from)?
+    let key = build_search_key(
+        keywords,
+        &subject_type,
+        &sort,
+        &tag,
+        &air_date,
+        &rating,
+        &rating_count,
+        &rank,
+        &nsfw,
+        &limit,
+        &offset,
     );
     let url = format!("{}/v0/search/subjects", BGM_API_HOST);
-    let payload: SearchPayload = (&params).into();
+    let payload = build_search_payload(
+        keywords,
+        &sort,
+        &subject_type,
+        &tag,
+        &air_date,
+        &rating,
+        &rating_count,
+        &rank,
+        &nsfw,
+    );
     let mut req_builder = CLIENT.post(&url).json(&payload);
-    let qs = build_limit_offset(params.limit, params.offset);
+    let qs = build_limit_offset(limit, offset);
     if !qs.is_empty() {
         req_builder = req_builder.query(&qs);
     }

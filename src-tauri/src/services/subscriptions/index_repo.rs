@@ -372,7 +372,9 @@ pub struct SubjectMetadata {
     pub cover_url: String,
 }
 
-pub async fn batch_get_metadata(subject_ids: &[u32]) -> Result<HashMap<u32, SubjectMetadata>, AppError> {
+pub async fn batch_get_metadata(
+    subject_ids: &[u32],
+) -> Result<HashMap<u32, SubjectMetadata>, AppError> {
     if subject_ids.is_empty() {
         return Ok(HashMap::new());
     }
@@ -380,38 +382,48 @@ pub async fn batch_get_metadata(subject_ids: &[u32]) -> Result<HashMap<u32, Subj
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
 
-    let ids: Vec<i64> = subject_ids.iter().map(|&id| id as i64).collect();
-    let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    const MAX_IN_BATCH: usize = 500;
 
-    let metadata = conn.interact(move |conn| -> Result<HashMap<u32, SubjectMetadata>, rusqlite::Error> {
-        let mut stmt = conn.prepare(&format!(
-            "SELECT subject_id, name, name_cn, cover_url FROM subjects_index WHERE subject_id IN ({})",
-            placeholders
-        ))?;
+    // Split into chunks to avoid hitting SQLite expression limits
+    let mut result: HashMap<u32, SubjectMetadata> = HashMap::new();
 
-        let mut rows = stmt.query(rusqlite::params_from_iter(ids.iter()))?;
-        let mut metadata: HashMap<u32, SubjectMetadata> = HashMap::new();
+    for chunk in subject_ids.chunks(MAX_IN_BATCH) {
+        let ids: Vec<i64> = chunk.iter().map(|&id| id as i64).collect();
 
-        while let Some(row) = rows.next()? {
-            let id: u32 = row.get::<_, i64>(0)? as u32;
-            let name: String = row.get(1)?;
-            let name_cn: String = row.get(2)?;
-            let cover_url: String = row.get(3)?;
-
-            metadata.insert(
-                id,
-                SubjectMetadata {
-                    subject_id: id,
-                    name,
-                    name_cn,
-                    cover_url,
-                },
+        let chunk_metadata = conn.interact(move |conn| -> Result<HashMap<u32, SubjectMetadata>, rusqlite::Error> {
+            // Build IN clause with exact number of placeholders (safe: ids are i64, controlled input)
+            let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+            let sql = format!(
+                "SELECT subject_id, name, name_cn, cover_url FROM subjects_index WHERE subject_id IN ({})",
+                placeholders
             );
-        }
+            let mut stmt = conn.prepare(&sql)?;
+            let mut rows = stmt.query(rusqlite::params_from_iter(ids.iter()))?;
+            let mut metadata: HashMap<u32, SubjectMetadata> = HashMap::new();
 
-        Ok(metadata)
-    })
-    .await??;
+            while let Some(row) = rows.next()? {
+                let id: u32 = row.get::<_, i64>(0)? as u32;
+                let name: String = row.get(1)?;
+                let name_cn: String = row.get(2)?;
+                let cover_url: String = row.get(3)?;
 
-    Ok(metadata)
+                metadata.insert(
+                    id,
+                    SubjectMetadata {
+                        subject_id: id,
+                        name,
+                        name_cn,
+                        cover_url,
+                    },
+                );
+            }
+
+            Ok(metadata)
+        })
+        .await??;
+
+        result.extend(chunk_metadata);
+    }
+
+    Ok(result)
 }

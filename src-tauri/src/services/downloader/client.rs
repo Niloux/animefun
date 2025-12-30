@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use ts_rs::TS;
 
 struct SessionState {
@@ -15,7 +15,8 @@ struct SessionState {
     config_hash: u64,
 }
 
-static SESSION: Lazy<Mutex<Option<SessionState>>> = Lazy::new(|| Mutex::new(None));
+// Use RwLock for concurrent reads: multiple readers can access session simultaneously
+static SESSION: Lazy<RwLock<Option<SessionState>>> = Lazy::new(|| RwLock::new(None));
 
 pub struct QbitClient {
     base_url: String,
@@ -79,9 +80,9 @@ impl QbitClient {
     pub async fn login(&mut self) -> Result<(), AppError> {
         let current_hash = calculate_config_hash(&self.config);
 
-        // 1. 尝试全局会话
+        // 1. Try to reuse existing global session (concurrent read)
         {
-            let session = SESSION.lock().await;
+            let session = SESSION.read().await;
             if let Some(s) = &*session {
                 if s.config_hash == current_hash {
                     self.cookie = Some(s.cookie.clone());
@@ -90,7 +91,7 @@ impl QbitClient {
             }
         }
 
-        // 2. 执行登录
+        // 2. Perform login
         let url = format!("{}/api/v2/auth/login", self.base_url);
         let params = [
             ("username", self.config.username.as_deref().unwrap_or("")),
@@ -115,9 +116,9 @@ impl QbitClient {
             }
         }
 
-        // 3. 更新全局会话
+        // 3. Update global session (exclusive write)
         if !cookie_val.is_empty() {
-            let mut session = SESSION.lock().await;
+            let mut session = SESSION.write().await;
             *session = Some(SessionState {
                 cookie: cookie_val,
                 config_hash: current_hash,

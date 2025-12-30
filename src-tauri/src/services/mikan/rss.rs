@@ -35,10 +35,18 @@ pub async fn fetch_rss(mid: u32) -> Result<Vec<MikanResourceItem>, AppError> {
     let url = format!("{}/RSS/Bangumi?bangumiId={}", MIKAN_HOST, mid);
 
     let xml = if let Ok(Some((body, _etag, _last_modified))) = cache::get_entry(&key).await {
-        info!(bangumi_id = mid, xml_len = body.len(), source = "cache", "mikan rss xml ready");
+        info!(
+            bangumi_id = mid,
+            xml_len = body.len(),
+            source = "cache",
+            "mikan rss xml ready"
+        );
         body
     } else {
-        info!(bangumi_id = mid, "mikan rss cache miss, fetching from network");
+        info!(
+            bangumi_id = mid,
+            "mikan rss cache miss, fetching from network"
+        );
 
         crate::infra::http::wait_api_limit().await;
         let net_start = Instant::now();
@@ -54,7 +62,10 @@ pub async fn fetch_rss(mid: u32) -> Result<Vec<MikanResourceItem>, AppError> {
             match cache::get_entry(&key).await {
                 Ok(Some((cached_body, _, _))) => cached_body,
                 Ok(None) => {
-                    warn!(bangumi_id = mid, "mikan rss 304 but no cached body, returning empty");
+                    warn!(
+                        bangumi_id = mid,
+                        "mikan rss 304 but no cached body, returning empty"
+                    );
                     String::new()
                 }
                 Err(e) => {
@@ -193,145 +204,179 @@ fn parse_group(title: &str) -> Option<String> {
     leading_group(title).or_else(|| any_group(title))
 }
 
-static RE_RANGE: Lazy<Option<Regex>> = Lazy::new(|| {
-    Regex::new(r"(?i)\b(\d{1,3})\s*-\s*(\d{1,3})(?:\s*[\[(（]?(?:全集|END|完)[\])）]?)?").ok()
+// Episode parsing patterns - ordered by priority
+static RE_EPISODE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)(?:EP|E|第)\s*(\d{1,3})(?:\s*(?:话|話|集))?\b").unwrap());
+static RE_RANGE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?i)\b(\d{1,3})\s*-\s*(\d{1,3})(?:\s*[\[(（]?(?:全集|END|完)[\])）]?)?").unwrap()
 });
-static RE_EP: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"(?i)(?:EP|E|第)\s*(\d{1,3})(?:\s*(?:话|話|集))?\b").ok());
-static RE_BRACKET_NUM: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"(?i)[\[(（]\s*(\d{1,3})\s*[\])）]").ok());
-static RE_DASH_NUM: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"(?i)[\s\-]\s*(\d{1,3})\b").ok());
+static RE_BRACKET_NUM: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)[\[(（]\s*(\d{1,3})\s*[\])）]").unwrap());
+static RE_DASH_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)[\s\-]\s*(\d{1,3})\b").unwrap());
 
 fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
-    let t = title;
-    if let Some(re) = RE_EP.as_ref() {
-        if let Some(c) = re.captures(t) {
-            if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
-                return (Some(n), None);
-            }
+    // Try explicit EP/E/第 pattern first
+    if let Some(c) = RE_EPISODE.captures(title) {
+        if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
+            return (Some(n), None);
         }
     }
-    if let Some(re) = RE_RANGE.as_ref() {
-        if let Some(c) = re.captures(t) {
-            let s = c.get(1).map(|m| m.as_str()).unwrap_or("");
-            let e = c.get(2).map(|m| m.as_str()).unwrap_or("");
-            let s_num = s.parse::<u32>().ok();
-            let e_num = e.parse::<u32>().ok();
 
-            if let (Some(sn), Some(en)) = (s_num, e_num) {
-                let m = c.get(0).unwrap();
-                let start = m.start();
-                let end = m.end();
-                let prev = t[..start].chars().rev().find(|ch| !ch.is_whitespace());
-                let next = t[end..].chars().find(|ch| !ch.is_whitespace());
-                let bracketed = matches!(prev, Some('[') | Some('(') | Some('（') | Some('【'))
-                    || matches!(next, Some(']') | Some(')') | Some('）') | Some('】'));
-                let has_kw = m.as_str().to_lowercase().contains("end")
-                    || m.as_str().contains("全集")
-                    || m.as_str().contains("完");
+    // Try range pattern (e.g., "01-12")
+    if let Some(c) = RE_RANGE.captures(title) {
+        if let (Ok(sn), Ok(en)) = (
+            c.get(1).unwrap().as_str().parse::<u32>(),
+            c.get(2).unwrap().as_str().parse::<u32>(),
+        ) {
+            // Check if this is a season indicator like "S2 - 23" (not a range)
+            if is_season_indicator(title, &c, sn) {
+                return (Some(en), None);
+            }
+            return (None, Some(format!("{}-{}", sn, en)));
+        }
+    }
 
-                if !bracketed && !has_kw {
-                    let re_season = Regex::new(&format!(r"(?i)\bS{}\b", sn)).ok();
-                    let has_season = re_season.as_ref().map(|r| r.is_match(t)).unwrap_or(false)
-                        || t.contains(&format!(" {} /", sn))
-                        || t.contains(&format!(" {}-", sn))
-                        || t.contains(&format!(" {} -", sn));
-                    if has_season {
-                        return (Some(en), None);
-                    }
-                }
-            }
+    // Try bracketed number (e.g., "[01]")
+    if let Some(c) = RE_BRACKET_NUM.captures(title) {
+        if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
+            return (Some(n), None);
+        }
+    }
 
-            let er = format!("{}-{}", s, e);
-            return (None, Some(er));
-        }
+    // Try standalone dash-separated number
+    if let Some(n) = parse_dash_number(title) {
+        return (Some(n), None);
     }
-    if let Some(re) = RE_BRACKET_NUM.as_ref() {
-        if let Some(c) = re.captures(t) {
-            if let Ok(n) = c.get(1).unwrap().as_str().parse::<u32>() {
-                return (Some(n), None);
-            }
-        }
-    }
-    if let Some(re) = RE_DASH_NUM.as_ref() {
-        let main = t.split_once('(').map(|(a, _)| a).unwrap_or(t);
-        let main = main.split_once('（').map(|(a, _)| a).unwrap_or(main);
-        let mut best: Option<u32> = None;
-        for c in re.captures_iter(main) {
-            let m = c.get(1).unwrap();
-            let s = m.as_str();
-            let end = m.end();
-            let next = main[end..].chars().next();
-            if matches!(next, Some('p') | Some('P')) {
-                continue;
-            }
-            if let Ok(n) = s.parse::<u32>() {
-                best = Some(n);
-            }
-        }
-        if best.is_some() {
-            return (best, None);
-        }
-    }
+
     (None, None)
 }
 
-static RE_RES_P: Lazy<Option<Regex>> =
-    Lazy::new(|| Regex::new(r"(?i)\b(2160|1080|720|480)\s*[pP]\b").ok());
-static RE_4K: Lazy<Option<Regex>> = Lazy::new(|| Regex::new(r"(?i)\b4\s*K\b").ok());
+// Check if a range match is actually a season indicator (e.g., "S2 - 23" means episode 23 of season 2)
+fn is_season_indicator(title: &str, c: &regex::Captures, season_num: u32) -> bool {
+    let m = c.get(0).unwrap();
+    let start = m.start();
+    let end = m.end();
+
+    // Check for brackets around the match
+    let prev = title[..start].chars().rev().find(|ch| !ch.is_whitespace());
+    let next = title[end..].chars().find(|ch| !ch.is_whitespace());
+    let bracketed = matches!(prev, Some('[') | Some('(') | Some('（') | Some('【'))
+        || matches!(next, Some(']') | Some(')') | Some('）') | Some('】'));
+
+    // Check for END/全集/完 keywords
+    let has_end_marker = m.as_str().to_lowercase().contains("end")
+        || m.as_str().contains("全集")
+        || m.as_str().contains("完");
+
+    if bracketed || has_end_marker {
+        return false;
+    }
+
+    // Check for "S{N}" or "{N} /" or "{N}-\" patterns that indicate season
+    let season_pattern = format!(r"(?i)\bS{}\b", season_num);
+    let has_season_marker = Regex::new(&season_pattern)
+        .ok()
+        .map(|r| r.is_match(title))
+        .unwrap_or(false)
+        || title.contains(&format!(" {} /", season_num))
+        || title.contains(&format!(" {}-", season_num))
+        || title.contains(&format!(" {} -", season_num));
+
+    has_season_marker
+}
+
+// Parse dash-separated numbers, excluding "1080p"-like patterns
+fn parse_dash_number(title: &str) -> Option<u32> {
+    // Remove parenthesized parts to avoid false matches
+    let main = title
+        .split_once('(')
+        .map(|(a, _)| a)
+        .unwrap_or(title)
+        .split_once('（')
+        .map(|(a, _)| a)
+        .unwrap_or(title);
+
+    RE_DASH_NUM
+        .captures_iter(main)
+        .filter_map(|c| {
+            let m = c.get(1)?;
+            let s = m.as_str();
+            let end = m.end();
+
+            // Skip if followed by 'p' or 'P' (resolution like 1080p)
+            let next = main[end..].chars().next();
+            if matches!(next, Some('p') | Some('P')) {
+                return None;
+            }
+
+            s.parse::<u32>().ok()
+        })
+        .last()
+}
+
+static RE_RESOLUTION: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?i)\b(2160|1080|720|480)\s*[pP]\b").unwrap());
+static RE_4K: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b4\s*K\b").unwrap());
 
 fn parse_resolution(text: &str) -> Option<u16> {
-    let t = text;
-    if let Some(re) = RE_RES_P.as_ref() {
-        if let Some(c) = re.captures(t) {
-            return c.get(1)?.as_str().parse::<u16>().ok();
+    // Try standard resolution pattern first
+    if let Some(c) = RE_RESOLUTION.captures(text) {
+        if let Ok(res) = c.get(1)?.as_str().parse::<u16>() {
+            return Some(res);
         }
     }
-    if let Some(re4k) = RE_4K.as_ref() {
-        if re4k.is_match(t) {
-            return Some(2160);
-        }
+    // Try 4K pattern
+    if RE_4K.is_match(text) {
+        return Some(2160);
     }
     None
 }
 
 fn parse_subtitle(title: &str, desc: Option<&str>) -> (Option<String>, Option<String>) {
-    fn from_text(t: &str) -> (Option<String>, Option<String>) {
-        let mut lang: Option<String> = None;
-        let mut typ: Option<String> = None;
-        let s = t.to_lowercase();
-        if s.contains("简繁日") {
-            lang = Some("简繁日".to_string())
-        } else if s.contains("简日") {
-            lang = Some("简日".to_string());
-        } else if s.contains("简繁") || s.contains("chs&cht") || s.contains("chs+cht") {
-            lang = Some("简繁".to_string());
-        } else if s.contains("简体") || s.contains("chs") || s.contains("gb") {
-            lang = Some("简体".to_string());
-        } else if s.contains("繁体") || s.contains("cht") || s.contains("big5") {
-            lang = Some("繁体".to_string());
-        } else if s.contains("繁日") {
-            lang = Some("繁日".to_string());
-        }
-        if s.contains("外挂") || s.contains("external") {
-            typ = Some("外挂".to_string());
-        } else if s.contains("内封")
-            || s.contains("内嵌")
-            || s.contains("内置")
-            || s.contains("softsub")
-        {
-            typ = Some("内封".to_string());
-        } else if s.contains("硬字幕") || s.contains("hardsub") {
-            typ = Some("硬字幕".to_string());
-        }
-        (lang, typ)
+    // Check title first, then description
+    let (lang, typ) = parse_subtitle_text(title);
+    if lang.is_some() || typ.is_some() {
+        return (lang, typ);
     }
-    let (l1, t1) = from_text(title);
-    let (l2, t2) = desc.map(from_text).unwrap_or((None, None));
-    let lang = l1.or(l2);
-    let typ = t1.or(t2);
-    (lang, typ)
+    desc.map_or((None, None), |d| parse_subtitle_text(d))
+}
+
+fn parse_subtitle_text(text: &str) -> (Option<String>, Option<String>) {
+    let s = text.to_lowercase();
+
+    // Language detection (priority order matters)
+    let lang = if s.contains("简繁日") {
+        Some("简繁日")
+    } else if s.contains("简日") {
+        Some("简日")
+    } else if s.contains("简繁") || s.contains("chs&cht") || s.contains("chs+cht") {
+        Some("简繁")
+    } else if s.contains("简体") || s.contains("chs") || s.contains("gb") {
+        Some("简体")
+    } else if s.contains("繁体") || s.contains("cht") || s.contains("big5") {
+        Some("繁体")
+    } else if s.contains("繁日") {
+        Some("繁日")
+    } else {
+        None
+    };
+
+    // Type detection
+    let typ = if s.contains("外挂") || s.contains("external") {
+        Some("外挂")
+    } else if s.contains("内封")
+        || s.contains("内嵌")
+        || s.contains("内置")
+        || s.contains("softsub")
+    {
+        Some("内封")
+    } else if s.contains("硬字幕") || s.contains("hardsub") {
+        Some("硬字幕")
+    } else {
+        None
+    };
+
+    (lang.map(str::to_string), typ.map(str::to_string))
 }
 
 #[cfg(test)]

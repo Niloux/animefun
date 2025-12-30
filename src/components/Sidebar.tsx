@@ -1,15 +1,12 @@
 import {
   BookOpen,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Folder,
   Home,
   Search,
   Settings,
 } from "lucide-react";
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ikuyoAvatar from "../assets/ikuyo-avatar.png";
 import { ROUTES } from "../constants/routes";
@@ -24,96 +21,36 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from "./ui/sidebar";
 
-// 定义菜单结构类型 - 区分父菜单和子菜单以提高类型安全
-type MenuItem = ParentMenuItem | ChildMenuItem;
-
-type ParentMenuItem = {
-  title: string;
-  icon?: React.ElementType;
-  children: ChildMenuItem[];
-  preload?: () => void;
-};
-
-type ChildMenuItem = {
+type MenuItem = {
   title: string;
   url: string;
   icon?: React.ElementType;
-  preload?: () => void;
 };
 
 interface AppSidebarProps {
-  // 预加载函数映射表：路径 -> 预加载函数
   preloadMap: Record<string, () => void>;
 }
 
 export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
-  // 使用Set存储展开的菜单标题，支持多菜单展开
-  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
 
-  // 检查路径是否激活
   const isActive = (path: string) => location.pathname === path;
 
-  // 类型守卫：检查是否为父菜单（有子菜单）
-  const isParent = (menuItem: MenuItem): menuItem is ParentMenuItem => {
-    return "children" in menuItem;
+  const handlePreload = (path: string) => {
+    preloadMap[path]?.();
   };
 
-  // 预加载处理函数
-  const handlePreload = (path?: string) => {
-    if (path && preloadMap[path]) {
-      preloadMap[path]();
-    }
-  };
-
-  // 切换菜单展开状态
-  const toggleMenu = (title: string) => {
-    setOpenMenus((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(title)) {
-        newSet.delete(title);
-      } else {
-        newSet.add(title);
-      }
-      return newSet;
-    });
-  };
-
-  // 统一的菜单配置，支持嵌套结构
   const menuItems: MenuItem[] = [
-    {
-      title: "首页",
-      url: ROUTES.HOME,
-      icon: Home,
-    },
-    {
-      title: "搜索",
-      url: ROUTES.SEARCH,
-      icon: Search,
-    },
-    {
-      title: "订阅",
-      url: ROUTES.SUBSCRIBE,
-      icon: BookOpen,
-    },
-    {
-      title: "资源",
-      url: ROUTES.RESOURCES,
-      icon: Folder,
-    },
-    {
-      title: "设置",
-      url: ROUTES.SETTINGS,
-      icon: Settings,
-    },
+    { title: "首页", url: ROUTES.HOME, icon: Home },
+    { title: "搜索", url: ROUTES.SEARCH, icon: Search },
+    { title: "订阅", url: ROUTES.SUBSCRIBE, icon: BookOpen },
+    { title: "资源", url: ROUTES.RESOURCES, icon: Folder },
+    { title: "设置", url: ROUTES.SETTINGS, icon: Settings },
   ];
 
   return (
@@ -131,7 +68,6 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
                 className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8"
               />
               <div className="text-left overflow-hidden whitespace-nowrap">
-                {/* <span className="text-xl font-semibold">For Fun</span> */}
                 <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
                   喜多郁代
                 </div>
@@ -151,69 +87,22 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
-                // 有子菜单的父项
-                if (isParent(item)) {
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        onClick={() => toggleMenu(item.title)}
-                        className="group/resources"
-                      >
-                        {item.icon && <item.icon />}
-                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
-                          {item.title}
-                        </span>
-                        <span className="ml-auto shrink-0">
-                          {openMenus.has(item.title) ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </span>
-                      </SidebarMenuButton>
-                      {openMenus.has(item.title) && (
-                        <SidebarMenuSub>
-                          {item.children.map((child) => (
-                            <SidebarMenuSubItem key={child.title}>
-                              <SidebarMenuSubButton
-                                asChild
-                                isActive={isActive(child.url)}
-                                onMouseEnter={() => handlePreload(child.url)}
-                                onFocus={() => handlePreload(child.url)}
-                              >
-                                <Link to={child.url}>
-                                  <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
-                                    {child.title}
-                                  </span>
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                }
-
-                // 普通菜单项
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.url)}
-                      onMouseEnter={() => handlePreload(item.url)}
-                    >
-                      <Link to={item.url}>
-                        {item.icon && <item.icon />}
-                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
-                          {item.title}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    onMouseEnter={() => handlePreload(item.url)}
+                  >
+                    <Link to={item.url}>
+                      {item.icon && <item.icon />}
+                      <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
+                        {item.title}
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
