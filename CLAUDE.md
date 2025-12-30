@@ -30,7 +30,7 @@ pnpm lint           # ESLint 9
 pnpm format         # Prettier
 
 # Type generation (run after Rust model changes)
-pnpm types:gen      # Generates src/types/gen/ from Rust via ts-rs
+pnpm types:gen      # Runs `cargo test` to generate src/types/gen/ from Rust via ts-rs
 ```
 
 ## Architecture
@@ -86,7 +86,10 @@ pnpm types:gen      # Generates src/types/gen/ from Rust via ts-rs
 
 2. **Data Flow**: React components → custom hooks → Tauri invoke → Rust commands → services → infrastructure
 
-3. **Background Workers**: Services like `subscriptions::worker` and `downloader::monitor` run as async tasks, polling external sources periodically.
+3. **Background Workers**: Services run as async tasks via `tauri::async_runtime::spawn`:
+   - `subscriptions::worker` - Polls subscription updates (10-min interval, 4 concurrent)
+   - `mikan::preheat` - Preheats RSS cache (15-min interval, 4 concurrent)
+   - `downloader::monitor` - Tracks download status continuously
 
 4. **Caching Strategy**: Two-layer caching
    - SQLite `cache.sqlite` for RSS/API data
@@ -108,7 +111,7 @@ All user data in `~/.animefun/`:
 ## Adding New Features
 
 1. **Rust-first**: Define models in `src-tauri/src/models/` with `#[ts_rs]` macro
-2. **Generate types**: Run `pnpm types:gen`
+2. **Generate types**: Run `pnpm types:gen` (executes `cargo test` which exports TS types)
 3. **Implement command**: Add handler in `src-tauri/src/commands/`
-4. **Register command**: Add to `src-tauri/src/lib.rs` invoke_handler
-5. **Frontend integration**: Create hook in `src/lib/`, consume in components
+4. **Register command**: Add to `src-tauri/src/lib.rs` `invoke_handler![]` macro
+5. **Frontend integration**: Add wrapper to `src/lib/api.ts`, consume in hooks/components
