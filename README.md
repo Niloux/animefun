@@ -8,6 +8,7 @@
 
   [![Build](https://img.shields.io/github/actions/workflow/status/Niloux/animefun/tauri-build.yml?branch=main&style=flat-square)](https://github.com/Niloux/animefun/actions)
   [![Release](https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=blue)](https://github.com/Niloux/animefun/releases)
+  [![Downloads](https://img.shields.io/github/downloads/Niloux/animefun/total?style=flat-square&color=green)](https://github.com/Niloux/animefun/releases)
   [![License](https://img.shields.io/badge/license-MIT-success?style=flat-square)](LICENSE)
 
 </div>
