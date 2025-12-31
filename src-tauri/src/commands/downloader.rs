@@ -242,6 +242,7 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
                     title,
                     cover,
                     meta_json: new_meta.or(t.meta_json),
+                    save_path: Some(l.save_path.clone()),
                 }
             } else {
                 DownloadItem {
@@ -255,6 +256,7 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
                     title,
                     cover,
                     meta_json: new_meta.or(t.meta_json),
+                    save_path: None,
                 }
             }
         })
@@ -296,5 +298,36 @@ pub async fn delete_download(hash: String, delete_files: bool) -> CommandResult<
     let qb = get_client().await?;
     qb.delete(&hash, delete_files).await?;
     repo::delete(hash).await?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_download_folder(save_path: String) -> CommandResult<()> {
+    let path = std::path::Path::new(&save_path);
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(path)
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(path)
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(path)
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
+    }
+
     Ok(())
 }

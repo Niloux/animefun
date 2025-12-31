@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import { DownloadItem } from "@/types/gen/downloader";
-import { Pause, Play, Trash2 } from "lucide-react";
+import { Folder, Pause, Play, Trash2 } from "lucide-react";
 import { memo } from "react";
 
 interface DownloadCardProps {
@@ -11,11 +11,12 @@ interface DownloadCardProps {
   onPause: () => void;
   onResume: () => void;
   onDelete: () => void;
+  onOpenFolder?: () => void;
   onCoverClick?: () => void;
 }
 
 export const DownloadCard = memo<DownloadCardProps>(
-  ({ item, onPause, onResume, onDelete, onCoverClick }) => {
+  ({ item, onPause, onResume, onDelete, onOpenFolder, onCoverClick }) => {
     const isPaused =
       item.status.toLowerCase().includes("paused") ||
       item.status.toLowerCase().includes("stop");
@@ -68,6 +69,17 @@ export const DownloadCard = memo<DownloadCardProps>(
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
+                {isCompleted && item.save_path && onOpenFolder && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    onClick={onOpenFolder}
+                    title="打开文件夹"
+                  >
+                    <Folder className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   size="icon"
                   variant="ghost"

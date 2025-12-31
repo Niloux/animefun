@@ -11,4 +11,5 @@ export type DownloadItem = {
   title: string;
   cover: string;
   meta_json?: string;
+  save_path?: string;
 };

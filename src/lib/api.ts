@@ -38,6 +38,9 @@ export const resumeDownload = (hash: string) =>
 export const deleteDownload = (hash: string, deleteFiles: boolean) =>
   invoke<void>("delete_download", { hash, deleteFiles });
 
+export const openDownloadFolder = (savePath: string) =>
+  invoke<void>("open_download_folder", { savePath });
+
 export const addTorrentAndTrack = (
   url: string,
   subjectId: number,

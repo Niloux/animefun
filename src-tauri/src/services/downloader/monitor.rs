@@ -118,6 +118,7 @@ fn merge_items(
                     title,
                     cover,
                     meta_json: t.meta_json,
+                    save_path: Some(l.save_path.clone()),
                 }
             } else {
                 let (title, cover) = t
@@ -137,6 +138,7 @@ fn merge_items(
                     title,
                     cover,
                     meta_json: t.meta_json,
+                    save_path: None,
                 }
             }
         })

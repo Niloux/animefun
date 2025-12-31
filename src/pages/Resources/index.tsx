@@ -14,6 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDownloadList } from "@/hooks/use-download-list";
 import { useFadeIn } from "@/hooks/use-fade-in";
+import { openDownloadFolder } from "@/lib/api";
 import { DownloadItem } from "@/types/gen/downloader";
 import {
   CheckCircle2,
@@ -55,6 +56,16 @@ const ResourcesPage: FC = () => {
 
   const handleCoverClick = (subjectId: number) => {
     navigateToAnimeDetail(navigate, subjectId);
+  };
+
+  const handleOpenFolder = async (item: DownloadItem) => {
+    if (item.save_path) {
+      try {
+        await openDownloadFolder(item.save_path);
+      } catch (error) {
+        console.error("Failed to open folder:", error);
+      }
+    }
   };
 
   const downloadingItems = useMemo(
@@ -156,6 +167,7 @@ const ResourcesPage: FC = () => {
             onPause={() => handlePause(item.hash)}
             onResume={() => handleResume(item.hash)}
             onDelete={() => setItemToDelete(item)}
+            onOpenFolder={() => handleOpenFolder(item)}
             onCoverClick={() => handleCoverClick(item.subject_id)}
           />
         ))}

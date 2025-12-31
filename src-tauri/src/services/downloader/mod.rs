@@ -20,6 +20,8 @@ pub struct DownloadItem {
     pub cover: String,
     #[ts(optional)]
     pub meta_json: Option<String>,
+    #[ts(optional)]
+    pub save_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
