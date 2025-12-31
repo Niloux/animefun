@@ -9,6 +9,7 @@ pub struct TrackedDownload {
     pub hash: String,
     pub subject_id: u32,
     pub episode: Option<u32>,
+    pub episode_range: Option<String>,
     pub meta_json: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -33,24 +34,27 @@ pub async fn insert(
     hash: &str,
     subject_id: u32,
     episode: Option<u32>,
+    episode_range: Option<&str>,
     meta_json: Option<&str>,
 ) -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let hash = hash.to_string();
+    let episode_range = episode_range.map(|s| s.to_string());
     let meta_json = meta_json.map(|s| s.to_string());
     let now = now_secs();
 
     conn.interact(move |conn| -> Result<(), rusqlite::Error> {
         conn.execute(
-            "INSERT INTO tracked_downloads (hash, subject_id, episode, meta_json, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+            "INSERT INTO tracked_downloads (hash, subject_id, episode, episode_range, meta_json, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
              ON CONFLICT(hash) DO UPDATE SET
                subject_id=excluded.subject_id,
                episode=excluded.episode,
+               episode_range=excluded.episode_range,
                meta_json=excluded.meta_json,
                updated_at=excluded.updated_at",
-            params![hash, subject_id, episode, meta_json, now, now],
+            params![hash, subject_id, episode, episode_range, meta_json, now, now],
         )?;
         Ok(())
     }).await??;
@@ -62,7 +66,7 @@ pub async fn list() -> Result<Vec<TrackedDownload>, AppError> {
     let conn = pool.get().await?;
 
     let items = conn.interact(move |conn| -> Result<Vec<TrackedDownload>, rusqlite::Error> {
-        let mut stmt = conn.prepare("SELECT id, hash, subject_id, episode, meta_json, created_at, updated_at FROM tracked_downloads ORDER BY created_at DESC")?;
+        let mut stmt = conn.prepare("SELECT id, hash, subject_id, episode, episode_range, meta_json, created_at, updated_at FROM tracked_downloads ORDER BY created_at DESC")?;
         let rows = stmt.query_map([], |row| {
             let ep_opt_i: Option<i64> = row.get(3)?;
             let ep_opt_u: Option<u32> = ep_opt_i.map(|v| v as u32);
@@ -71,9 +75,10 @@ pub async fn list() -> Result<Vec<TrackedDownload>, AppError> {
                 hash: row.get(1)?,
                 subject_id: row.get(2)?,
                 episode: ep_opt_u,
-                meta_json: row.get(4)?,
-                created_at: row.get(5)?,
-                updated_at: row.get(6)?,
+                episode_range: row.get(4)?,
+                meta_json: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })?;
         let mut out = Vec::new();

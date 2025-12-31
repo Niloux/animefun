@@ -145,7 +145,7 @@ async fn test_repo_roundtrip() -> Result<(), AppError> {
     animefun_lib::infra::db::init_pools(base.clone()).await?;
 
     let h = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-    repo::insert(h, 1, Some(1), None).await?;
+    repo::insert(h, 1, Some(1), None, None).await?;
     let list1 = repo::list().await?;
     assert!(list1.iter().any(|x| x.hash == h));
 

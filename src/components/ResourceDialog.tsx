@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,7 @@ import {
 } from "./ui/select";
 import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
-import type { MikanResourcesResponse } from "../types/gen/mikan";
+import type { MikanResourcesResponse, MikanResourceItem } from "../types/gen/mikan";
 import type { Episode } from "../types/gen/bangumi";
 import { useEpisodeResources } from "../hooks/use-episode-resources";
 import { useDownloadAction } from "../hooks/use-download-action";
@@ -57,6 +57,14 @@ export function ResourceDialog({
     subjectCover,
     episode,
   });
+
+  // 包装函数，传递 episode_range 给 handleDownload
+  const handleDownloadWithResource = useCallback(
+    (url: string, title: string, item: MikanResourceItem) => {
+      handleDownload(url, title, item.episode_range || null);
+    },
+    [handleDownload],
+  );
 
   const { isConnected, isCheckingConnection } = useDownloadList();
 
@@ -194,7 +202,7 @@ export function ResourceDialog({
               <ScrollArea className="h-[50vh]">
                 <ResourceGroupList
                   groups={filteredGrouped}
-                  onDownload={handleDownload}
+                  onDownload={handleDownloadWithResource}
                   isConnected={isConnected}
                   isCheckingConnection={isCheckingConnection}
                 />

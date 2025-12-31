@@ -7,11 +7,13 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 #[derive(Serialize, Clone, TS)]
-#[ts(export, export_to = "../../../src/types/gen/downloader.ts")]
+#[ts(export, export_to = "../../src/types/gen/downloader.ts")]
 pub struct DownloadItem {
     pub hash: String,
     pub subject_id: u32,
     pub episode: Option<u32>,
+    #[ts(optional)]
+    pub episode_range: Option<String>,
     pub status: String,
     pub progress: f64,
     pub dlspeed: i64,

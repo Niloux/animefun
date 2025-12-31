@@ -94,6 +94,7 @@ async fn create_data_tables(pool: &DbPool) -> Result<(), AppError> {
                     hash TEXT NOT NULL UNIQUE,
                     subject_id INTEGER NOT NULL,
                     episode INTEGER,
+                    episode_range TEXT,
                     meta_json TEXT,
                     created_at INTEGER NOT NULL,
                     updated_at INTEGER NOT NULL

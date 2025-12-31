@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 interface ResourceGroupListProps {
   groups: { group: string; items: MikanResourceItem[] }[];
-  onDownload: (url: string, title: string) => void;
+  onDownload: (url: string, title: string, item: MikanResourceItem) => void;
   isConnected?: boolean;
   isCheckingConnection?: boolean;
 }
@@ -78,7 +78,7 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           if (!isConnected) {
                             navigate("/settings");
                           } else {
-                            onDownload(it.torrent_url!, it.title);
+                            onDownload(it.torrent_url!, it.title, it);
                           }
                         }}
                       >
@@ -104,7 +104,7 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           if (!isConnected) {
                             navigate("/settings");
                           } else {
-                            onDownload(it.magnet!, it.title);
+                            onDownload(it.magnet!, it.title, it);
                           }
                         }}
                       >

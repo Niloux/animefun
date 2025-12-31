@@ -43,6 +43,7 @@ pub async fn add_torrent_and_track(
     url: String,
     subject_id: u32,
     episode: Option<u32>,
+    episode_range: Option<String>,
     meta_json: Option<String>,
 ) -> CommandResult<()> {
     const MAX_TORRENT_SIZE: usize = 20 * 1024 * 1024;
@@ -85,7 +86,7 @@ pub async fn add_torrent_and_track(
     };
 
     // 2. 先记录到数据库
-    repo::insert(&hash, subject_id, episode, meta_json.as_deref()).await?;
+    repo::insert(&hash, subject_id, episode, episode_range.as_deref(), meta_json.as_deref()).await?;
 
     // 3. 添加到 qBittorrent
     let qb = get_client().await?;
@@ -235,6 +236,7 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
                     hash: t.hash,
                     subject_id: t.subject_id,
                     episode: t.episode,
+                    episode_range: t.episode_range,
                     status: l.state.clone(),
                     progress: l.progress * 100.0,
                     dlspeed: l.dlspeed,
@@ -249,6 +251,7 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
                     hash: t.hash,
                     subject_id: t.subject_id,
                     episode: t.episode,
+                    episode_range: t.episode_range,
                     status: "stopped".to_string(),
                     progress: 0.0,
                     dlspeed: 0,

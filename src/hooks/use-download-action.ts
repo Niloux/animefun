@@ -15,7 +15,7 @@ export function useDownloadAction({
   episode,
 }: UseDownloadActionProps) {
   const handleDownload = useCallback(
-    async (url: string, title: string) => {
+    async (url: string, title: string, episodeRange: string | null) => {
       if (!subjectId) {
         toast.error("缺少番剧ID，无法下载");
         return;
@@ -31,6 +31,7 @@ export function useDownloadAction({
           url,
           subjectId,
           episode?.sort ? Math.floor(episode.sort) : null,
+          episodeRange,
           JSON.stringify(meta),
         );
         toast.success("已添加到下载列表");

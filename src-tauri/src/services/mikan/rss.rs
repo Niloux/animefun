@@ -401,7 +401,8 @@ mod tests {
         let t = "【动漫国字幕组】恋上换装娃娃 [01-12(全集)] 1080P 简繁外挂";
         let (ep, range) = parse_episode_info(t);
         assert!(ep.is_none());
-        assert_eq!(range.as_deref(), Some("01-12"));
+        // format! 会将数字转换为无前导零的形式
+        assert_eq!(range.as_deref(), Some("1-12"));
     }
 
     #[test]

@@ -64,7 +64,11 @@ export const DownloadCard = memo<DownloadCardProps>(
                   {item.title}
                 </h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  {item.episode ? `第${item.episode}话` : "未知剧集"}
+                  {item.episode_range
+                    ? `${item.episode_range} 合集`
+                    : item.episode
+                      ? `第${item.episode}话`
+                      : "未知剧集"}
                 </p>
               </div>
 

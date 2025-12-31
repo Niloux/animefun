@@ -45,9 +45,10 @@ export const addTorrentAndTrack = (
   url: string,
   subjectId: number,
   episode: number | null,
+  episodeRange: string | null,
   metaJson: string | null,
 ) =>
-  invoke<void>("add_torrent_and_track", { url, subjectId, episode, metaJson });
+  invoke<void>("add_torrent_and_track", { url, subjectId, episode, episodeRange, metaJson });
 
 // --- Bangumi ---
 
