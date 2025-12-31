@@ -1,8 +1,8 @@
 [package]
 name = "animefun"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.2.1"
+description = "看动画的app"
+authors = ["Niloux3d"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -23,29 +23,30 @@ tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.12", features = [
+reqwest = { version = "0.13", features = [
     "json",
-    "rustls-tls",
+    "query",
+    "form",
     "gzip",
     "deflate",
     "multipart",
     "stream",
 ] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-thiserror = "2.0.17"
+thiserror = "2"
 rusqlite = { version = "0.37", features = ["bundled"] }
-once_cell = "1.21"
+once_cell = "1"
 sha2 = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-ts-rs = "11.1"
+ts-rs = "11"
 scraper = "0.25"
-rss = "2.0"
+rss = "2"
 regex = "1"
 deadpool-sqlite = { version = "0.12", features = ["rt_tokio_1"] }
 governor = "0.10"
-sha1 = "0.10.6"
-serde_bencode = "0.2.4"
-hex = "0.4.3"
-futures = "0.3.31"
+sha1 = "0.10"
+serde_bencode = "0.2"
+hex = "0.4"
+futures = "0.3"
