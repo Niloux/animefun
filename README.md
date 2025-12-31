@@ -1,83 +1,110 @@
 <div align="center">
-  <img src="src/assets/ikuyo-avatar.png" width="150" alt="Ikuyo Logo">
-  <h1>AnimeFun</h1>
-  <p>一站式本地追番客户端：订阅、日历、剧集与资源聚合，专注快速、稳定、可离线。</p>
-  <p>专为希望自动化追番流程、聚合资源并在一个地方完成所有操作的动漫爱好者打造。</p>
+
+  <img src="src/assets/ikuyo-avatar.png" width="100" alt="AnimeFun">
+
+  # AnimeFun
+
+  本地追番客户端 · 订阅管理 · 日历 · 资源聚合
+
+  [![Build](https://img.shields.io/github/actions/workflow/status/Niloux/animefun/tauri-build.yml?branch=main&style=flat-square)](https://github.com/Niloux/animefun/actions)
+  [![Release](https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=blue)](https://github.com/Niloux/animefun/releases)
+  [![License](https://img.shields.io/badge/license-MIT-success?style=flat-square)](LICENSE)
+
 </div>
 
-<p align="center">
-  <a href="https://github.com/Niloux/animefun/actions/workflows/tauri-build.yml"><img alt="Build Status" src="https://img.shields.io/github/actions/workflow/status/Niloux/animefun/tauri-build.yml?branch=main&style=for-the-badge"></a>
-  <a href="https://github.com/Niloux/animefun/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/Niloux/animefun?style=for-the-badge&color=blue"></a>
-  <a href="https://github.com/Niloux/animefun/releases"><img alt="Total Downloads" src="https://img.shields.io/github/downloads/Niloux/animefun/total?style=for-the-badge&color=green"></a>
-  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge"></a>
-</p>
+---
 
-## 应用截图
+## 截图
 
-- 首页（日历与更新）：
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/home.png"></td>
+    <td width="50%"><img src="docs/screenshots/subscriptions.png"></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/detail.png"></td>
+    <td width="50%"><img src="docs/screenshots/resources.png"></td>
+  </tr>
+</table>
 
-  ![Home](docs/screenshots/home.png)
+---
 
-- 订阅列表（过滤与搜索）：
+## 功能
 
-  ![Subscriptions](docs/screenshots/subscriptions.png)
+- **订阅管理** — 收藏番剧，后台自动刷新（10 分钟）
+- **番剧日历** — 本周更新时间线
+- **高级搜索** — 按 类型/评分/年份/标签 过滤
+- **资源聚合** — 解析 Mikan RSS，关联剧集，支持添加到 qBittorrent/Transmission
+- **本地缓存** — 图片与 RSS 数据缓存，离线可用
+- **跨平台** — macOS / Linux / Windows
 
-- 番剧详情（信息与标签）：
+---
 
-  ![Detail](docs/screenshots/detail.png)
+## 安装
 
-- 资源聚合（Mikan RSS）：
+下载 [Releases](https://github.com/Niloux/animefun/releases) 中的安装包：
 
-  ![Resources](docs/screenshots/resources.png)
+| 平台   | 文件格式                           |
+| ------ | ---------------------------------- |
+| macOS  | `.dmg` / `.app.tar.gz`             |
+| Linux  | `.AppImage` / `.deb` / `.rpm`      |
+| Windows | `.msi` / `.nsis.exe`               |
 
-## 特性
+### 从源码构建
 
-- 订阅管理：一键收藏/取消、批量清理、后台周期性刷新索引（10 分钟轮询）
-- 高级搜索：对接 Bangumi 搜索，支持类型、评分、标签、排序等过滤
-- 番剧日历：本周更新一目了然，点击直达详情与剧集
-- 资源聚合：解析并聚合 Mikan RSS 资源，关联剧集快速定位
-- 本地缓存：图片与 RSS 智能缓存，过期自动清理，离线可用
-- 现代 UI：基于 shadcn-ui/Radix + Tailwind v4，响应式布局与骨架屏
-- 稳定架构：前端 React 19 + React Query；后端 Tauri 2 + Rust
+```bash
+git clone https://github.com/Niloux/animefun.git
+cd animefun
+pnpm install
+pnpm tauri build
+```
 
-## 快速开始（macOS）
+---
 
-- 前置依赖：`pnpm`、Node 20+、Rust toolchain、Xcode Command Line Tools
-- 安装依赖：`pnpm install`
-- 开发（桌面应用）：`pnpm tauri dev`
-- 仅前端预览：`pnpm dev`
-- 构建发行包：`pnpm tauri build`
+## 开发
 
-## 常用脚本
+```bash
+pnpm tauri dev      # 启动开发环境
+pnpm lint           # ESLint
+pnpm format         # Prettier
+pnpm types:gen      # 从 Rust 导出 TypeScript 类型
+```
 
-- `pnpm lint` 代码检查（ESLint 9）
-- `pnpm types:gen` 从 Rust 通过测试导出 TS 类型（ts-rs）
-- `pnpm build` 生产构建（`tsc && vite build`）
-
-## 目录结构
-
-- `src/` 前端 UI、路由与业务逻辑（搜索、订阅、资源、详情等）
-- `src/components/ui/` 基础 UI 组件（shadcn 风格封装）
-- `src/pages/` 页面模块（`Home`、`Search`、`Subscribe`、`Resources`、`AnimeDetail`、`Settings`）
-- `src/lib/` 前端工具层（API 调用、分页、懒加载、查询客户端）
-- `src/types/gen/` Rust 自动导出到 TS 的类型定义
-- `src-tauri/` Rust 后端（命令、服务、订阅并发刷新、缓存、DB 等）
-- `docs/bangumi_api.yml` Bangumi OpenAPI 规范
-
-## 数据与隐私
-
-- 存储位置：`~/.animefun`（SQLite `data.sqlite`/`cache.sqlite` 与 `images/` 缓存）
-- 网络来源：Bangumi API、Mikan RSS；仅本地缓存，不上传个人数据
+---
 
 ## 技术栈
 
-- 前端：React 19、React Router、React Query、Tailwind v4、shadcn-ui
-- 后端：Tauri 2、Rust、SQLite（deadpool_sqlite）、reqwest、tracing
-- 类型：ts-rs 自动生成前后端共享类型
+- **前端**: React 19, React Router, TanStack Query, Tailwind v4, Radix UI
+- **后端**: Tauri 2, Rust, SQLite
+- **类型**: [ts-rs](https://github.com/Aleph-Alpha/ts-rs) 自动同步前后端类型
 
-## 致谢
+---
 
-- Bangumi 社区与开放 API
-- Mikan Project与 RSS 服务
-- shadcn-ui/Radix 团队
-- tauri 团队与贡献者
+## 数据存储
+
+| 平台   | 目录                                                |
+| ------ | --------------------------------------------------- |
+| macOS  | `~/Library/Application Support/com.wuyou.animefun/` |
+| Linux  | `~/.config/com.wuyou.animefun/`                     |
+| Windows | `%APPDATA%\com.wuyou.animefun\`                     |
+
+```
+com.wuyou.animefun/
+├── data.sqlite      # 订阅、设置
+├── cache.sqlite     # RSS、API 缓存
+└── images/          # 图片缓存
+```
+
+数据仅存储在本地，网络请求仅限于 Bangumi API 和 Mikan RSS。
+
+---
+
+## 依赖
+
+- [Bangumi API](https://github.com/bangumi/api) — 番剧数据
+- [Mikan Project](https://mikanani.me) — 番剧资源 RSS
+- [Tauri](https://tauri.app) — 跨平台桌面应用框架
+
+---
+
+MIT License
