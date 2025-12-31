@@ -16,8 +16,12 @@ export function useDownloadList() {
   const [loading, setLoading] = useState(true);
 
   // 使用统一的连接状态管理
-  const { isConnected, isChecking: isCheckingConnection, setIsConnected, setIsChecking } =
-    useConnectionState();
+  const {
+    isConnected,
+    isChecking: isCheckingConnection,
+    setIsConnected,
+    setIsChecking,
+  } = useConnectionState();
 
   // 暴露给外部的 refresh 函数
   const refresh = useCallback(async () => {

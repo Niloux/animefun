@@ -97,6 +97,9 @@ export function formatDuration(seconds: number | bigint) {
   return parts.join(" ");
 }
 
-export function navigateToAnimeDetail(navigate: NavigateFunction, id: number | string) {
+export function navigateToAnimeDetail(
+  navigate: NavigateFunction,
+  id: number | string,
+) {
   navigate(ROUTES.ANIME_DETAIL.replace(":id", id.toString()));
 }

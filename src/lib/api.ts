@@ -48,8 +48,7 @@ export const addTorrentAndTrack = (
 
 // --- Bangumi ---
 
-export const getCalendar = () =>
-  invoke<CalendarDay[]>("get_calendar");
+export const getCalendar = () => invoke<CalendarDay[]>("get_calendar");
 
 export const getAnimeDetail = (id: number) =>
   invoke<Anime>("get_subject", { id });
@@ -59,8 +58,7 @@ export const getEpisodes = (
   epType?: number,
   limit?: number,
   offset?: number,
-) =>
-  invoke<PagedEpisode>("get_episodes", { subjectId, epType, limit, offset });
+) => invoke<PagedEpisode>("get_episodes", { subjectId, epType, limit, offset });
 
 export const getSubjectStatus = (id: number) =>
   invoke<SubjectStatus>("get_subject_status", { id });
@@ -77,8 +75,7 @@ export const searchSubject = (params: {
   nsfw?: boolean;
   limit?: number;
   offset?: number;
-}) =>
-  invoke<SearchResponse>("search_subject", params);
+}) => invoke<SearchResponse>("search_subject", params);
 
 // --- Mikan ---
 
@@ -88,9 +85,10 @@ export const getMikanResources = (subjectId: number) =>
 // --- Subscriptions ---
 
 export const getSubscriptions = async () => {
-  const data = await invoke<
-    { id: number; anime: Anime; addedAt: number; notify?: boolean }[]
-  >("sub_list");
+  const data =
+    await invoke<
+      { id: number; anime: Anime; addedAt: number; notify?: boolean }[]
+    >("sub_list");
   return Array.isArray(data) ? data : [];
 };
 
@@ -126,5 +124,4 @@ export const querySubscriptions = (params: {
   status_code: SubjectStatusCode | null;
   limit: number | null;
   offset: number | null;
-}) =>
-  invoke<SearchResponse>("sub_query", { params });
+}) => invoke<SearchResponse>("sub_query", { params });

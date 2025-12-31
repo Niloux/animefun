@@ -1,4 +1,10 @@
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from "react";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { testDownloaderConnection } from "@/lib/api";
 import { toast } from "sonner";
@@ -10,14 +16,19 @@ interface ConnectionStateContextValue {
   setIsChecking: (checking: boolean) => void;
 }
 
-const ConnectionStateContext = createContext<ConnectionStateContextValue | null>(null);
+const ConnectionStateContext =
+  createContext<ConnectionStateContextValue | null>(null);
 
 /**
  * 连接状态 Provider
  *
  * 在应用顶层包裹，确保全局只有一个状态实例
  */
-export function ConnectionProvider({ children }: { children: React.ReactNode }) {
+export function ConnectionProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [isConnected, setIsConnected] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -26,10 +37,13 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
 
     const setupListener = async () => {
       try {
-        unlisten = await listen<boolean>("downloader-connection-state", (event) => {
-          setIsConnected(event.payload);
-          setIsChecking(false);
-        });
+        unlisten = await listen<boolean>(
+          "downloader-connection-state",
+          (event) => {
+            setIsConnected(event.payload);
+            setIsChecking(false);
+          },
+        );
 
         // 初始化时主动检测一次连接状态
         // 避免被动等待后端事件导致启动时状态不准确
@@ -65,7 +79,12 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <ConnectionStateContext.Provider
-      value={{ isConnected, isChecking, setIsConnected: setConnectionState, setIsChecking: setChecking }}
+      value={{
+        isConnected,
+        isChecking,
+        setIsConnected: setConnectionState,
+        setIsChecking: setChecking,
+      }}
     >
       {children}
     </ConnectionStateContext.Provider>
@@ -80,7 +99,9 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
 export function useConnectionState() {
   const context = useContext(ConnectionStateContext);
   if (!context) {
-    throw new Error("useConnectionState must be used within ConnectionProvider");
+    throw new Error(
+      "useConnectionState must be used within ConnectionProvider",
+    );
   }
   return context;
 }
@@ -91,7 +112,8 @@ export function useConnectionState() {
  * 用于 Settings 页面，提供测试连接按钮功能
  */
 export function useDownloaderConnection() {
-  const { isConnected, isChecking, setIsConnected, setIsChecking } = useConnectionState();
+  const { isConnected, isChecking, setIsConnected, setIsChecking } =
+    useConnectionState();
   const [isTesting, setIsTesting] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
 

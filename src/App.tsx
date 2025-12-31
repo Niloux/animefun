@@ -25,23 +25,29 @@ function App() {
     <ConnectionProvider>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-        <ErrorBoundary>
-          <Toaster position="bottom-right" />
-          <Routes>
-            <Route path="/" element={<Layout preloadMap={preloadMap} />}>
-              <Route index element={<Navigate to={ROUTES.HOME} replace />} />
-              <Route path={ROUTES.HOME} element={<HomePage />} />
-              <Route path={ROUTES.SEARCH} element={<SearchPage />} />
-              <Route path={ROUTES.SUBSCRIBE} element={<SubscribePage />} />
-              <Route path={ROUTES.RESOURCES} element={<ResourcesPage />} />
-              <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
-              <Route path={ROUTES.ANIME_DETAIL} element={<AnimeDetailPage />} />
-              <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
-            </Route>
-          </Routes>
-        </ErrorBoundary>
-      </BrowserRouter>
-    </QueryClientProvider>
+          <ErrorBoundary>
+            <Toaster position="bottom-right" />
+            <Routes>
+              <Route path="/" element={<Layout preloadMap={preloadMap} />}>
+                <Route index element={<Navigate to={ROUTES.HOME} replace />} />
+                <Route path={ROUTES.HOME} element={<HomePage />} />
+                <Route path={ROUTES.SEARCH} element={<SearchPage />} />
+                <Route path={ROUTES.SUBSCRIBE} element={<SubscribePage />} />
+                <Route path={ROUTES.RESOURCES} element={<ResourcesPage />} />
+                <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
+                <Route
+                  path={ROUTES.ANIME_DETAIL}
+                  element={<AnimeDetailPage />}
+                />
+                <Route
+                  path="*"
+                  element={<Navigate to={ROUTES.HOME} replace />}
+                />
+              </Route>
+            </Routes>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </QueryClientProvider>
     </ConnectionProvider>
   );
 }
