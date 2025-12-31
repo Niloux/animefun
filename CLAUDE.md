@@ -115,3 +115,17 @@ All user data in `~/.animefun/`:
 3. **Implement command**: Add handler in `src-tauri/src/commands/`
 4. **Register command**: Add to `src-tauri/src/lib.rs` `invoke_handler![]` macro
 5. **Frontend integration**: Add wrapper to `src/lib/api.ts`, consume in hooks/components
+
+## Releasing
+
+To release a new version (e.g., v0.2.1 → v0.2.2):
+
+1. Update version in `src-tauri/tauri.conf.json`
+2. Update version in `src-tauri/Cargo.toml`
+3. Commit the changes
+4. Create and push git tag:
+
+```bash
+git tag -a v0.2.2 -m "Release v0.2.2"
+git push origin v0.2.2
+```
