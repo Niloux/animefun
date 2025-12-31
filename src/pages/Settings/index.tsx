@@ -226,7 +226,7 @@ const SettingsPage: FC = () => {
                           <Input
                             {...field}
                             placeholder="http://localhost:8080"
-                            className="font-mono text-sm"
+                            className="font-mono text-sm border-border"
                           />
                         </FormControl>
                         <FormDescription>
@@ -246,7 +246,7 @@ const SettingsPage: FC = () => {
                         <FormItem>
                           <FormLabel>用户名</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="admin" />
+                            <Input {...field} placeholder="admin" className="border-border" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -260,7 +260,7 @@ const SettingsPage: FC = () => {
                         <FormItem>
                           <FormLabel>密码</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} />
+                            <Input type="password" {...field} className="border-border" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
