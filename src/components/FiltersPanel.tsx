@@ -1,27 +1,27 @@
-import React, { useState } from "react";
 import type { SubjectStatusCode } from "@/types/gen/bangumi";
+import { X } from "lucide-react";
+import React, { useState } from "react";
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { ScrollArea } from "./ui/scroll-area";
 import {
   Select,
-  SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Input } from "./ui/input";
-import { Slider } from "./ui/slider";
-import { ScrollArea } from "./ui/scroll-area";
-import { Badge } from "./ui/badge";
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
   SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from "./ui/sheet";
-import { X } from "lucide-react";
+import { Slider } from "./ui/slider";
 
 interface FiltersPanelProps {
   open: boolean;
@@ -123,6 +123,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   return (
     <Sheet open={open} onOpenChange={(v) => (v ? undefined : onClose())}>
       <SheetContent side="right">
+        <style>{`
+          [data-slot="slider-thumb"] { cursor: pointer; }
+        `}</style>
         <SheetHeader>
           <SheetTitle>筛选条件</SheetTitle>
           <SheetDescription className="sr-only">
@@ -138,14 +141,24 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               }
               onValueChange={handleSortChange}
             >
-              <SelectTrigger className="w-full border-border">
+              <SelectTrigger className="w-full border-border cursor-pointer">
                 <SelectValue placeholder="选择排序" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="heat">热度</SelectItem>
-                <SelectItem value="rank">排名</SelectItem>
-                <SelectItem value="score">评分</SelectItem>
-                {hasKeywords && <SelectItem value="match">匹配度</SelectItem>}
+                <SelectItem value="heat" className="cursor-pointer">
+                  热度
+                </SelectItem>
+                <SelectItem value="rank" className="cursor-pointer">
+                  排名
+                </SelectItem>
+                <SelectItem value="score" className="cursor-pointer">
+                  评分
+                </SelectItem>
+                {hasKeywords && (
+                  <SelectItem value="match" className="cursor-pointer">
+                    匹配度
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -213,7 +226,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   >
                     {t}
                     <button
-                      className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                      className="ml-1 rounded-full hover:bg-primary/20 p-0.5 cursor-pointer"
                       onClick={() => removeTag(t)}
                     >
                       <X className="h-3 w-3" />
@@ -230,6 +243,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => addTag(genre)}
+                    className="cursor-pointer"
                   >
                     {genre}
                   </Button>
@@ -250,15 +264,25 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   })
                 }
               >
-                <SelectTrigger className="w-full border-border">
+                <SelectTrigger className="w-full border-border cursor-pointer">
                   <SelectValue placeholder="选择状态" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Airing">连载中</SelectItem>
-                  <SelectItem value="Finished">已完结</SelectItem>
-                  <SelectItem value="PreAir">未开播</SelectItem>
-                  <SelectItem value="OnHiatus">停更</SelectItem>
-                  <SelectItem value="Unknown">未知</SelectItem>
+                  <SelectItem value="Airing" className="cursor-pointer">
+                    连载中
+                  </SelectItem>
+                  <SelectItem value="Finished" className="cursor-pointer">
+                    已完结
+                  </SelectItem>
+                  <SelectItem value="PreAir" className="cursor-pointer">
+                    未开播
+                  </SelectItem>
+                  <SelectItem value="OnHiatus" className="cursor-pointer">
+                    停更
+                  </SelectItem>
+                  <SelectItem value="Unknown" className="cursor-pointer">
+                    未知
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -266,11 +290,15 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         </div>
         <SheetFooter>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset} className="flex-1">
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="flex-1 cursor-pointer"
+            >
               重置
             </Button>
             <Button
-              className="flex-1"
+              className="flex-1 cursor-pointer"
               onClick={() => {
                 onApply();
                 onClose();

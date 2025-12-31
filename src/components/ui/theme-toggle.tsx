@@ -1,4 +1,4 @@
-import { Moon, Monitor, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { FC } from "react";
 import { useEffect, useState } from "react";
@@ -34,13 +34,25 @@ const ThemeToggle: FC = () => {
       spacing={0}
       variant="outline"
     >
-      <ToggleGroupItem value="light" aria-label="浅色模式">
+      <ToggleGroupItem
+        value="light"
+        aria-label="浅色模式"
+        className="cursor-pointer"
+      >
         <Sun className="h-4 w-4" />
       </ToggleGroupItem>
-      <ToggleGroupItem value="system" aria-label="跟随系统">
+      <ToggleGroupItem
+        value="system"
+        aria-label="跟随系统"
+        className="cursor-pointer"
+      >
         <Monitor className="h-4 w-4" />
       </ToggleGroupItem>
-      <ToggleGroupItem value="dark" aria-label="深色模式">
+      <ToggleGroupItem
+        value="dark"
+        aria-label="深色模式"
+        className="cursor-pointer"
+      >
         <Moon className="h-4 w-4" />
       </ToggleGroupItem>
     </ToggleGroup>

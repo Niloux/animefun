@@ -1,14 +1,14 @@
+import { Filter, Loader2, X } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AnimeGrid } from "../../components/AnimeGrid";
 import { AnimeGridSkeleton } from "../../components/AnimeGridSkeleton";
-import { Button } from "../../components/ui/button";
-import { Loader2, Filter, X } from "lucide-react";
-import { Badge } from "../../components/ui/badge";
-import FiltersPanel from "../../components/FiltersPanel";
 import AutoComplete from "../../components/AutoComplete";
-import { useNavigate } from "react-router-dom";
-import { useSearch } from "../../hooks/use-search";
+import FiltersPanel from "../../components/FiltersPanel";
 import { PaginationBar } from "../../components/PaginationBar";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { useSearch } from "../../hooks/use-search";
 import { navigateToAnimeDetail } from "../../lib/utils";
 
 const SearchPage = () => {
@@ -75,7 +75,11 @@ const SearchPage = () => {
             }}
           />
         </div>
-        <Button onClick={() => submit()} disabled={isLoading}>
+        <Button
+          onClick={() => submit()}
+          disabled={isLoading}
+          className="cursor-pointer"
+        >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -85,7 +89,11 @@ const SearchPage = () => {
             "搜索"
           )}
         </Button>
-        <Button variant="outline" onClick={() => setIsFiltersOpen(true)}>
+        <Button
+          variant="outline"
+          onClick={() => setIsFiltersOpen(true)}
+          className="cursor-pointer"
+        >
           <Filter className="h-4 w-4" />
           筛选
         </Button>

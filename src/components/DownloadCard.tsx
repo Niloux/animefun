@@ -1,10 +1,10 @@
-import { memo } from "react";
-import { DownloadItem } from "@/types/gen/downloader";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Play, Pause, Trash2 } from "lucide-react";
 import { formatBytes, formatDuration } from "@/lib/utils";
+import { DownloadItem } from "@/types/gen/downloader";
+import { Pause, Play, Trash2 } from "lucide-react";
+import { memo } from "react";
 
 interface DownloadCardProps {
   item: DownloadItem;
@@ -59,7 +59,7 @@ export const DownloadCard = memo<DownloadCardProps>(
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground"
+                  className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
                   onClick={isPaused ? onResume : onPause}
                   disabled={isCompleted}
                 >
@@ -72,7 +72,7 @@ export const DownloadCard = memo<DownloadCardProps>(
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-muted-foreground transition-colors hover:text-destructive"
+                  className="h-8 w-8 text-muted-foreground transition-colors hover:text-destructive cursor-pointer"
                   onClick={onDelete}
                 >
                   <Trash2 className="h-4 w-4" />

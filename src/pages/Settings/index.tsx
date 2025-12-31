@@ -1,26 +1,3 @@
-import { useFadeIn } from "@/hooks/use-fade-in";
-import { useDownloaderConnection } from "@/hooks/use-connection-state";
-import { useSimpleQuery } from "@/hooks/use-simple-query";
-import { getDownloaderConfig, setDownloaderConfig } from "@/lib/api";
-import type { DownloaderConfig } from "@/types/gen/downloader_config";
-import {
-  AlertCircle,
-  Bell,
-  CheckCircle2,
-  Download,
-  ExternalLink,
-  HelpCircle,
-  Loader2,
-  Moon,
-  Monitor,
-  Sun,
-  XCircle,
-} from "lucide-react";
-import type { FC } from "react";
-import { useForm } from "react-hook-form";
-import { useState } from "react";
-import { sendTestNotification } from "@/lib/api";
-import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +21,32 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ThemeToggle from "@/components/ui/theme-toggle";
+import { useDownloaderConnection } from "@/hooks/use-connection-state";
+import { useFadeIn } from "@/hooks/use-fade-in";
+import { useSimpleQuery } from "@/hooks/use-simple-query";
+import {
+  getDownloaderConfig,
+  sendTestNotification,
+  setDownloaderConfig,
+} from "@/lib/api";
+import type { DownloaderConfig } from "@/types/gen/downloader_config";
+import {
+  AlertCircle,
+  Bell,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  HelpCircle,
+  Loader2,
+  Monitor,
+  Moon,
+  Sun,
+  XCircle,
+} from "lucide-react";
+import type { FC } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 type FormConfig = {
   api_url: string;
@@ -131,17 +134,23 @@ const SettingsPage: FC = () => {
     >
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">设置</h1>
-        <p className="text-muted-foreground mt-2">
-          管理应用配置和偏好
-        </p>
+        <p className="text-muted-foreground mt-2">管理应用配置和偏好</p>
       </div>
 
       <Tabs defaultValue="download">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="download">下载</TabsTrigger>
-          <TabsTrigger value="appearance">外观</TabsTrigger>
-          <TabsTrigger value="notification">通知</TabsTrigger>
-          <TabsTrigger value="about">关于</TabsTrigger>
+          <TabsTrigger value="download" className="cursor-pointer">
+            下载
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="cursor-pointer">
+            外观
+          </TabsTrigger>
+          <TabsTrigger value="notification" className="cursor-pointer">
+            通知
+          </TabsTrigger>
+          <TabsTrigger value="about" className="cursor-pointer">
+            关于
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="download" className="space-y-6 mt-6">
@@ -174,8 +183,8 @@ const SettingsPage: FC = () => {
             <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
               <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
               <AlertDescription className="text-amber-900 dark:text-amber-200">
-                未检测到 qBittorrent 连接。请确保 qBittorrent 正在运行并已启用 Web
-                UI。
+                未检测到 qBittorrent 连接。请确保 qBittorrent 正在运行并已启用
+                Web UI。
                 <Button
                   variant="link"
                   size="sm"
@@ -213,7 +222,10 @@ const SettingsPage: FC = () => {
             </CardHeader>
             <CardContent>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="space-y-5"
+                >
                   <FormField
                     control={form.control}
                     name="api_url"
@@ -251,7 +263,11 @@ const SettingsPage: FC = () => {
                         <FormItem>
                           <FormLabel>用户名</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="admin" className="border-border" />
+                            <Input
+                              {...field}
+                              placeholder="admin"
+                              className="border-border"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -265,7 +281,11 @@ const SettingsPage: FC = () => {
                         <FormItem>
                           <FormLabel>密码</FormLabel>
                           <FormControl>
-                            <Input type="password" {...field} className="border-border" />
+                            <Input
+                              type="password"
+                              {...field}
+                              className="border-border"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -281,7 +301,7 @@ const SettingsPage: FC = () => {
                       variant="outline"
                       onClick={testConnection}
                       disabled={isTesting}
-                      className="w-full sm:w-auto bg-transparent"
+                      className="w-full sm:w-auto bg-transparent cursor-pointer"
                     >
                       {isTesting ? (
                         <>
@@ -298,7 +318,7 @@ const SettingsPage: FC = () => {
                     <Button
                       type="submit"
                       disabled={form.formState.isSubmitting}
-                      className="w-full sm:w-auto sm:ml-auto"
+                      className="w-full sm:w-auto sm:ml-auto cursor-pointer"
                     >
                       {form.formState.isSubmitting ? (
                         <>
@@ -342,9 +362,7 @@ const SettingsPage: FC = () => {
         <TabsContent value="appearance" className="space-y-6 mt-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">外观设置</h2>
-            <p className="text-muted-foreground mt-1">
-              自定义应用主题
-            </p>
+            <p className="text-muted-foreground mt-1">自定义应用主题</p>
           </div>
 
           <Card className="shadow-sm">
@@ -379,9 +397,7 @@ const SettingsPage: FC = () => {
         <TabsContent value="notification" className="space-y-6 mt-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">通知设置</h2>
-            <p className="text-muted-foreground mt-1">
-              管理系统通知功能
-            </p>
+            <p className="text-muted-foreground mt-1">管理系统通知功能</p>
           </div>
 
           <Card className="shadow-sm">
@@ -403,7 +419,7 @@ const SettingsPage: FC = () => {
                   variant="outline"
                   onClick={handleTestNotification}
                   disabled={isTestingNotification}
-                  className="shrink-0"
+                  className="shrink-0 cursor-pointer"
                 >
                   {isTestingNotification ? (
                     <>
@@ -424,9 +440,7 @@ const SettingsPage: FC = () => {
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>关于通知</CardTitle>
-              <CardDescription className="mt-1.5">
-                通知功能说明
-              </CardDescription>
+              <CardDescription className="mt-1.5">通知功能说明</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-muted-foreground">
               <div>
@@ -455,17 +469,13 @@ const SettingsPage: FC = () => {
         <TabsContent value="about" className="space-y-6 mt-6">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">关于</h2>
-            <p className="text-muted-foreground mt-1">
-              应用信息
-            </p>
+            <p className="text-muted-foreground mt-1">应用信息</p>
           </div>
 
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>AnimeFun</CardTitle>
-              <CardDescription>
-                跨平台桌面番剧订阅客户端
-              </CardDescription>
+              <CardDescription>跨平台桌面番剧订阅客户端</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-4">
@@ -482,7 +492,12 @@ const SettingsPage: FC = () => {
               <div className="space-y-2">
                 <p className="text-muted-foreground">数据来源</p>
                 <div className="flex flex-col gap-2">
-                  <Button variant="ghost" size="sm" asChild className="justify-start">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className="justify-start"
+                  >
                     <a
                       href="https://bgm.tv"
                       target="_blank"
@@ -492,7 +507,12 @@ const SettingsPage: FC = () => {
                       Bangumi 番组计划
                     </a>
                   </Button>
-                  <Button variant="ghost" size="sm" asChild className="justify-start">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    asChild
+                    className="justify-start"
+                  >
                     <a
                       href="https://mikanani.me"
                       target="_blank"

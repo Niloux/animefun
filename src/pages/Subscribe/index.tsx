@@ -67,7 +67,11 @@ const SubscribePage = () => {
             source="subscriptions"
           />
         </div>
-        <Button onClick={() => submit()} disabled={isLoading}>
+        <Button
+          onClick={() => submit()}
+          disabled={isLoading}
+          className="cursor-pointer"
+        >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -77,7 +81,11 @@ const SubscribePage = () => {
             "搜索"
           )}
         </Button>
-        <Button variant="outline" onClick={() => setIsFiltersOpen(true)}>
+        <Button
+          variant="outline"
+          onClick={() => setIsFiltersOpen(true)}
+          className="cursor-pointer"
+        >
           <Filter className="h-4 w-4" />
           筛选
         </Button>
@@ -105,7 +113,7 @@ const SubscribePage = () => {
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3 cursor-pointer" />
               </button>
             </Badge>
           ))}
@@ -119,7 +127,7 @@ const SubscribePage = () => {
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3 cursor-pointer" />
               </button>
             </Badge>
           )}
@@ -133,7 +141,7 @@ const SubscribePage = () => {
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3 cursor-pointer" />
               </button>
             </Badge>
           )}
@@ -155,7 +163,7 @@ const SubscribePage = () => {
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3 cursor-pointer" />
               </button>
             </Badge>
           )}

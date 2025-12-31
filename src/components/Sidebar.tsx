@@ -114,6 +114,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
             <SidebarMenuButton
               onClick={() => toggleSidebar()}
               tooltip={state === "expanded" ? "收起侧边栏" : "展开侧边栏"}
+              className="cursor-pointer"
             >
               {state === "expanded" ? (
                 <>

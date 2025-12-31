@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useFadeIn } from "@/hooks/use-fade-in";
 import { useDownloadList } from "@/hooks/use-download-list";
+import { useFadeIn } from "@/hooks/use-fade-in";
 import { DownloadItem } from "@/types/gen/downloader";
 import {
   CheckCircle2,
@@ -94,7 +94,7 @@ const ResourcesPage: FC = () => {
           <Button
             variant="outline"
             onClick={() => refresh()}
-            className="gap-2"
+            className="gap-2 cursor-pointer"
             disabled={isCheckingConnection}
           >
             {isCheckingConnection ? (
@@ -106,7 +106,12 @@ const ResourcesPage: FC = () => {
               "重试连接"
             )}
           </Button>
-          <Button onClick={() => navigate("/settings")}>前往配置</Button>
+          <Button
+            onClick={() => navigate("/settings")}
+            className="cursor-pointer"
+          >
+            前往配置
+          </Button>
         </div>
       </div>
     );
@@ -162,7 +167,7 @@ const ResourcesPage: FC = () => {
         <Tabs defaultValue="downloading" className="w-full">
           <div className="flex items-center justify-between mb-6">
             <TabsList className="grid w-full max-w-xs md:max-w-md grid-cols-3">
-              <TabsTrigger value="downloading" className="gap-2">
+              <TabsTrigger value="downloading" className="gap-2 cursor-pointer">
                 <Download className="size-4" />
                 下载中
                 <Badge
@@ -172,7 +177,7 @@ const ResourcesPage: FC = () => {
                   {downloadingItems.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="downloaded" className="gap-2">
+              <TabsTrigger value="downloaded" className="gap-2 cursor-pointer">
                 <CheckCircle2 className="size-4" />
                 已完成
                 <Badge
@@ -182,7 +187,7 @@ const ResourcesPage: FC = () => {
                   {downloadedItems.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="all" className="gap-2">
+              <TabsTrigger value="all" className="gap-2 cursor-pointer">
                 <ListFilter className="size-4" />
                 全部
                 <Badge
@@ -244,10 +249,12 @@ const ResourcesPage: FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">
+              取消
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90 cursor-pointer"
             >
               删除任务及文件
             </AlertDialogAction>
