@@ -26,6 +26,7 @@ import {
 import { FC, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DownloadCard } from "../../components/DownloadCard";
+import { navigateToAnimeDetail } from "@/lib/utils";
 
 const ResourcesPage: FC = () => {
   const navigate = useNavigate();
@@ -50,6 +51,10 @@ const ResourcesPage: FC = () => {
     if (success) {
       setItemToDelete(null);
     }
+  };
+
+  const handleCoverClick = (subjectId: number) => {
+    navigateToAnimeDetail(navigate, subjectId);
   };
 
   const downloadingItems = useMemo(
@@ -151,6 +156,7 @@ const ResourcesPage: FC = () => {
             onPause={() => handlePause(item.hash)}
             onResume={() => handleResume(item.hash)}
             onDelete={() => setItemToDelete(item)}
+            onCoverClick={() => handleCoverClick(item.subject_id)}
           />
         ))}
       </div>

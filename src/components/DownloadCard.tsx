@@ -11,10 +11,11 @@ interface DownloadCardProps {
   onPause: () => void;
   onResume: () => void;
   onDelete: () => void;
+  onCoverClick?: () => void;
 }
 
 export const DownloadCard = memo<DownloadCardProps>(
-  ({ item, onPause, onResume, onDelete }) => {
+  ({ item, onPause, onResume, onDelete, onCoverClick }) => {
     const isPaused =
       item.status.toLowerCase().includes("paused") ||
       item.status.toLowerCase().includes("stop");
@@ -24,7 +25,18 @@ export const DownloadCard = memo<DownloadCardProps>(
       <Card className="py-2 group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-lg">
         <div className="flex items-center gap-4 px-2">
           {/* Thumbnail */}
-          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 shadow-sm md:h-24 md:w-24">
+          <div
+            className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted/30 shadow-sm md:h-24 md:w-24 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+            onClick={onCoverClick}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onCoverClick?.();
+              }
+            }}
+            role="button"
+            tabIndex={onCoverClick ? 0 : undefined}
+          >
             {item.cover ? (
               <img
                 src={item.cover}
