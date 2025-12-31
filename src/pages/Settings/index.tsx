@@ -11,6 +11,9 @@ import {
   ExternalLink,
   HelpCircle,
   Loader2,
+  Moon,
+  Monitor,
+  Sun,
   XCircle,
 } from "lucide-react";
 import type { FC } from "react";
@@ -40,6 +43,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ThemeToggle from "@/components/ui/theme-toggle";
 
 type FormConfig = {
   api_url: string;
@@ -133,8 +137,9 @@ const SettingsPage: FC = () => {
       </div>
 
       <Tabs defaultValue="download">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="download">下载</TabsTrigger>
+          <TabsTrigger value="appearance">外观</TabsTrigger>
           <TabsTrigger value="notification">通知</TabsTrigger>
           <TabsTrigger value="about">关于</TabsTrigger>
         </TabsList>
@@ -332,6 +337,43 @@ const SettingsPage: FC = () => {
               </Button>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-6 mt-6">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">外观设置</h2>
+            <p className="text-muted-foreground mt-1">
+              自定义应用主题
+            </p>
+          </div>
+
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>主题</CardTitle>
+              <CardDescription className="mt-1.5">
+                选择应用的外观主题
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4">
+                <ThemeToggle />
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Sun className="h-4 w-4" />
+                    <span>浅色</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Monitor className="h-4 w-4" />
+                    <span>跟随系统</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Moon className="h-4 w-4" />
+                    <span>深色</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="notification" className="space-y-6 mt-6">
