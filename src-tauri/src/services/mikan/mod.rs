@@ -6,7 +6,7 @@ use crate::services::bangumi;
 const MAX_CONCURRENCY: usize = 5;
 const NO_MAP_TTL_SECS: i64 = 3600;
 
-use crate::services::mikan::util::{normalize_name, strip_season_suffix};
+use crate::services::mikan::util::{normalize_for_search, normalize_name};
 
 pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
     // 检查持久化存储中的映射
@@ -25,18 +25,18 @@ pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
     // 执行映射逻辑
     let subject = bangumi::api::fetch_subject(sid).await?;
     let normalized_name = normalize_name(subject.name, subject.name_cn);
-    let stripped_name = strip_season_suffix(&normalized_name);
+    let sanitized_name = normalize_for_search(&normalized_name);
 
-    // 先尝试清理后的名称（Mikan 存储基础名称），失败则回退到原始名称
-    let candidates = if stripped_name == normalized_name {
-        // 没有季号后缀，直接使用原始名称
+    // 先尝试清理后的名称（移除季号+括号），失败则回退到原始名称
+    let candidates = if sanitized_name == normalized_name {
+        // 没有需要清理的内容，直接使用原始名称
         search::search_candidates(&normalized_name).await?
-    } else if stripped_name.len() < normalized_name.len() / 2 {
+    } else if sanitized_name.len() < normalized_name.len() / 2 {
         // 清理后太短，使用原始名称避免误匹配
         search::search_candidates(&normalized_name).await?
     } else {
         // 先试清理后的名称
-        match search::search_candidates(&stripped_name).await {
+        match search::search_candidates(&sanitized_name).await {
             Ok(c) if !c.is_empty() => c,
             _ => {
                 // 清理后无结果，回退到原始名称
