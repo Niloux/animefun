@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import type { DownloadItem } from "@/types/gen/downloader";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import { TorrentInfo } from "@/types/gen/torrent_info";
@@ -134,3 +136,67 @@ export const querySubscriptions = (params: {
 // --- App ---
 
 export const getAppVersion = () => getVersion();
+
+// --- Updater ---
+
+export interface UpdateInfo {
+  available: boolean;
+  currentVersion: string;
+  latestVersion?: string;
+  body?: string;
+  date?: string;
+}
+
+export const checkUpdate = async (): Promise<UpdateInfo | null> => {
+  try {
+    const update = await check({ headers: { "Accept-Encoding": "gzip, deflate" } });
+    if (!update?.available) {
+      return { available: false, currentVersion: await getVersion() };
+    }
+    return {
+      available: true,
+      currentVersion: await getVersion(),
+      latestVersion: update.version,
+      body: update.body,
+      date: update.date,
+    };
+  } catch (error) {
+    console.error("Failed to check for updates:", error);
+    return null;
+  }
+};
+
+export const downloadAndInstall = async (
+  onProgress: (progress: { current: number; total: number; percent: number }) => void,
+): Promise<void> => {
+  const update = await check();
+  if (!update) throw new Error("No update available");
+
+  let downloaded = 0;
+  let contentLength = 0;
+
+  await update.downloadAndInstall((event) => {
+    switch (event.event) {
+      case "Started":
+        contentLength = event.data.contentLength ?? 0;
+        break;
+      case "Progress":
+        downloaded += event.data.chunkLength;
+        onProgress({
+          current: downloaded,
+          total: contentLength,
+          percent: contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0,
+        });
+        break;
+      case "Finished":
+        onProgress({
+          current: contentLength,
+          total: contentLength,
+          percent: 100,
+        });
+        break;
+    }
+  });
+};
+
+export const restartApp = () => relaunch();

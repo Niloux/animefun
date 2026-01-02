@@ -42,8 +42,13 @@ jobs:
       - name: Show pnpm version
         run: pnpm --version
 
+      - name: Setup updater private key
+        run: echo "${{ secrets.TAURI_PRIVATE_KEY }}" > updater-private.pem
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
+        with:
+          tauriSigningPrivateKeyPath: updater-private.pem
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -94,8 +99,13 @@ jobs:
       - name: Show pnpm version
         run: pnpm --version
 
+      - name: Setup updater private key
+        run: echo "${{ secrets.TAURI_PRIVATE_KEY }}" > updater-private.pem
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
+        with:
+          tauriSigningPrivateKeyPath: updater-private.pem
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

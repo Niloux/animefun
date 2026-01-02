@@ -21,14 +21,17 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ThemeToggle from "@/components/ui/theme-toggle";
+import { UpdateDialog } from "@/components/UpdateDialog";
 import { useDownloaderConnection } from "@/hooks/use-connection-state";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSimpleQuery } from "@/hooks/use-simple-query";
 import {
+  checkUpdate,
   getAppVersion,
   getDownloaderConfig,
   sendTestNotification,
   setDownloaderConfig,
+  type UpdateInfo,
 } from "@/lib/api";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import {
@@ -41,6 +44,7 @@ import {
   Loader2,
   Monitor,
   Moon,
+  RefreshCw,
   Sun,
   XCircle,
 } from "lucide-react";
@@ -57,6 +61,9 @@ type FormConfig = {
 
 const SettingsPage: FC = () => {
   const [isTestingNotification, setIsTestingNotification] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   const { data: version } = useSimpleQuery<string>({
     queryKey: ["app-version"],
@@ -112,6 +119,33 @@ const SettingsPage: FC = () => {
       });
     } finally {
       setIsTestingNotification(false);
+    }
+  };
+
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      const result = await checkUpdate();
+      if (!result) {
+        toast.error("检查更新失败", {
+          description: "请检查网络连接",
+        });
+        return;
+      }
+      if (result.available) {
+        setUpdateInfo(result);
+        setShowUpdateDialog(true);
+      } else {
+        toast.success("已是最新版本", {
+          description: `当前版本 ${result.currentVersion}已是最新`,
+        });
+      }
+    } catch {
+      toast.error("检查更新失败", {
+        description: "请检查网络连接",
+      });
+    } finally {
+      setIsCheckingUpdate(false);
     }
   };
 
@@ -495,6 +529,36 @@ const SettingsPage: FC = () => {
                 </div>
               </div>
               <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-muted-foreground">自动更新</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      应用启动时会自动检查更新
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCheckUpdate}
+                    disabled={isCheckingUpdate}
+                    className="cursor-pointer"
+                  >
+                    {isCheckingUpdate ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        检查中...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        检查更新
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <Separator />
               <div className="space-y-2">
                 <p className="text-muted-foreground">数据来源</p>
                 <div className="flex flex-col gap-2">
@@ -539,6 +603,11 @@ const SettingsPage: FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      <UpdateDialog
+        open={showUpdateDialog}
+        onOpenChange={setShowUpdateDialog}
+        updateInfo={updateInfo}
+      />
     </div>
   );
 };
