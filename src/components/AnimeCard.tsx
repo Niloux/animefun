@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCachedImage } from "../hooks/use-cached-image";
 import { getRatingColorClass, navigateToAnimeDetail } from "../lib/utils";
 import { Anime, CalendarItem } from "../types/gen/bangumi";
+import { AspectRatio } from "./ui/aspect-ratio";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
 
@@ -42,23 +43,21 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
       tabIndex={0}
     >
       <div className="relative overflow-hidden">
-        <img
-          src={cachedSrc ?? rawImgSrc}
-          alt={anime.name}
-          width={160}
-          height={240}
-          className={`w-full h-60 object-cover transition-opacity duration-300 ${
-            isImageLoaded ? "opacity-100" : "opacity-0"
-          }`}
-          loading={index < 8 ? "eager" : "lazy"}
-          decoding="async"
-          fetchPriority={index < 8 ? "high" : "auto"}
-          onLoad={() => setIsImageLoaded(true)}
-          onError={() => setIsImageLoaded(false)}
-        />
-        {!isImageLoaded && (
-          <Skeleton className="absolute inset-0 w-full h-60" />
-        )}
+        <AspectRatio ratio={3 / 4}>
+          <img
+            src={cachedSrc ?? rawImgSrc}
+            alt={anime.name}
+            className={`w-full h-full object-fill transition-opacity duration-300 ${
+              isImageLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            loading={index < 8 ? "eager" : "lazy"}
+            decoding="async"
+            fetchPriority={index < 8 ? "high" : "auto"}
+            onLoad={() => setIsImageLoaded(true)}
+            onError={() => setIsImageLoaded(false)}
+          />
+        </AspectRatio>
+        {!isImageLoaded && <Skeleton className="absolute inset-0" />}
         {/* 评分标签 */}
         {anime.rating && anime.rating.score !== 0 && (
           <Badge

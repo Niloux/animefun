@@ -1,14 +1,15 @@
-import { useState, useEffect, useRef } from "react";
-import { Anime } from "../types/gen/bangumi";
-import { searchSubject, querySubscriptions } from "../lib/api";
-import { scoreCandidate, matchTier } from "../lib/utils";
-import { Star } from "lucide-react";
-import { Input } from "./ui/input";
-import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
-import { Command, CommandList, CommandItem, CommandEmpty } from "./ui/command";
-import { Skeleton } from "./ui/skeleton";
-import { Badge } from "./ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { Star } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { querySubscriptions, searchSubject } from "../lib/api";
+import { matchTier, scoreCandidate } from "../lib/utils";
+import { Anime } from "../types/gen/bangumi";
+import { AspectRatio } from "./ui/aspect-ratio";
+import { Badge } from "./ui/badge";
+import { Command, CommandEmpty, CommandItem, CommandList } from "./ui/command";
+import { Input } from "./ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Skeleton } from "./ui/skeleton";
 
 interface AutoCompleteProps {
   query: string;
@@ -174,20 +175,20 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
                     setIsOpen(false);
                   }}
                 >
-                  <img
-                    src={
-                      anime.images?.small ||
-                      "https://lain.bgm.tv/img/no_icon_subject.png"
-                    }
-                    alt={anime.name}
-                    width={48}
-                    height={72}
-                    className="object-cover rounded-2xl"
-                    onError={(e) => {
-                      e.currentTarget.src =
-                        "https://lain.bgm.tv/img/no_icon_subject.png";
-                    }}
-                  />
+                  <AspectRatio ratio={4 / 4} className="w-12">
+                    <img
+                      src={
+                        anime.images?.small ||
+                        "https://lain.bgm.tv/img/no_icon_subject.png"
+                      }
+                      alt={anime.name}
+                      className="h-full w-full object-fill rounded-2xl"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "https://lain.bgm.tv/img/no_icon_subject.png";
+                      }}
+                    />
+                  </AspectRatio>
                   <div className="min-w-0">
                     <div className="text-sm font-medium line-clamp-1 hover:text-primary">
                       {highlight(query, anime.name_cn || anime.name)}

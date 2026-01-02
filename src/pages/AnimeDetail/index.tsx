@@ -129,7 +129,7 @@ const AnimeDetailPage = () => {
                 <img
                   src={(cachedSrc ?? rawImgSrc) as string}
                   alt={data.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-fill"
                   decoding="async"
                   fetchPriority="high"
                 />

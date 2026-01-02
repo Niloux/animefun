@@ -1,3 +1,4 @@
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -39,12 +40,14 @@ export const DownloadCard = memo<DownloadCardProps>(
             tabIndex={onCoverClick ? 0 : undefined}
           >
             {item.cover ? (
-              <img
-                src={item.cover}
-                alt={item.title}
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
+              <AspectRatio ratio={3 / 4}>
+                <img
+                  src={item.cover}
+                  alt={item.title}
+                  loading="lazy"
+                  className="h-full w-full object-fill transition-transform duration-300 group-hover:scale-105"
+                />
+              </AspectRatio>
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-secondary text-xs text-muted-foreground">
                 No Cover
