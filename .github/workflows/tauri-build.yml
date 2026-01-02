@@ -43,7 +43,7 @@ jobs:
         run: pnpm --version
 
       - name: Setup updater private key
-        run: echo "${{ secrets.TAURI_PRIVATE_KEY }}" > updater-private.pem
+        run: echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > updater-private.pem
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
@@ -100,7 +100,7 @@ jobs:
         run: pnpm --version
 
       - name: Setup updater private key
-        run: echo "${{ secrets.TAURI_PRIVATE_KEY }}" > updater-private.pem
+        run: echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > updater-private.pem
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
