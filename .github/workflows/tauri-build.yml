@@ -53,10 +53,21 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Write signing key
+        if: matrix.platform.runner != 'windows-latest'
+        run: echo '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > ~/.tauri/animefun.key
+
+      - name: Write signing key (Windows)
+        if: matrix.platform.runner == 'windows-latest'
+        shell: powershell
+        run: |
+          $keyPath = "$env:USERPROFILE\.tauri\animefun.key"
+          New-Item -Force (Split-Path $keyPath -Parent) -ItemType Directory | Out-Null
+          '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' | Out-File -FilePath $keyPath -Encoding utf8
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ~/.tauri/animefun.key
         with:
           tauriScript: pnpm tauri

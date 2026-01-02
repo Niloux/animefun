@@ -40,7 +40,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY3MkFDMDY2QjlDNUE0RkQKUldUOXBNVzVac0FxOTRwellwd2JoaWpsSVgvbGx6ZWJ1RGpsd3RqdDN6WmRFakk0YWpNdytjNC8K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCNDY3MTkyRTBCMTQxMTQKUldRVVFiSGdrbkZHYStqZjBEQityaFQrUm5YcEt2NFFWdGt1anl6SVJEdEdleXNBMXZWVGxRM2YK",
       "endpoints": [
         "https://github.com/Niloux/animefun/releases/latest/download/latest.json"
       ]
