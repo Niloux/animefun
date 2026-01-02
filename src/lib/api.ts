@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import type { DownloadItem } from "@/types/gen/downloader";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import { TorrentInfo } from "@/types/gen/torrent_info";
@@ -129,3 +130,7 @@ export const querySubscriptions = (params: {
   limit: number | null;
   offset: number | null;
 }) => invoke<SearchResponse>("sub_query", { params });
+
+// --- App ---
+
+export const getAppVersion = () => getVersion();

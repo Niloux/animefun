@@ -25,6 +25,7 @@ import { useDownloaderConnection } from "@/hooks/use-connection-state";
 import { useFadeIn } from "@/hooks/use-fade-in";
 import { useSimpleQuery } from "@/hooks/use-simple-query";
 import {
+  getAppVersion,
   getDownloaderConfig,
   sendTestNotification,
   setDownloaderConfig,
@@ -56,6 +57,11 @@ type FormConfig = {
 
 const SettingsPage: FC = () => {
   const [isTestingNotification, setIsTestingNotification] = useState(false);
+
+  const { data: version } = useSimpleQuery<string>({
+    queryKey: ["app-version"],
+    queryFn: getAppVersion,
+  });
 
   const { data: config, loading } = useSimpleQuery<DownloaderConfig>({
     queryKey: ["downloader-config"],
@@ -481,7 +487,7 @@ const SettingsPage: FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-muted-foreground">版本</p>
-                  <p className="font-medium">0.1.0</p>
+                  <p className="font-medium">{version ?? "..."}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">构建</p>
