@@ -56,8 +56,8 @@ jobs:
       - name: Write signing key
         if: matrix.platform.runner != 'windows-latest'
         run: |
-          mkdir -p ~/.tauri
-          echo '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > ~/.tauri/animefun.key
+          mkdir -p $HOME/.tauri
+          echo '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > $HOME/.tauri/animefun.key
 
       - name: Write signing key (Windows)
         if: matrix.platform.runner == 'windows-latest'
@@ -70,6 +70,6 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ~/.tauri/animefun.key
+          TAURI_SIGNING_PRIVATE_KEY: $HOME/.tauri/animefun.key
         with:
           tauriScript: pnpm tauri
