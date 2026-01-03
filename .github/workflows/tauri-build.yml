@@ -30,23 +30,23 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@10.12.4
-
-      - name: Setup cache
-        uses: actions/cache@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
         with:
-          path: |
-            ~/.pnpm-store
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ matrix.platform.runner }}-${{ matrix.platform.target }}-${{ hashFiles('**/pnpm-lock.yaml', '**/Cargo.lock') }}
+          run_install: false
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v1-rust"
+          key: ${{ matrix.platform.runner }}-${{ matrix.platform.target }}
+          workspaces: |
+            src-tauri -> target
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -80,6 +80,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseDraft: false
 
       - name: Build Tauri app (Windows)
         if: runner.os == 'Windows'
@@ -90,6 +93,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseDraft: false
 
   generate-latest-json:
     needs: build
@@ -102,11 +108,10 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install pnpm
-        run: npm install -g pnpm@10.12.4
-
-      - name: Install dependencies
-        run: pnpm install
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: true
 
       - name: Generate and upload latest.json
         run: pnpm updater
