@@ -136,9 +136,9 @@ jobs:
               pub_date: $pub_date,
               platforms: (
                 {}
-                + ( $mactar != "" ? { "darwin-x86_64": { url: ($base + "/" + $mactar), signature: $mactar_sig } } : {} )
-                + ( $macarm != "" ? { "darwin-aarch64": { url: ($base + "/" + $macarm), signature: $macarm_sig } } : {} )
-                + ( $win != "" ? { "windows-x86_64": { url: ($base + "/" + $win), signature: $win_sig } } : {} )
+                | if $mactar != "" then .["darwin-x86_64"] = {url: ($base + "/" + $mactar), signature: $mactar_sig} else . end
+                | if $macarm != "" then .["darwin-aarch64"] = {url: ($base + "/" + $macarm), signature: $macarm_sig} else . end
+                | if $win != "" then .["windows-x86_64"] = {url: ($base + "/" + $win), signature: $win_sig} else . end
               )
             }' > latest.json
 
