@@ -110,37 +110,79 @@ jobs:
           BASE_URL="https://github.com/$REPO/releases/download/$REF"
 
           # 获取各平台文件名
-          MAC_TAR=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".app.tar.gz"))')
-          MAC_ARM=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("aarch64"))')
-          WIN_EXE=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".exe"))')
+          MAC_TAR=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".app.tar.gz"))' | head -1)
+          MAC_ARM=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("aarch64"))' | head -1)
+          WIN_EXE=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".exe"))' | head -1)
+
+          echo "MAC_TAR=$MAC_TAR"
+          echo "MAC_ARM=$MAC_ARM"
+          echo "WIN_EXE=$WIN_EXE"
 
           # 获取签名（base64 编码）
-          MAC_TAR_SIG=$( [ -n "$MAC_TAR" ] && curl -s "$BASE_URL/$MAC_TAR.sig" | base64 -w 0 || echo "" )
-          MAC_ARM_SIG=$( [ -n "$MAC_ARM" ] && curl -s "$BASE_URL/$MAC_ARM.sig" | base64 -w 0 || echo "" )
-          WIN_EXE_SIG=$( [ -n "$WIN_EXE" ] && curl -s "$BASE_URL/$WIN_EXE.sig" | base64 -w 0 || echo "" )
+          MAC_TAR_SIG=""
+          MAC_ARM_SIG=""
+          WIN_EXE_SIG=""
 
-          # 生成 latest.json
-          jq -n \
-            --arg version "$VERSION" \
-            --arg pub_date "$PUB_DATE" \
-            --arg base "$BASE_URL" \
-            --arg mactar "$MAC_TAR" \
-            --arg mactar_sig "$MAC_TAR_SIG" \
-            --arg macarm "$MAC_ARM" \
-            --arg macarm_sig "$MAC_ARM_SIG" \
-            --arg win "$WIN_EXE" \
-            --arg win_sig "$WIN_EXE_SIG" \
-            '{
-              version: $version,
-              notes: ("Release " + $version),
-              pub_date: $pub_date,
-              platforms: (
-                {}
-                | if $mactar != "" then .["darwin-x86_64"] = {url: ($base + "/" + $mactar), signature: $mactar_sig} else . end
-                | if $macarm != "" then .["darwin-aarch64"] = {url: ($base + "/" + $macarm), signature: $macarm_sig} else . end
-                | if $win != "" then .["windows-x86_64"] = {url: ($base + "/" + $win), signature: $win_sig} else . end
-              )
-            }' > latest.json
+          if [ -n "$MAC_TAR" ]; then
+            MAC_TAR_SIG=$(curl -sf "$BASE_URL/$MAC_TAR.sig" | base64 -w 0 || echo "")
+          fi
+          if [ -n "$MAC_ARM" ]; then
+            MAC_ARM_SIG=$(curl -sf "$BASE_URL/$MAC_ARM.sig" | base64 -w 0 || echo "")
+          fi
+          if [ -n "$WIN_EXE" ]; then
+            WIN_EXE_SIG=$(curl -sf "$BASE_URL/$WIN_EXE.sig" | base64 -w 0 || echo "")
+          fi
+
+          echo "Building JSON with available platforms..."
+
+          # 生成 latest.json - 只包含有签名的平台
+          python3 << 'PYEOF'
+import json
+import os
+import subprocess
+
+version = os.environ['VERSION']
+pub_date = os.environ['PUB_DATE']
+base_url = os.environ['BASE_URL']
+
+mactar = os.environ.get('MAC_TAR', '')
+macarm = os.environ.get('MAC_ARM', '')
+win = os.environ.get('WIN_EXE', '')
+
+mactar_sig = os.environ.get('MAC_TAR_SIG', '')
+macarm_sig = os.environ.get('MAC_ARM_SIG', '')
+win_sig = os.environ.get('WIN_EXE_SIG', '')
+
+data = {
+    "version": version,
+    "notes": f"Release {version}",
+    "pub_date": pub_date,
+    "platforms": {}
+}
+
+if mactar and mactar_sig:
+    data["platforms"]["darwin-x86_64"] = {
+        "url": f"{base_url}/{mactar}",
+        "signature": mactar_sig
+    }
+
+if macarm and macarm_sig:
+    data["platforms"]["darwin-aarch64"] = {
+        "url": f"{base_url}/{macarm}",
+        "signature": macarm_sig
+    }
+
+if win and win_sig:
+    data["platforms"]["windows-x86_64"] = {
+        "url": f"{base_url}/{win}",
+        "signature": win_sig
+    }
+
+with open('latest.json', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f"Generated latest.json with {len(data['platforms'])} platforms")
+PYEOF
 
       - name: Upload latest.json
         env:
