@@ -96,95 +96,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate latest.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.12.4
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate and upload latest.json
+        run: pnpm updater
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          REF: ${{ github.ref_name }}
-        run: |
-          set -e
-
-          VERSION="${REF#v}"
-          RELEASE=$(curl -s https://api.github.com/repos/$REPO/releases/tags/$REF)
-          PUB_DATE=$(echo "$RELEASE" | jq -r '.published_at')
-          BASE_URL="https://github.com/$REPO/releases/download/$REF"
-
-          # 获取各平台文件名
-          MAC_TAR=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".app.tar.gz"))' | head -1)
-          MAC_ARM=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("aarch64"))' | head -1)
-          WIN_EXE=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".exe"))' | head -1)
-
-          echo "MAC_TAR=$MAC_TAR"
-          echo "MAC_ARM=$MAC_ARM"
-          echo "WIN_EXE=$WIN_EXE"
-
-          # 获取签名（base64 编码）
-          MAC_TAR_SIG=""
-          MAC_ARM_SIG=""
-          WIN_EXE_SIG=""
-
-          if [ -n "$MAC_TAR" ]; then
-            MAC_TAR_SIG=$(curl -sf "$BASE_URL/$MAC_TAR.sig" | base64 -w 0 || echo "")
-          fi
-          if [ -n "$MAC_ARM" ]; then
-            MAC_ARM_SIG=$(curl -sf "$BASE_URL/$MAC_ARM.sig" | base64 -w 0 || echo "")
-          fi
-          if [ -n "$WIN_EXE" ]; then
-            WIN_EXE_SIG=$(curl -sf "$BASE_URL/$WIN_EXE.sig" | base64 -w 0 || echo "")
-          fi
-
-          echo "Building JSON with available platforms..."
-
-          # 生成 latest.json - 只包含有签名的平台
-          python3 << 'PYEOF'
-import json
-import os
-import subprocess
-
-version = os.environ['VERSION']
-pub_date = os.environ['PUB_DATE']
-base_url = os.environ['BASE_URL']
-
-mactar = os.environ.get('MAC_TAR', '')
-macarm = os.environ.get('MAC_ARM', '')
-win = os.environ.get('WIN_EXE', '')
-
-mactar_sig = os.environ.get('MAC_TAR_SIG', '')
-macarm_sig = os.environ.get('MAC_ARM_SIG', '')
-win_sig = os.environ.get('WIN_EXE_SIG', '')
-
-data = {
-    "version": version,
-    "notes": f"Release {version}",
-    "pub_date": pub_date,
-    "platforms": {}
-}
-
-if mactar and mactar_sig:
-    data["platforms"]["darwin-x86_64"] = {
-        "url": f"{base_url}/{mactar}",
-        "signature": mactar_sig
-    }
-
-if macarm and macarm_sig:
-    data["platforms"]["darwin-aarch64"] = {
-        "url": f"{base_url}/{macarm}",
-        "signature": macarm_sig
-    }
-
-if win and win_sig:
-    data["platforms"]["windows-x86_64"] = {
-        "url": f"{base_url}/{win}",
-        "signature": win_sig
-    }
-
-with open('latest.json', 'w') as f:
-    json.dump(data, f, indent=2)
-
-print(f"Generated latest.json with {len(data['platforms'])} platforms")
-PYEOF
-
-      - name: Upload latest.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$REF" latest.json --clobber

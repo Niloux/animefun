@@ -10,7 +10,8 @@
     "tauri": "tauri",
     "lint": "eslint --ext .ts,.tsx src/",
     "format": "prettier --write src/",
-    "types:gen": "cargo test -q --manifest-path src-tauri/Cargo.toml"
+    "types:gen": "cargo test -q --manifest-path src-tauri/Cargo.toml",
+    "updater": "node scripts/updater.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -68,7 +69,9 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@actions/github": "^6.0.0",
     "@eslint/js": "^9.39.1",
+    "node-fetch": "^3.3.2",
     "@tauri-apps/cli": "^2",
     "@types/node": "^20.19.25",
     "@types/react": "^19.1.8",
