@@ -51,14 +51,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ===== 写入签名私钥（文件形式）=====
+      # ===== 写入签名私钥 =====
       - name: Write signing key (macOS)
         if: runner.os == 'macOS'
         env:
           TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
           mkdir -p /Users/runner/.tauri
-          echo "$TAURI_KEY" > /Users/runner/.tauri/animefun.key
+          printf '%s' "$TAURI_KEY" > /Users/runner/.tauri/animefun.key
 
       - name: Write signing key (Windows)
         if: runner.os == 'Windows'
@@ -68,14 +68,14 @@ jobs:
         run: |
           $path = "C:\Users\runner\.tauri\animefun.key"
           New-Item -Force (Split-Path $path -Parent) -ItemType Directory | Out-Null
-          $env:TAURI_KEY | Out-File -FilePath $path -Encoding utf8 -NoNewline
+          [System.IO.File]::WriteAllText($path, $env:TAURI_KEY)
 
       # ===== 构建并发布 =====
       - name: Build Tauri app (macOS)
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v0
         env:
-          TAURI_SIGNING_PRIVATE_KEY_PATH: /Users/runner/.tauri/animefun.key
+          TAURI_SIGNING_PRIVATE_KEY: /Users/runner/.tauri/animefun.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
@@ -84,7 +84,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: tauri-apps/tauri-action@v0
         env:
-          TAURI_SIGNING_PRIVATE_KEY_PATH: C:\Users\runner\.tauri\animefun.key
+          TAURI_SIGNING_PRIVATE_KEY: C:\Users\runner\.tauri\animefun.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
@@ -109,22 +109,25 @@ jobs:
           PUB_DATE=$(echo "$RELEASE" | jq -r '.published_at')
           BASE_URL="https://github.com/$REPO/releases/download/$REF"
 
-          MAC_X64=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("x64"))')
+          # 获取各平台文件名
+          MAC_TAR=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".app.tar.gz"))')
           MAC_ARM=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("aarch64"))')
           WIN_EXE=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".exe"))')
 
-          MAC_X64_SIG=$( [ -n "$MAC_X64" ] && curl -s "$BASE_URL/$MAC_X64.sig" | base64 -w 0 || echo "" )
+          # 获取签名（base64 编码）
+          MAC_TAR_SIG=$( [ -n "$MAC_TAR" ] && curl -s "$BASE_URL/$MAC_TAR.sig" | base64 -w 0 || echo "" )
           MAC_ARM_SIG=$( [ -n "$MAC_ARM" ] && curl -s "$BASE_URL/$MAC_ARM.sig" | base64 -w 0 || echo "" )
           WIN_EXE_SIG=$( [ -n "$WIN_EXE" ] && curl -s "$BASE_URL/$WIN_EXE.sig" | base64 -w 0 || echo "" )
 
+          # 生成 latest.json
           jq -n \
             --arg version "$VERSION" \
             --arg pub_date "$PUB_DATE" \
             --arg base "$BASE_URL" \
-            --arg macx "$MAC_X64" \
-            --arg macx_sig "$MAC_X64_SIG" \
-            --arg maca "$MAC_ARM" \
-            --arg maca_sig "$MAC_ARM_SIG" \
+            --arg mactar "$MAC_TAR" \
+            --arg mactar_sig "$MAC_TAR_SIG" \
+            --arg macarm "$MAC_ARM" \
+            --arg macarm_sig "$MAC_ARM_SIG" \
             --arg win "$WIN_EXE" \
             --arg win_sig "$WIN_EXE_SIG" \
             '{
@@ -133,9 +136,9 @@ jobs:
               pub_date: $pub_date,
               platforms: (
                 {}
-                + ( $macx != "" ? { "darwin-x86_64": { url: ($base + "/" + $macx), signature: $macx_sig } } : {} )
-                + ( $maca != "" ? { "darwin-aarch64": { url: ($base + "/" + $maca), signature: $maca_sig } } : {} )
-                + ( $win  != "" ? { "windows-x86_64": { url: ($base + "/" + $win ), signature: $win_sig  } } : {} )
+                + ( $mactar != "" ? { "darwin-x86_64": { url: ($base + "/" + $mactar), signature: $mactar_sig } } : {} )
+                + ( $macarm != "" ? { "darwin-aarch64": { url: ($base + "/" + $macarm), signature: $macarm_sig } } : {} )
+                + ( $win != "" ? { "windows-x86_64": { url: ($base + "/" + $win), signature: $win_sig } } : {} )
               )
             }' > latest.json
 
