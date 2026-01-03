@@ -77,8 +77,10 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: /Users/runner/.tauri/animefun.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
+          args: --release
 
       - name: Build Tauri app (Windows)
         if: runner.os == 'Windows'
@@ -86,8 +88,10 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: C:\Users\runner\.tauri\animefun.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
+          args: --release
 
   generate-latest-json:
     needs: build
