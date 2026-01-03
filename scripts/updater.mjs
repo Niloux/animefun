@@ -31,7 +31,6 @@ async function resolveUpdater() {
     notes: latestRelease.body || `Release ${latestRelease.tag_name}`,
     pub_date: latestRelease.published_at,
     platforms: {
-      "darwin-x86_64": { signature: "", url: "" },
       "darwin-aarch64": { signature: "", url: "" },
       "windows-x86_64": { signature: "", url: "" },
     },
@@ -41,19 +40,8 @@ async function resolveUpdater() {
   for (const asset of latestRelease.assets) {
     const { name, browser_download_url } = asset;
 
-    // macOS x86_64 (intel) - .app.tar.gz
-    if (name.endsWith(".app.tar.gz") && !name.includes("aarch64")) {
-      updateData.platforms["darwin-x86_64"].url = browser_download_url;
-    }
-
-    // macOS x86_64 signature
-    if (name.endsWith(".app.tar.gz.sig") && !name.includes("aarch64")) {
-      const sig = await getSignature(browser_download_url);
-      updateData.platforms["darwin-x86_64"].signature = sig;
-    }
-
-    // macOS aarch64 - .aarch64.dmg or .aarch64.app.tar.gz
-    if (name.includes("aarch64.dmg") || name.includes("aarch64.app.tar.gz")) {
+    // macOS aarch64 - .aarch64.dmg or .aarch64.app.tar.gz (exclude .sig files)
+    if ((name.endsWith("aarch64.dmg") || name.endsWith("aarch64.app.tar.gz")) && !name.endsWith(".sig")) {
       updateData.platforms["darwin-aarch64"].url = browser_download_url;
     }
 
@@ -63,8 +51,8 @@ async function resolveUpdater() {
       updateData.platforms["darwin-aarch64"].signature = sig;
     }
 
-    // Windows x86_64 - *_x64-setup.exe
-    if (name.includes("x64-setup.exe")) {
+    // Windows x86_64 - *_x64-setup.exe (exclude .sig files)
+    if (name.endsWith("x64-setup.exe") && !name.endsWith(".sig")) {
       updateData.platforms["windows-x86_64"].url = browser_download_url;
     }
 
