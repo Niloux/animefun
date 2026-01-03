@@ -65,7 +65,7 @@ jobs:
         run: |
           $keyPath = "C:\Users\runner\.tauri\animefun.key"
           New-Item -Force (Split-Path $keyPath -Parent) -ItemType Directory | Out-Null
-          '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' | Out-File -FilePath $keyPath -Encoding utf8 -NoNewline
+          [System.IO.File]::WriteAllText($keyPath, '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}')
 
       - name: Build Tauri app (macOS)
         if: runner.os == 'macOS'
