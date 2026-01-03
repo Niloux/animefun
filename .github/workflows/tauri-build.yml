@@ -26,8 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
@@ -43,9 +42,6 @@ jobs:
             ~/.cargo/git
             src-tauri/target
           key: ${{ matrix.platform.runner }}-${{ matrix.platform.target }}-${{ hashFiles('**/pnpm-lock.yaml', '**/Cargo.lock') }}
-          restore-keys: |
-            ${{ matrix.platform.runner }}-${{ matrix.platform.target }}-
-            ${{ matrix.platform.runner }}-
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -55,26 +51,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ===== 写入签名私钥（关键，保证换行不被破坏） =====
+      # ===== 写入签名私钥（修复版）=====
       - name: Write signing key (macOS)
         if: runner.os == 'macOS'
+        env:
+          TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
           mkdir -p /Users/runner/.tauri
-          cat << 'EOF' > /Users/runner/.tauri/animefun.key
-${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-EOF
+          echo "$TAURI_KEY" > /Users/runner/.tauri/animefun.key
 
       - name: Write signing key (Windows)
         if: runner.os == 'Windows'
         shell: powershell
+        env:
+          TAURI_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          $keyPath = "C:\Users\runner\.tauri\animefun.key"
-          New-Item -Force (Split-Path $keyPath -Parent) -ItemType Directory | Out-Null
-          @'
-${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-'@ | Out-File -FilePath $keyPath -Encoding utf8 -NoNewline
+          $path = "C:\Users\runner\.tauri\animefun.key"
+          New-Item -Force (Split-Path $path -Parent) -ItemType Directory | Out-Null
+          $env:TAURI_KEY | Out-File -FilePath $path -Encoding utf8 -NoNewline
 
-      # ===== 构建并发布 =====
       - name: Build Tauri app (macOS)
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v0
@@ -83,8 +78,6 @@ ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
-          releaseDraft: false
-          prerelease: false
 
       - name: Build Tauri app (Windows)
         if: runner.os == 'Windows'
@@ -94,10 +87,7 @@ ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
-          releaseDraft: false
-          prerelease: false
 
-  # ===== 生成 latest.json（热更新核心） =====
   generate-latest-json:
     needs: build
     runs-on: ubuntu-latest
@@ -112,71 +102,51 @@ ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           REF: ${{ github.ref_name }}
         run: |
           VERSION="${REF#v}"
-          RELEASE_JSON=$(curl -s https://api.github.com/repos/$REPO/releases/tags/$REF)
-          PUB_DATE=$(echo "$RELEASE_JSON" | jq -r '.published_at')
-          ASSETS=$(echo "$RELEASE_JSON" | jq -r '.assets')
+          RELEASE=$(curl -s https://api.github.com/repos/$REPO/releases/tags/$REF)
+          PUB_DATE=$(echo "$RELEASE" | jq -r '.published_at')
+          ASSETS=$(echo "$RELEASE" | jq -r '.assets')
 
-          python3 << 'PYEOF'
+          python3 << 'PY'
 import json, os, subprocess, base64
 
-version = os.environ["VERSION"]
-pub_date = os.environ["PUB_DATE"]
 repo = os.environ["REPO"]
 ref = os.environ["REF"]
+version = ref.lstrip("v")
+pub_date = os.environ["PUB_DATE"]
 assets = json.loads(os.environ["ASSETS"])
+base = f"https://github.com/{repo}/releases/download/{ref}"
 
-base_url = f"https://github.com/{repo}/releases/download/{ref}"
-
-def find_asset(ext, contains=None):
+def find(ext, key=None):
     for a in assets:
-        if a["name"].endswith(ext) and (contains is None or contains in a["name"]):
+        if a["name"].endswith(ext) and (key is None or key in a["name"]):
             return a["name"]
     return None
 
-def load_sig(name):
+def sig(name):
     if not name:
         return ""
-    try:
-        sig = subprocess.check_output(["curl", "-s", f"{base_url}/{name}.sig"])
-        return base64.b64encode(sig).decode()
-    except:
-        return ""
+    data = subprocess.check_output(["curl", "-s", f"{base}/{name}.sig"])
+    return base64.b64encode(data).decode()
 
-data = {
-    "version": version,
-    "notes": f"Release {version}",
-    "pub_date": pub_date,
-    "platforms": {}
+out = {
+  "version": version,
+  "notes": f"Release {version}",
+  "pub_date": pub_date,
+  "platforms": {}
 }
 
-mac_x64 = find_asset(".dmg", "x64")
-mac_arm = find_asset(".dmg", "aarch64")
-win_exe = find_asset(".exe")
-
-if mac_x64:
-    data["platforms"]["darwin-x86_64"] = {
-        "url": f"{base_url}/{mac_x64}",
-        "signature": load_sig(mac_x64)
-    }
-
-if mac_arm:
-    data["platforms"]["darwin-aarch64"] = {
-        "url": f"{base_url}/{mac_arm}",
-        "signature": load_sig(mac_arm)
-    }
-
-if win_exe:
-    data["platforms"]["windows-x86_64"] = {
-        "url": f"{base_url}/{win_exe}",
-        "signature": load_sig(win_exe)
-    }
+if (m := find(".dmg", "x64")):
+    out["platforms"]["darwin-x86_64"] = {"url": f"{base}/{m}", "signature": sig(m)}
+if (m := find(".dmg", "aarch64")):
+    out["platforms"]["darwin-aarch64"] = {"url": f"{base}/{m}", "signature": sig(m)}
+if (w := find(".exe")):
+    out["platforms"]["windows-x86_64"] = {"url": f"{base}/{w}", "signature": sig(w)}
 
 with open("latest.json", "w") as f:
-    json.dump(data, f, indent=2)
-PYEOF
+    json.dump(out, f, indent=2)
+PY
 
-      - name: Upload latest.json to release
+      - name: Upload latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "$REF" latest.json --clobber
+        run: gh release upload "$REF" latest.json --clobber
