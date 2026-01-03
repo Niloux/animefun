@@ -51,6 +51,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ===== 写入签名私钥（文件形式）=====
       - name: Write signing key (macOS)
         if: runner.os == 'macOS'
         env:
@@ -69,11 +70,12 @@ jobs:
           New-Item -Force (Split-Path $path -Parent) -ItemType Directory | Out-Null
           $env:TAURI_KEY | Out-File -FilePath $path -Encoding utf8 -NoNewline
 
+      # ===== 构建并发布 =====
       - name: Build Tauri app (macOS)
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v0
         env:
-          TAURI_SIGNING_PRIVATE_KEY: /Users/runner/.tauri/animefun.key
+          TAURI_SIGNING_PRIVATE_KEY_PATH: /Users/runner/.tauri/animefun.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
@@ -82,7 +84,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: tauri-apps/tauri-action@v0
         env:
-          TAURI_SIGNING_PRIVATE_KEY: C:\Users\runner\.tauri\animefun.key
+          TAURI_SIGNING_PRIVATE_KEY_PATH: C:\Users\runner\.tauri\animefun.key
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
