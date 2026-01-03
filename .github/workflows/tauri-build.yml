@@ -105,50 +105,79 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Generate and upload latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
         run: |
-          # Get version from tag
-          VERSION="${{ github.ref_name }}"
+          VERSION="$REF"
           VERSION="${VERSION#v}"
 
           # Get release info
-          PUB_DATE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.published_at')
+          PUB_DATE=$(curl -s https://api.github.com/repos/$REPO/releases/latest | jq -r '.published_at')
+          BASE_URL="https://github.com/$REPO/releases/download/$REF"
 
           # Get all release assets
-          ASSETS=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest/assets)
+          ASSETS=$(curl -s https://api.github.com/repos/$REPO/releases/latest/assets)
 
-          # Find and process each asset
-          echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".tar.gz")) | {name, url: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" + .name}' | jq -s 'map(select(.name != null)) | .[0] // empty' > /tmp/tar.json
-          echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".dmg") and (.name | contains("aarch64"))) | {name, url: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" + .name}' | jq -s 'map(select(.name != null)) | .[0] // empty' > /tmp/dmg.json
-          echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".exe")) | {name, url: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" + .name}' | jq -s 'map(select(.name != null)) | .[0] // empty' > /tmp/exe.json
+          # Find assets
+          TAR_NAME=$(echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".tar.gz")) | .name // empty')
+          DMG_NAME=$(echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".dmg") | select(.name | contains("aarch64"))) | .name // empty')
+          EXE_NAME=$(echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".exe")) | .name // empty')
 
-          # Get signatures
-          TAR_SIG=$(curl -s "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/animefun.app.tar.gz.sig" | base64 -w 0 2>/dev/null || echo "")
-          DMG_SIG=$(curl -s "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"$(jq -r '.name // ""' /tmp/dmg.json)".sig" | base64 -w 0 2>/dev/null || echo "")
-          EXE_SIG=$(curl -s "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"$(jq -r '.name // ""' /tmp/exe.json)".sig" | base64 -w 0 2>/dev/null || echo "")
+          # Get signatures (base64 encoded)
+          TAR_SIG=$(curl -s "$BASE_URL/animefun.app.tar.gz.sig" | base64 -w 0 2>/dev/null || echo "")
+          DMG_SIG=$(curl -s "$BASE_URL/$DMG_NAME.sig" | base64 -w 0 2>/dev/null || echo "")
+          EXE_SIG=$(curl -s "$BASE_URL/$EXE_NAME.sig" | base64 -w 0 2>/dev/null || echo "")
 
-          TAR_URL=$(jq -r '.url // ""' /tmp/tar.json)
-          DMG_URL=$(jq -r '.url // ""' /tmp/dmg.json)
-          EXE_URL=$(jq -r '.url // ""' /tmp/exe.json)
+          # Build JSON using Python to avoid shell quoting issues
+          python3 << 'PYEOF'
+import json
+import os
 
-          # Build JSON
-          JSON="{\"version\":\"$VERSION\",\"notes\":\"Release $VERSION\",\"pub_date\":\"$PUB_DATE\",\"platforms\":{}}"
+version = os.environ['VERSION']
+pub_date = os.environ['PUB_DATE']
+base_url = os.environ['BASE_URL']
 
-          if [ -n "$TAR_URL" ]; then
-            JSON=$(echo "$JSON" | jq --arg sig "$TAR_SIG" --arg url "$TAR_URL" '.platforms."darwin-x86_64" = {signature: $sig, url: $url}')
-          fi
+tar_name = os.environ.get('TAR_NAME', '')
+dmg_name = os.environ.get('DMG_NAME', '')
+exe_name = os.environ.get('EXE_NAME', '')
 
-          if [ -n "$DMG_URL" ]; then
-            JSON=$(echo "$JSON" | jq --arg sig "$DMG_SIG" --arg url "$DMG_URL" '.platforms."darwin-aarch64" = {signature: $sig, url: $url}')
-          fi
+tar_sig = os.environ.get('TAR_SIG', '')
+dmg_sig = os.environ.get('DMG_SIG', '')
+exe_sig = os.environ.get('EXE_SIG', '')
 
-          if [ -n "$EXE_URL" ]; then
-            JSON=$(echo "$JSON" | jq --arg sig "$EXE_SIG" --arg url "$EXE_URL" '.platforms."windows-x86_64" = {signature: $sig, url: $url}')
-          fi
+data = {
+    "version": version,
+    "notes": f"Release {version}",
+    "pub_date": pub_date,
+    "platforms": {}
+}
 
-          echo "$JSON" | jq . > latest.json
+if tar_name and tar_sig:
+    data["platforms"]["darwin-x86_64"] = {
+        "signature": tar_sig,
+        "url": f"{base_url}/{tar_name}"
+    }
+
+if dmg_name and dmg_sig:
+    data["platforms"]["darwin-aarch64"] = {
+        "signature": dmg_sig,
+        "url": f"{base_url}/{dmg_name}"
+    }
+
+if exe_name and exe_sig:
+    data["platforms"]["windows-x86_64"] = {
+        "signature": exe_sig,
+        "url": f"{base_url}/{exe_name}"
+    }
+
+with open('latest.json', 'w') as f:
+    json.dump(data, f, indent=2)
+PYEOF
 
           # Upload latest.json to release
-          gh release upload ${{ github.ref_name }} latest.json --clobber
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release upload "$REF" latest.json --clobber
