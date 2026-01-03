@@ -51,7 +51,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # ===== 写入签名私钥（修复版）=====
       - name: Write signing key (macOS)
         if: runner.os == 'macOS'
         env:
@@ -101,50 +100,42 @@ jobs:
           REPO: ${{ github.repository }}
           REF: ${{ github.ref_name }}
         run: |
+          set -e
+
           VERSION="${REF#v}"
           RELEASE=$(curl -s https://api.github.com/repos/$REPO/releases/tags/$REF)
           PUB_DATE=$(echo "$RELEASE" | jq -r '.published_at')
-          ASSETS=$(echo "$RELEASE" | jq -r '.assets')
+          BASE_URL="https://github.com/$REPO/releases/download/$REF"
 
-          python3 << 'PY'
-import json, os, subprocess, base64
+          MAC_X64=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("x64"))')
+          MAC_ARM=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".dmg") and contains("aarch64"))')
+          WIN_EXE=$(echo "$RELEASE" | jq -r '.assets[].name | select(endswith(".exe"))')
 
-repo = os.environ["REPO"]
-ref = os.environ["REF"]
-version = ref.lstrip("v")
-pub_date = os.environ["PUB_DATE"]
-assets = json.loads(os.environ["ASSETS"])
-base = f"https://github.com/{repo}/releases/download/{ref}"
+          MAC_X64_SIG=$( [ -n "$MAC_X64" ] && curl -s "$BASE_URL/$MAC_X64.sig" | base64 -w 0 || echo "" )
+          MAC_ARM_SIG=$( [ -n "$MAC_ARM" ] && curl -s "$BASE_URL/$MAC_ARM.sig" | base64 -w 0 || echo "" )
+          WIN_EXE_SIG=$( [ -n "$WIN_EXE" ] && curl -s "$BASE_URL/$WIN_EXE.sig" | base64 -w 0 || echo "" )
 
-def find(ext, key=None):
-    for a in assets:
-        if a["name"].endswith(ext) and (key is None or key in a["name"]):
-            return a["name"]
-    return None
-
-def sig(name):
-    if not name:
-        return ""
-    data = subprocess.check_output(["curl", "-s", f"{base}/{name}.sig"])
-    return base64.b64encode(data).decode()
-
-out = {
-  "version": version,
-  "notes": f"Release {version}",
-  "pub_date": pub_date,
-  "platforms": {}
-}
-
-if (m := find(".dmg", "x64")):
-    out["platforms"]["darwin-x86_64"] = {"url": f"{base}/{m}", "signature": sig(m)}
-if (m := find(".dmg", "aarch64")):
-    out["platforms"]["darwin-aarch64"] = {"url": f"{base}/{m}", "signature": sig(m)}
-if (w := find(".exe")):
-    out["platforms"]["windows-x86_64"] = {"url": f"{base}/{w}", "signature": sig(w)}
-
-with open("latest.json", "w") as f:
-    json.dump(out, f, indent=2)
-PY
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$PUB_DATE" \
+            --arg base "$BASE_URL" \
+            --arg macx "$MAC_X64" \
+            --arg macx_sig "$MAC_X64_SIG" \
+            --arg maca "$MAC_ARM" \
+            --arg maca_sig "$MAC_ARM_SIG" \
+            --arg win "$WIN_EXE" \
+            --arg win_sig "$WIN_EXE_SIG" \
+            '{
+              version: $version,
+              notes: ("Release " + $version),
+              pub_date: $pub_date,
+              platforms: (
+                {}
+                + ( $macx != "" ? { "darwin-x86_64": { url: ($base + "/" + $macx), signature: $macx_sig } } : {} )
+                + ( $maca != "" ? { "darwin-aarch64": { url: ($base + "/" + $maca), signature: $maca_sig } } : {} )
+                + ( $win  != "" ? { "windows-x86_64": { url: ($base + "/" + $win ), signature: $win_sig  } } : {} )
+              )
+            }' > latest.json
 
       - name: Upload latest.json
         env:
