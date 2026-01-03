@@ -55,7 +55,9 @@ jobs:
 
       - name: Write signing key
         if: matrix.platform.runner != 'windows-latest'
-        run: echo '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > ~/.tauri/animefun.key
+        run: |
+          mkdir -p ~/.tauri
+          echo '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > ~/.tauri/animefun.key
 
       - name: Write signing key (Windows)
         if: matrix.platform.runner == 'windows-latest'
