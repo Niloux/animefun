@@ -80,7 +80,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
-          args: --release
 
       - name: Build Tauri app (Windows)
         if: runner.os == 'Windows'
@@ -91,7 +90,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
-          args: --release
 
   generate-latest-json:
     needs: build
