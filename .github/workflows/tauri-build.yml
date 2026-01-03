@@ -84,3 +84,71 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
+
+      - name: Upload signature files (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          find src-tauri/target/release/bundle -name "*.sig" -exec gh release upload ${{ github.ref_name }} {} \;
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload signature files (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Get-ChildItem -Recurse src-tauri\target\release\bundle -Filter *.sig | ForEach-Object {
+            gh release upload ${{ github.ref_name }} $_.FullName
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  generate-latest-json:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate and upload latest.json
+        run: |
+          # Get version from tag
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+
+          # Get release info
+          PUB_DATE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.published_at')
+
+          # Get all release assets
+          ASSETS=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest/assets)
+
+          # Find and process each asset
+          echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".tar.gz")) | {name, url: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" + .name}' | jq -s 'map(select(.name != null)) | .[0] // empty' > /tmp/tar.json
+          echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".dmg") and (.name | contains("aarch64"))) | {name, url: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" + .name}' | jq -s 'map(select(.name != null)) | .[0] // empty' > /tmp/dmg.json
+          echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".exe")) | {name, url: "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" + .name}' | jq -s 'map(select(.name != null)) | .[0] // empty' > /tmp/exe.json
+
+          # Get signatures
+          TAR_SIG=$(curl -s "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/animefun.app.tar.gz.sig" | base64 -w 0 2>/dev/null || echo "")
+          DMG_SIG=$(curl -s "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"$(jq -r '.name // ""' /tmp/dmg.json)".sig" | base64 -w 0 2>/dev/null || echo "")
+          EXE_SIG=$(curl -s "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/"$(jq -r '.name // ""' /tmp/exe.json)".sig" | base64 -w 0 2>/dev/null || echo "")
+
+          TAR_URL=$(jq -r '.url // ""' /tmp/tar.json)
+          DMG_URL=$(jq -r '.url // ""' /tmp/dmg.json)
+          EXE_URL=$(jq -r '.url // ""' /tmp/exe.json)
+
+          # Build JSON
+          JSON="{\"version\":\"$VERSION\",\"notes\":\"Release $VERSION\",\"pub_date\":\"$PUB_DATE\",\"platforms\":{}}"
+
+          if [ -n "$TAR_URL" ]; then
+            JSON=$(echo "$JSON" | jq --arg sig "$TAR_SIG" --arg url "$TAR_URL" '.platforms."darwin-x86_64" = {signature: $sig, url: $url}')
+          fi
+
+          if [ -n "$DMG_URL" ]; then
+            JSON=$(echo "$JSON" | jq --arg sig "$DMG_SIG" --arg url "$DMG_URL" '.platforms."darwin-aarch64" = {signature: $sig, url: $url}')
+          fi
+
+          if [ -n "$EXE_URL" ]; then
+            JSON=$(echo "$JSON" | jq --arg sig "$EXE_SIG" --arg url "$EXE_URL" '.platforms."windows-x86_64" = {signature: $sig, url: $url}')
+          fi
+
+          echo "$JSON" | jq . > latest.json
+
+          # Upload latest.json to release
+          gh release upload ${{ github.ref_name }} latest.json --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
