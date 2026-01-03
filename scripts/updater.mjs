@@ -1,7 +1,6 @@
 import { getOctokit, context } from "@actions/github";
 import fetch from "node-fetch";
 
-const UPDATE_TAG_NAME = "updater";
 const UPDATE_JSON_FILE = "latest.json";
 
 async function resolveUpdater() {
@@ -86,31 +85,8 @@ async function resolveUpdater() {
 
   console.log("Generated update data:", JSON.stringify(updateData, null, 2));
 
-  // Create or get the updater release
-  let updateRelease;
-
-  try {
-    const response = await github.rest.repos.getReleaseByTag({
-      ...options,
-      tag: UPDATE_TAG_NAME,
-    });
-    updateRelease = response.data;
-    console.log(`Found existing ${UPDATE_TAG_NAME} release`);
-  } catch (error) {
-    if (error.status === 404) {
-      console.log(`Creating ${UPDATE_TAG_NAME} release...`);
-      const createResponse = await github.rest.repos.createRelease({
-        ...options,
-        tag_name: UPDATE_TAG_NAME,
-        name: "Auto-update Channel",
-        body: "This release contains the update information for the auto-update system.",
-        prerelease: false,
-      });
-      updateRelease = createResponse.data;
-    } else {
-      throw error;
-    }
-  }
+  // Use the latest release (already fetched above)
+  const updateRelease = latestRelease;
 
   // Delete existing latest.json asset
   for (const asset of updateRelease.assets) {
@@ -130,7 +106,7 @@ async function resolveUpdater() {
     data: JSON.stringify(updateData, null, 2),
   });
 
-  console.log(`Successfully uploaded ${UPDATE_JSON_FILE} to ${UPDATE_TAG_NAME} release`);
+  console.log(`Successfully uploaded ${UPDATE_JSON_FILE} to ${latestRelease.tag_name} release`);
 }
 
 async function getSignature(url) {
