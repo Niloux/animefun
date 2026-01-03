@@ -57,7 +57,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p /Users/runner/.tauri
-          echo '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > /Users/runner/.tauri/animefun.key
+          printf '%s' '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > /Users/runner/.tauri/animefun.key
 
       - name: Write signing key (Windows)
         if: runner.os == 'Windows'
@@ -65,13 +65,14 @@ jobs:
         run: |
           $keyPath = "C:\Users\runner\.tauri\animefun.key"
           New-Item -Force (Split-Path $keyPath -Parent) -ItemType Directory | Out-Null
-          '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' | Out-File -FilePath $keyPath -Encoding utf8
+          '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' | Out-File -FilePath $keyPath -Encoding utf8 -NoNewline
 
       - name: Build Tauri app (macOS)
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v0
         env:
           TAURI_SIGNING_PRIVATE_KEY: /Users/runner/.tauri/animefun.key
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
 
@@ -80,5 +81,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           TAURI_SIGNING_PRIVATE_KEY: C:\Users\runner\.tauri\animefun.key
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
