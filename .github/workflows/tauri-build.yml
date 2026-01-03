@@ -1,4 +1,5 @@
 name: Tauri Build
+
 on:
   push:
     tags:
@@ -21,6 +22,7 @@ jobs:
             target: aarch64-apple-darwin
 
     runs-on: ${{ matrix.platform.runner }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +34,7 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm@10.12.4
 
-      - name: Setup Cache
+      - name: Setup cache
         uses: actions/cache@v4
         with:
           path: |
@@ -50,14 +52,17 @@ jobs:
         with:
           targets: ${{ matrix.platform.target }}
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ===== 写入签名私钥（关键，保证换行不被破坏） =====
       - name: Write signing key (macOS)
         if: runner.os == 'macOS'
         run: |
           mkdir -p /Users/runner/.tauri
-          printf '%s' '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}' > /Users/runner/.tauri/animefun.key
+          cat << 'EOF' > /Users/runner/.tauri/animefun.key
+${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+EOF
 
       - name: Write signing key (Windows)
         if: runner.os == 'Windows'
@@ -65,8 +70,11 @@ jobs:
         run: |
           $keyPath = "C:\Users\runner\.tauri\animefun.key"
           New-Item -Force (Split-Path $keyPath -Parent) -ItemType Directory | Out-Null
-          [System.IO.File]::WriteAllText($keyPath, '${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}')
+          @'
+${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+'@ | Out-File -FilePath $keyPath -Encoding utf8 -NoNewline
 
+      # ===== 构建并发布 =====
       - name: Build Tauri app (macOS)
         if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v0
@@ -75,6 +83,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
+          releaseDraft: false
+          prerelease: false
 
       - name: Build Tauri app (Windows)
         if: runner.os == 'Windows'
@@ -84,71 +94,53 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: pnpm tauri
+          releaseDraft: false
+          prerelease: false
 
-      - name: Upload signature files (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          find src-tauri/target/release/bundle -name "*.sig" -exec gh release upload ${{ github.ref_name }} {} \;
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload signature files (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          Get-ChildItem -Recurse src-tauri\target\release\bundle -Filter *.sig | ForEach-Object {
-            gh release upload ${{ github.ref_name }} $_.FullName
-          }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+  # ===== 生成 latest.json（热更新核心） =====
   generate-latest-json:
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate and upload latest.json
+      - name: Generate latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           REF: ${{ github.ref_name }}
         run: |
-          VERSION="$REF"
-          VERSION="${VERSION#v}"
+          VERSION="${REF#v}"
+          RELEASE_JSON=$(curl -s https://api.github.com/repos/$REPO/releases/tags/$REF)
+          PUB_DATE=$(echo "$RELEASE_JSON" | jq -r '.published_at')
+          ASSETS=$(echo "$RELEASE_JSON" | jq -r '.assets')
 
-          # Get release info
-          PUB_DATE=$(curl -s https://api.github.com/repos/$REPO/releases/latest | jq -r '.published_at')
-          BASE_URL="https://github.com/$REPO/releases/download/$REF"
-
-          # Get all release assets
-          ASSETS=$(curl -s https://api.github.com/repos/$REPO/releases/latest/assets)
-
-          # Find assets
-          TAR_NAME=$(echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".tar.gz")) | .name // empty')
-          DMG_NAME=$(echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".dmg") | select(.name | contains("aarch64"))) | .name // empty')
-          EXE_NAME=$(echo "$ASSETS" | jq -r '.[] | select(.name | endswith(".exe")) | .name // empty')
-
-          # Get signatures (base64 encoded)
-          TAR_SIG=$(curl -s "$BASE_URL/animefun.app.tar.gz.sig" | base64 -w 0 2>/dev/null || echo "")
-          DMG_SIG=$(curl -s "$BASE_URL/$DMG_NAME.sig" | base64 -w 0 2>/dev/null || echo "")
-          EXE_SIG=$(curl -s "$BASE_URL/$EXE_NAME.sig" | base64 -w 0 2>/dev/null || echo "")
-
-          # Build JSON using Python to avoid shell quoting issues
           python3 << 'PYEOF'
-import json
-import os
+import json, os, subprocess, base64
 
-version = os.environ['VERSION']
-pub_date = os.environ['PUB_DATE']
-base_url = os.environ['BASE_URL']
+version = os.environ["VERSION"]
+pub_date = os.environ["PUB_DATE"]
+repo = os.environ["REPO"]
+ref = os.environ["REF"]
+assets = json.loads(os.environ["ASSETS"])
 
-tar_name = os.environ.get('TAR_NAME', '')
-dmg_name = os.environ.get('DMG_NAME', '')
-exe_name = os.environ.get('EXE_NAME', '')
+base_url = f"https://github.com/{repo}/releases/download/{ref}"
 
-tar_sig = os.environ.get('TAR_SIG', '')
-dmg_sig = os.environ.get('DMG_SIG', '')
-exe_sig = os.environ.get('EXE_SIG', '')
+def find_asset(ext, contains=None):
+    for a in assets:
+        if a["name"].endswith(ext) and (contains is None or contains in a["name"]):
+            return a["name"]
+    return None
+
+def load_sig(name):
+    if not name:
+        return ""
+    try:
+        sig = subprocess.check_output(["curl", "-s", f"{base_url}/{name}.sig"])
+        return base64.b64encode(sig).decode()
+    except:
+        return ""
 
 data = {
     "version": version,
@@ -157,27 +149,34 @@ data = {
     "platforms": {}
 }
 
-if tar_name and tar_sig:
+mac_x64 = find_asset(".dmg", "x64")
+mac_arm = find_asset(".dmg", "aarch64")
+win_exe = find_asset(".exe")
+
+if mac_x64:
     data["platforms"]["darwin-x86_64"] = {
-        "signature": tar_sig,
-        "url": f"{base_url}/{tar_name}"
+        "url": f"{base_url}/{mac_x64}",
+        "signature": load_sig(mac_x64)
     }
 
-if dmg_name and dmg_sig:
+if mac_arm:
     data["platforms"]["darwin-aarch64"] = {
-        "signature": dmg_sig,
-        "url": f"{base_url}/{dmg_name}"
+        "url": f"{base_url}/{mac_arm}",
+        "signature": load_sig(mac_arm)
     }
 
-if exe_name and exe_sig:
+if win_exe:
     data["platforms"]["windows-x86_64"] = {
-        "signature": exe_sig,
-        "url": f"{base_url}/{exe_name}"
+        "url": f"{base_url}/{win_exe}",
+        "signature": load_sig(win_exe)
     }
 
-with open('latest.json', 'w') as f:
+with open("latest.json", "w") as f:
     json.dump(data, f, indent=2)
 PYEOF
 
-          # Upload latest.json to release
+      - name: Upload latest.json to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           gh release upload "$REF" latest.json --clobber
