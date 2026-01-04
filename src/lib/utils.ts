@@ -103,3 +103,12 @@ export function navigateToAnimeDetail(
 ) {
   navigate(ROUTES.ANIME_DETAIL.replace(":id", id.toString()));
 }
+
+export function formatRelativeTime(date: Date | null | undefined): string {
+  if (!date) return "从未检测";
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 60000) return "刚刚";
+  if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)} 分钟前`;
+  return date.toLocaleTimeString();
+}

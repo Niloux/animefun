@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ThemeToggle from "@/components/ui/theme-toggle";
@@ -33,6 +34,7 @@ import {
   setDownloaderConfig,
   type UpdateInfo,
 } from "@/lib/api";
+import { formatRelativeTime } from "@/lib/utils";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import {
   AlertCircle,
@@ -82,11 +84,6 @@ const SettingsPage: FC = () => {
   const isContentVisible = useFadeIn(!loading && !!config);
 
   const form = useForm<FormConfig>({
-    defaultValues: {
-      api_url: config?.api_url ?? "http://localhost:8080",
-      username: config?.username ?? "admin",
-      password: config?.password ?? "adminadmin",
-    },
     values: config
       ? {
           api_url: config.api_url,
@@ -157,15 +154,6 @@ const SettingsPage: FC = () => {
     );
   }
 
-  const formatLastCheck = () => {
-    if (!lastCheck) return "从未检测";
-    const now = new Date();
-    const diffMs = now.getTime() - lastCheck.getTime();
-    if (diffMs < 60000) return "刚刚";
-    if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)} 分钟前`;
-    return lastCheck.toLocaleTimeString();
-  };
-
   return (
     <div
       className={`max-w-3xl mx-auto transition-opacity duration-300 ${
@@ -220,15 +208,15 @@ const SettingsPage: FC = () => {
           </div>
 
           {!isConnected && (
-            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-              <AlertDescription className="text-amber-900 dark:text-amber-200">
+            <Alert variant="warning">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
                 未检测到 qBittorrent 连接。请确保 qBittorrent 正在运行并已启用
                 Web UI。
                 <Button
                   variant="link"
                   size="sm"
-                  className="h-auto p-0 ml-1 text-amber-900 dark:text-amber-200"
+                  className="h-auto p-0 ml-1"
                   asChild
                 >
                   <a
@@ -255,7 +243,7 @@ const SettingsPage: FC = () => {
                 </div>
                 {lastCheck && (
                   <span className="text-xs text-muted-foreground">
-                    最后检测: {formatLastCheck()}
+                    最后检测: {formatRelativeTime(lastCheck)}
                   </span>
                 )}
               </div>
@@ -336,42 +324,26 @@ const SettingsPage: FC = () => {
                   <Separator />
 
                   <div className="flex flex-col-reverse sm:flex-row gap-3">
-                    <Button
+                    <LoadingButton
                       type="button"
                       variant="outline"
                       onClick={testConnection}
-                      disabled={isTesting}
-                      className="w-full sm:w-auto bg-transparent cursor-pointer"
+                      loading={isTesting}
+                      loadingText="测试中..."
+                      icon={<CheckCircle2 className="h-4 w-4" />}
+                      className="w-full sm:w-auto bg-transparent"
                     >
-                      {isTesting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          测试中...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          测试连接
-                        </>
-                      )}
-                    </Button>
-                    <Button
+                      测试连接
+                    </LoadingButton>
+                    <LoadingButton
                       type="submit"
-                      disabled={form.formState.isSubmitting}
-                      className="w-full sm:w-auto sm:ml-auto cursor-pointer"
+                      loading={form.formState.isSubmitting}
+                      loadingText="保存中..."
+                      icon={<Download className="h-4 w-4" />}
+                      className="w-full sm:w-auto sm:ml-auto"
                     >
-                      {form.formState.isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          保存中...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="mr-2 h-4 w-4" />
-                          保存配置
-                        </>
-                      )}
-                    </Button>
+                      保存配置
+                    </LoadingButton>
                   </div>
                 </form>
               </Form>
@@ -455,24 +427,16 @@ const SettingsPage: FC = () => {
                     点击下方按钮测试通知功能。
                   </p>
                 </div>
-                <Button
+                <LoadingButton
                   variant="outline"
                   onClick={handleTestNotification}
-                  disabled={isTestingNotification}
-                  className="shrink-0 cursor-pointer"
+                  loading={isTestingNotification}
+                  loadingText="发送中..."
+                  icon={<Bell className="h-4 w-4" />}
+                  className="shrink-0"
                 >
-                  {isTestingNotification ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      发送中...
-                    </>
-                  ) : (
-                    <>
-                      <Bell className="mr-2 h-4 w-4" />
-                      测试通知
-                    </>
-                  )}
-                </Button>
+                  测试通知
+                </LoadingButton>
               </div>
             </CardContent>
           </Card>
@@ -537,25 +501,16 @@ const SettingsPage: FC = () => {
                       应用启动时会自动检查更新
                     </p>
                   </div>
-                  <Button
+                  <LoadingButton
                     variant="outline"
                     size="sm"
                     onClick={handleCheckUpdate}
-                    disabled={isCheckingUpdate}
-                    className="cursor-pointer"
+                    loading={isCheckingUpdate}
+                    loadingText="检查中..."
+                    icon={<RefreshCw className="h-4 w-4" />}
                   >
-                    {isCheckingUpdate ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        检查中...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        检查更新
-                      </>
-                    )}
-                  </Button>
+                    检查更新
+                  </LoadingButton>
                 </div>
               </div>
               <Separator />
