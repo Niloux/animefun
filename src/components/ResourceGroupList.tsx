@@ -1,6 +1,7 @@
 import { FC } from "react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { LoadingButton } from "./ui/loading-button";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Download, WifiOff } from "lucide-react";
 import type { MikanResourceItem } from "../types/gen/mikan";
@@ -12,6 +13,7 @@ interface ResourceGroupListProps {
   onDownload: (url: string, title: string, item: MikanResourceItem) => void;
   isConnected?: boolean;
   isCheckingConnection?: boolean;
+  isDownloading?: (url: string) => boolean;
 }
 
 export const ResourceGroupList: FC<ResourceGroupListProps> = ({
@@ -19,6 +21,7 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
   onDownload,
   isConnected = true,
   isCheckingConnection = false,
+  isDownloading,
 }) => {
   const navigate = useNavigate();
   return (
@@ -69,11 +72,14 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                       </Button>
                     )}
                     {it.torrent_url && (
-                      <Button
+                      <LoadingButton
                         className="cursor-pointer"
                         variant={isConnected ? "outline" : "secondary"}
                         size="sm"
                         disabled={isCheckingConnection}
+                        loading={isDownloading ? isDownloading(it.torrent_url!) : false}
+                        loadingText="添加中..."
+                        icon={isConnected ? <Download className="w-4 h-4" /> : <WifiOff className="w-4 h-4 opacity-70" />}
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -82,24 +88,18 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           }
                         }}
                       >
-                        {isConnected ? (
-                          <Download className="w-4 h-4 mr-1" />
-                        ) : (
-                          <WifiOff className="w-4 h-4 mr-1 opacity-70" />
-                        )}
-                        {isCheckingConnection
-                          ? "检查中..."
-                          : isConnected
-                            ? "种子"
-                            : "去配置"}
-                      </Button>
+                        {isConnected ? "种子" : "去配置"}
+                      </LoadingButton>
                     )}
                     {it.magnet && (
-                      <Button
+                      <LoadingButton
                         className="cursor-pointer"
                         variant={isConnected ? "outline" : "secondary"}
                         size="sm"
                         disabled={isCheckingConnection}
+                        loading={isDownloading ? isDownloading(it.magnet!) : false}
+                        loadingText="添加中..."
+                        icon={isConnected ? <Download className="w-4 h-4" /> : <WifiOff className="w-4 h-4 opacity-70" />}
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -108,17 +108,8 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           }
                         }}
                       >
-                        {isConnected ? (
-                          <Download className="w-4 h-4 mr-1" />
-                        ) : (
-                          <WifiOff className="w-4 h-4 mr-1 opacity-70" />
-                        )}
-                        {isCheckingConnection
-                          ? "检查中..."
-                          : isConnected
-                            ? "磁力"
-                            : "去配置"}
-                      </Button>
+                        {isConnected ? "磁力" : "去配置"}
+                      </LoadingButton>
                     )}
                   </div>
                 </div>

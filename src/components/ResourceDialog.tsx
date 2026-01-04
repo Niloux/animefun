@@ -55,7 +55,7 @@ export function ResourceDialog({
   const [resFilter, setResFilter] = useState<number | null>(null);
   const [sublangFilter, setSublangFilter] = useState<string | null>(null);
 
-  const { handleDownload } = useDownloadAction({
+  const { handleDownload, isDownloading } = useDownloadAction({
     subjectId,
     subjectCover,
     episode,
@@ -209,6 +209,7 @@ export function ResourceDialog({
                   onDownload={handleDownloadWithResource}
                   isConnected={isConnected}
                   isCheckingConnection={isCheckingConnection}
+                  isDownloading={isDownloading}
                 />
               </ScrollArea>
             ) : resources && !mapped ? (
