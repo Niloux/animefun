@@ -24,7 +24,6 @@ Bangumi 个人收藏管理客户端 · 订阅追踪 · 日历视图 · 元数据
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/detail.png"></td>
-    <td width="50%"><img src="docs/screenshots/resources.png"></td>
   </tr>
 </table>
 
