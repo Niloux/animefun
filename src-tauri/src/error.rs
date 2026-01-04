@@ -23,6 +23,8 @@ pub enum AppError {
     SerdeBencode(#[from] serde_bencode::Error),
     #[error("{0}")]
     Any(String),
+    #[error("该任务已在下载列表中")]
+    TorrentAlreadyExists,
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名
@@ -42,6 +44,7 @@ impl AppError {
             AppError::Tauri(_) => "tauri",
             AppError::SerdeBencode(_) => "serde_bencode",
             AppError::Any(_) => "any",
+            AppError::TorrentAlreadyExists => "torrent_already_exists",
         }
     }
 }

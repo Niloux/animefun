@@ -46,7 +46,21 @@ export function useDownloadAction({
         );
         toast.success("已添加到下载列表");
       } catch (e) {
-        toast.error("添加下载失败: " + String(e));
+        // 正确提取错误消息
+        const errorMsg =
+          e && typeof e === "object" && "message" in e
+            ? String(e.message)
+            : String(e);
+
+        // 特殊处理重复下载
+        if (
+          errorMsg.includes("torrent_already_exists") ||
+          errorMsg.includes("该任务已在下载列表中")
+        ) {
+          toast.warning("该任务已在下载列表中");
+        } else {
+          toast.error("添加下载失败: " + errorMsg);
+        }
       } finally {
         // 从下载中状态移除
         setDownloadingUrls((prev) => {

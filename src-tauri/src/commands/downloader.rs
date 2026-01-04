@@ -88,8 +88,14 @@ pub async fn add_torrent_and_track(
     // 2. 先记录到数据库
     repo::insert(&hash, subject_id, episode, episode_range.as_deref(), meta_json.as_deref()).await?;
 
-    // 3. 添加到 qBittorrent
+    // 3. 检查 qBittorrent 中是否已存在该 hash
     let qb = get_client().await?;
+    let existing = qb.get_torrents_info(vec![hash.clone()]).await?;
+    if !existing.is_empty() {
+        return Err(AppError::TorrentAlreadyExists);
+    }
+
+    // 4. 添加到 qBittorrent
     let result = if let Some(data) = torrent_data {
         qb.add_torrent(data).await
     } else {

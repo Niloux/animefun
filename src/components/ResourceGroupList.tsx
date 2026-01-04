@@ -1,12 +1,12 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Download, WifiOff } from "lucide-react";
 import { FC } from "react";
+import { useNavigate } from "react-router-dom";
+import { formatBytes } from "../lib/utils";
+import type { MikanResourceItem } from "../types/gen/mikan";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { LoadingButton } from "./ui/loading-button";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download, WifiOff } from "lucide-react";
-import type { MikanResourceItem } from "../types/gen/mikan";
-import { formatBytes } from "../lib/utils";
-import { useNavigate } from "react-router-dom";
 
 interface ResourceGroupListProps {
   groups: { group: string; items: MikanResourceItem[] }[];
@@ -77,9 +77,17 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                         variant={isConnected ? "outline" : "secondary"}
                         size="sm"
                         disabled={isCheckingConnection}
-                        loading={isDownloading ? isDownloading(it.torrent_url!) : false}
-                        loadingText="添加中..."
-                        icon={isConnected ? <Download className="w-4 h-4" /> : <WifiOff className="w-4 h-4 opacity-70" />}
+                        loading={
+                          isDownloading ? isDownloading(it.torrent_url!) : false
+                        }
+                        loadingText="种子"
+                        icon={
+                          isConnected ? (
+                            <Download className="w-4 h-4" />
+                          ) : (
+                            <WifiOff className="w-4 h-4 opacity-70" />
+                          )
+                        }
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -91,15 +99,24 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                         {isConnected ? "种子" : "去配置"}
                       </LoadingButton>
                     )}
+                    {/*磁力按钮不会出现，因为从rss中解析到的mikan资源都没有磁力链接信息，只有torrent_url*/}
                     {it.magnet && (
                       <LoadingButton
                         className="cursor-pointer"
                         variant={isConnected ? "outline" : "secondary"}
                         size="sm"
                         disabled={isCheckingConnection}
-                        loading={isDownloading ? isDownloading(it.magnet!) : false}
-                        loadingText="添加中..."
-                        icon={isConnected ? <Download className="w-4 h-4" /> : <WifiOff className="w-4 h-4 opacity-70" />}
+                        loading={
+                          isDownloading ? isDownloading(it.magnet!) : false
+                        }
+                        loadingText="磁力"
+                        icon={
+                          isConnected ? (
+                            <Download className="w-4 h-4" />
+                          ) : (
+                            <WifiOff className="w-4 h-4 opacity-70" />
+                          )
+                        }
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
