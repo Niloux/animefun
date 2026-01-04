@@ -25,9 +25,33 @@ async function resolveUpdater() {
     return;
   }
 
+  // Fetch the annotated tag message directly, as Release.body may be empty
+  // during the initial GitHub Actions run (tag message syncs to Release async)
+  let notes = latestRelease.body;
+  if (!notes) {
+    try {
+      const tagRef = await github.rest.git.getRef({
+        ...options,
+        ref: `tags/${latestRelease.tag_name}`,
+      });
+      // Only fetch tag object if it's an annotated tag (object type is tag)
+      if (tagRef.data.object.type === "tag") {
+        const tagObject = await github.rest.git.getTag({
+          ...options,
+          tag_sha: tagRef.data.object.sha,
+        });
+        notes = tagObject.data.message;
+      }
+    } catch (e) {
+      console.warn(`Failed to fetch tag annotation for ${latestRelease.tag_name}:`, e.message);
+    }
+  }
+  // Fallback to tag name if no notes available
+  const finalNotes = notes || `Release ${latestRelease.tag_name}`;
+
   const updateData = {
     version: latestRelease.tag_name.replace(/^v/, ""),
-    notes: latestRelease.body || `Release ${latestRelease.tag_name}`,
+    notes: finalNotes,
     pub_date: latestRelease.published_at,
     platforms: {
       "darwin-aarch64": { signature: "", url: "" },
