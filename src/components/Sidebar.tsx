@@ -8,6 +8,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useMemo } from "react";
 import ikuyoAvatar from "../assets/ikuyo-avatar.png";
 import { ROUTES } from "../constants/routes";
 import {
@@ -19,11 +20,13 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
 } from "./ui/sidebar";
+import { useDownloadList } from "@/hooks/use-download-list";
 
 type MenuItem = {
   title: string;
@@ -38,6 +41,13 @@ interface AppSidebarProps {
 export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
+  const { items } = useDownloadList();
+
+  // 计算下载中的任务数量
+  const downloadingCount = useMemo(
+    () => items.filter((item) => item.progress < 100).length,
+    [items],
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -87,22 +97,30 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    onMouseEnter={() => handlePreload(item.url)}
-                  >
-                    <Link to={item.url}>
-                      {item.icon && <item.icon />}
-                      <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
-                        {item.title}
-                      </span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menuItems.map((item) => {
+                const isResources = item.title === "资源";
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      onMouseEnter={() => handlePreload(item.url)}
+                    >
+                      <Link to={item.url}>
+                        {item.icon && <item.icon />}
+                        <span className="opacity-100 group-data-[state=collapsed]:opacity-0 transition-opacity duration-300 whitespace-nowrap">
+                          {item.title}
+                        </span>
+                        {isResources && downloadingCount > 0 && (
+                          <SidebarMenuBadge className="bg-primary text-primary-foreground shadow-sm animate-pulse">
+                            {downloadingCount}
+                          </SidebarMenuBadge>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
