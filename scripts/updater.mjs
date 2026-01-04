@@ -17,14 +17,13 @@ async function resolveUpdater() {
     per_page: 10,
   });
 
-  const latestRelease = releases.find((r) => !r.prerelease && r.tag_name.startsWith("v"));
+  const latestRelease = releases.find(
+    (r) => !r.prerelease && r.tag_name.startsWith("v"),
+  );
 
   if (!latestRelease) {
-    console.log("No stable release found");
     return;
   }
-
-  console.log(`Processing release: ${latestRelease.tag_name}`);
 
   const updateData = {
     version: latestRelease.tag_name.replace(/^v/, ""),
@@ -41,12 +40,18 @@ async function resolveUpdater() {
     const { name, browser_download_url } = asset;
 
     // macOS aarch64 - .aarch64.dmg or .aarch64.app.tar.gz (exclude .sig files)
-    if ((name.endsWith("aarch64.dmg") || name.endsWith("aarch64.app.tar.gz")) && !name.endsWith(".sig")) {
+    if (
+      (name.endsWith("aarch64.dmg") || name.endsWith("aarch64.app.tar.gz")) &&
+      !name.endsWith(".sig")
+    ) {
       updateData.platforms["darwin-aarch64"].url = browser_download_url;
     }
 
     // macOS aarch64 signature
-    if (name.includes("aarch64.dmg.sig") || name.includes("aarch64.app.tar.gz.sig")) {
+    if (
+      name.includes("aarch64.dmg.sig") ||
+      name.includes("aarch64.app.tar.gz.sig")
+    ) {
       const sig = await getSignature(browser_download_url);
       updateData.platforms["darwin-aarch64"].signature = sig;
     }
@@ -66,12 +71,9 @@ async function resolveUpdater() {
   // Remove platforms without URL
   Object.entries(updateData.platforms).forEach(([key, value]) => {
     if (!value.url) {
-      console.log(`[Warning] No asset found for: ${key}`);
       delete updateData.platforms[key];
     }
   });
-
-  console.log("Generated update data:", JSON.stringify(updateData, null, 2));
 
   // Use the latest release (already fetched above)
   const updateRelease = latestRelease;
@@ -93,8 +95,6 @@ async function resolveUpdater() {
     name: UPDATE_JSON_FILE,
     data: JSON.stringify(updateData, null, 2),
   });
-
-  console.log(`Successfully uploaded ${UPDATE_JSON_FILE} to ${latestRelease.tag_name} release`);
 }
 
 async function getSignature(url) {
@@ -105,7 +105,4 @@ async function getSignature(url) {
   return response.text();
 }
 
-resolveUpdater().catch((error) => {
-  console.error("Updater failed:", error.message);
-  process.exit(1);
-});
+void resolveUpdater();

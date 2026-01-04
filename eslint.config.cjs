@@ -69,14 +69,14 @@ module.exports = [
 
   // ===================== Node 配置文件 =====================
   {
-    files: ["vite.config.ts", "scripts/**/*.ts"],
+    files: ["vite.config.ts", "scripts/**/*.{ts,mjs}"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
       },
-      globals: nodeGlobals,
+      globals: { ...nodeGlobals, fetch: "readonly" },
     },
     plugins: {
       "@typescript-eslint": tsEslint,
