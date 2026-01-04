@@ -1,27 +1,30 @@
-import { useMemo, useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useDownloadAction } from "../hooks/use-download-action";
+import { useDownloadList } from "../hooks/use-download-list";
+import { useEpisodeResources } from "../hooks/use-episode-resources";
+import type { Episode } from "../types/gen/bangumi";
+import type {
+  MikanResourceItem,
+  MikanResourcesResponse,
+} from "../types/gen/mikan";
+import { ResourceGroupList } from "./ResourceGroupList";
+import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "./ui/dialog";
 import { ScrollArea } from "./ui/scroll-area";
 import {
   Select,
-  SelectTrigger,
   SelectContent,
   SelectItem,
+  SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { Button } from "./ui/button";
 import { Spinner } from "./ui/spinner";
-import type { MikanResourcesResponse, MikanResourceItem } from "../types/gen/mikan";
-import type { Episode } from "../types/gen/bangumi";
-import { useEpisodeResources } from "../hooks/use-episode-resources";
-import { useDownloadAction } from "../hooks/use-download-action";
-import { useDownloadList } from "../hooks/use-download-list";
-import { ResourceGroupList } from "./ResourceGroupList";
 
 export function ResourceDialog({
   open,
@@ -181,6 +184,7 @@ export function ResourceDialog({
                 {(groupFilter || resFilter || sublangFilter) && (
                   <Button
                     variant="ghost"
+                    className="cursor-pointer"
                     size="sm"
                     onClick={() => {
                       setGroupFilter(null);
