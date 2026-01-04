@@ -1,4 +1,3 @@
-import { useState, useCallback } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -9,9 +8,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { checkUpdate, downloadAndInstall, restartApp, type UpdateInfo } from "@/lib/api";
-import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  checkUpdate,
+  downloadAndInstall,
+  restartApp,
+  type UpdateInfo,
+} from "@/lib/api";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 interface UpdateDialogProps {
   open: boolean;
@@ -21,7 +26,11 @@ interface UpdateDialogProps {
 
 type UpdateStatus = "idle" | "downloading" | "installing" | "done";
 
-export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogProps) {
+export function UpdateDialog({
+  open,
+  onOpenChange,
+  updateInfo,
+}: UpdateDialogProps) {
   const [status, setStatus] = useState<UpdateStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [totalSize, setTotalSize] = useState(0);
@@ -66,7 +75,10 @@ export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogPro
   const isDone = status === "done";
 
   return (
-    <AlertDialog open={open} onOpenChange={isProcessing ? undefined : onOpenChange}>
+    <AlertDialog
+      open={open}
+      onOpenChange={isProcessing ? undefined : onOpenChange}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>发现新版本</AlertDialogTitle>
@@ -75,9 +87,15 @@ export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogPro
               {updateInfo && (
                 <>
                   <p>
-                    当前版本：<span className="font-medium">{updateInfo.currentVersion}</span>
+                    当前版本：
+                    <span className="font-medium">
+                      {updateInfo.currentVersion}
+                    </span>
                     <br />
-                    最新版本：<span className="font-medium text-primary">{updateInfo.latestVersion}</span>
+                    最新版本：
+                    <span className="font-medium text-primary">
+                      {updateInfo.latestVersion}
+                    </span>
                   </p>
                   {updateInfo.body && (
                     <div className="max-h-40 overflow-y-auto rounded-md bg-muted/50 p-3 text-sm">
@@ -112,13 +130,18 @@ export function UpdateDialog({ open, onOpenChange, updateInfo }: UpdateDialogPro
           {!isDone && (
             <>
               <Button
+                className="cursor-pointer"
                 variant="outline"
                 onClick={handleLater}
                 disabled={isProcessing}
               >
                 稍后提醒
               </Button>
-              <Button onClick={handleUpdate} disabled={isProcessing}>
+              <Button
+                className="cursor-pointer"
+                onClick={handleUpdate}
+                disabled={isProcessing}
+              >
                 {isProcessing ? (
                   <>
                     <Spinner className="mr-2 h-4 w-4" />
