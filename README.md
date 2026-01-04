@@ -2,14 +2,14 @@
 
   <img src="src/assets/ikuyo-avatar.png" width="100" alt="AnimeFun">
 
-  # AnimeFun
+# AnimeFun
 
-  本地追番客户端 · 订阅管理 · 日历 · 资源聚合
+本地追番客户端 · 订阅管理 · 日历 · 资源聚合
 
-  [![Build](https://img.shields.io/github/actions/workflow/status/Niloux/animefun/tauri-build.yml?branch=main&style=flat-square)](https://github.com/Niloux/animefun/actions)
-  [![Release](https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=blue)](https://github.com/Niloux/animefun/releases)
-  [![Downloads](https://img.shields.io/github/downloads/Niloux/animefun/total?style=flat-square&color=green)](https://github.com/Niloux/animefun/releases)
-  [![License](https://img.shields.io/badge/license-MIT-success?style=flat-square)](LICENSE)
+[![Build](https://img.shields.io/github/actions/workflow/status/Niloux/animefun/tauri-build.yml?branch=main&style=flat-square)](https://github.com/Niloux/animefun/actions)
+[![Release](https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=blue)](https://github.com/Niloux/animefun/releases)
+[![Downloads](https://img.shields.io/github/downloads/Niloux/animefun/total?style=flat-square&color=green)](https://github.com/Niloux/animefun/releases)
+[![License](https://img.shields.io/badge/license-MIT-success?style=flat-square)](LICENSE)
 
 </div>
 
@@ -45,11 +45,11 @@
 
 下载 [Releases](https://github.com/Niloux/animefun/releases) 中的安装包：
 
-| 平台   | 文件格式                           |
-| ------ | ---------------------------------- |
-| macOS  | `.dmg` / `.app.tar.gz`             |
-| Linux  | `.AppImage` / `.deb` / `.rpm`      |
-| Windows | `.msi` / `.nsis.exe`               |
+| 平台    | 文件格式                      |
+| ------- | ----------------------------- |
+| macOS   | `.dmg` / `.app.tar.gz`        |
+| Linux   | `.AppImage` / `.deb` / `.rpm` |
+| Windows | `.msi` / `.nsis.exe`          |
 
 ### 从源码构建
 
@@ -83,10 +83,10 @@ pnpm types:gen      # 从 Rust 导出 TypeScript 类型
 
 ## 数据存储
 
-| 平台   | 目录                                                |
-| ------ | --------------------------------------------------- |
-| macOS  | `~/Library/Application Support/com.wuyou.animefun/` |
-| Linux  | `~/.config/com.wuyou.animefun/`                     |
+| 平台    | 目录                                                |
+| ------- | --------------------------------------------------- |
+| macOS   | `~/Library/Application Support/com.wuyou.animefun/` |
+| Linux   | `~/.config/com.wuyou.animefun/`                     |
 | Windows | `%APPDATA%\com.wuyou.animefun\`                     |
 
 ```
@@ -105,6 +105,14 @@ com.wuyou.animefun/
 - [Bangumi API](https://github.com/bangumi/api) — 番剧数据
 - [Mikan Project](https://mikanani.me) — 番剧资源 RSS
 - [Tauri](https://tauri.app) — 跨平台桌面应用框架
+
+---
+
+## 免责声明
+
+本项目 AnimeFun 为非商业、非盈利性质的个人项目，仅用于学习、研究与个人使用。1. 本项目不提供、不存储、不分发任何视频、种子或磁力链接内容。2. 番剧信息来源于 Bangumi API，资源索引来源于 Mikan Project（RSS），其版权归原站点及权利方所有。3. 本项目仅对第三方公开数据进行整理与展示，不对内容的准确性或可用性作任何保证。4. 用户因使用第三方资源或下载工具所产生的任何行为与后果，均由用户自行承担。5. 本项目不得用于任何商业用途。
+
+如有侵权或不当之处，请通过 Issue 联系，项目将及时处理。
 
 ---
 
