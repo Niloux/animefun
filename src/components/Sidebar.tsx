@@ -85,7 +85,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
               <img
                 src={getAvatarSrc()}
                 alt="avatar"
-                className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8"
+                className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8 object-cover"
               />
               <div className="text-left overflow-hidden whitespace-nowrap">
                 <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
