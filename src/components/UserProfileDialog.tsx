@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { Camera, RotateCcw } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface UserProfileDialogProps {
@@ -39,10 +39,16 @@ export function UserProfileDialog({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
+  // 当对话框打开时，同步 profile 的值到表单状态
+  useEffect(() => {
+    if (open) {
       setName(profile.name);
       setBio(profile.bio);
+    }
+  }, [open, profile.name, profile.bio]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
       setPreviewUrl(null);
     }
     onOpenChange(newOpen);
