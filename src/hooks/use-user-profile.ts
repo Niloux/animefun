@@ -54,8 +54,8 @@ export function useUserProfile() {
     mutationFn: updateUserAvatar,
     onSuccess: (updatedProfile) => {
       queryClient.setQueryData(QUERY_KEY, updatedProfile);
-      // 头像更新后，重新获取 data URL
-      queryClient.invalidateQueries({ queryKey: AVATAR_QUERY_KEY });
+      // 清除旧头像缓存，确保下次启动时从后端重新获取
+      queryClient.setQueryData(AVATAR_QUERY_KEY, undefined);
       toast.success("头像已更新");
     },
     onError: (error) => {
