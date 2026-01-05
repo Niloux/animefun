@@ -8,8 +8,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useMemo } from "react";
-import ikuyoAvatar from "../assets/ikuyo-avatar.png";
+import { useMemo, useCallback, useState } from "react";
 import { ROUTES } from "../constants/routes";
 import {
   Sidebar,
@@ -27,6 +26,8 @@ import {
   useSidebar,
 } from "./ui/sidebar";
 import { useDownloadList } from "@/hooks/use-download-list";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import { UserProfileDialog } from "@/components/UserProfileDialog";
 
 type MenuItem = {
   title: string;
@@ -42,8 +43,9 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const { items } = useDownloadList();
+  const { profile, avatarDataUrl } = useUserProfile();
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
 
-  // 计算下载中的任务数量
   const downloadingCount = useMemo(
     () => items.filter((item) => item.progress < 100).length,
     [items],
@@ -54,6 +56,17 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const handlePreload = (path: string) => {
     preloadMap[path]?.();
   };
+
+  const getAvatarSrc = useCallback(() => {
+    if (profile.has_custom_avatar) {
+      if (avatarDataUrl) {
+        return avatarDataUrl;
+      }
+      // 正在加载头像，暂时返回默认头像
+      return new URL("../assets/ikuyo-avatar.png", import.meta.url).href;
+    }
+    return new URL("../assets/ikuyo-avatar.png", import.meta.url).href;
+  }, [profile.has_custom_avatar, avatarDataUrl]);
 
   const menuItems: MenuItem[] = [
     { title: "首页", url: ROUTES.HOME, icon: Home },
@@ -71,18 +84,19 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
             <SidebarMenuButton
               size="lg"
               className="group-data-[state=collapsed]:size-10 p-8"
+              onClick={() => setShowProfileDialog(true)}
             >
               <img
-                src={ikuyoAvatar}
-                alt="ikuyo-avatar"
-                className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8"
+                src={getAvatarSrc()}
+                alt="avatar"
+                className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8 object-cover"
               />
               <div className="text-left overflow-hidden whitespace-nowrap">
                 <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
-                  喜多郁代
+                  {profile.name}
                 </div>
                 <div className="text-xs text-gray-400 opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity">
-                  きた,いくよ
+                  {profile.bio}
                 </div>
               </div>
             </SidebarMenuButton>
@@ -148,6 +162,11 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
       </SidebarFooter>
 
       <SidebarRail />
+
+      <UserProfileDialog
+        open={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
+      />
     </Sidebar>
   );
 };
