@@ -28,7 +28,7 @@ pub async fn get_avatar_data_url() -> CommandResult<String> {
         "image/jpeg"
     } else if bytes.starts_with(b"PNG") {
         "image/png"
-    } else if bytes.len() > 12 && bytes.get(8..12) == Some(b"WEBP") {
+    } else if bytes.starts_with(b"RIFF") && bytes.get(8..12) == Some(b"WEBP") {
         "image/webp"
     } else {
         "image/png"

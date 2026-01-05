@@ -30,12 +30,18 @@ pub async fn save_profile(profile: UserProfile) -> Result<(), AppError> {
 }
 
 pub async fn save_avatar(base64_data: String) -> Result<(), AppError> {
+    const MAX_AVATAR_BYTES: usize = 2 * 1024 * 1024; // 2MB
+
     let (_, data) = base64_data
         .split_once(',')
         .ok_or_else(|| AppError::Any("invalid_base64_format".into()))?;
 
     let bytes = base64::Engine::decode(&base64::prelude::BASE64_STANDARD, data)
         .map_err(|_| AppError::Any("invalid_base64_data".into()))?;
+
+    if bytes.len() > MAX_AVATAR_BYTES {
+        return Err(AppError::Any("avatar_too_large".into()));
+    }
 
     let dir = default_app_dir();
     if !dir.exists() {
