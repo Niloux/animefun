@@ -44,6 +44,9 @@ export const deleteDownload = (hash: string, deleteFiles: boolean) =>
 export const openDownloadFolder = (savePath: string) =>
   invoke<void>("open_download_folder", { savePath });
 
+export const playVideo = (hash: string) =>
+  invoke<void>("play_video", { hash });
+
 export const addTorrentAndTrack = (
   url: string,
   subjectId: number,

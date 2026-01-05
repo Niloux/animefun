@@ -4,6 +4,7 @@ use crate::infra::http::{wait_api_limit, CLIENT};
 use crate::services::downloader::{
     build_metadata, client, config, parse_metadata, repo, DownloadItem,
 };
+
 use futures::StreamExt;
 use std::collections::HashMap;
 
@@ -336,6 +337,62 @@ pub async fn open_download_folder(save_path: String) -> CommandResult<()> {
             .arg(path)
             .spawn()
             .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn play_video(hash: String) -> CommandResult<()> {
+    let qb = get_client().await?;
+
+    // 获取 save_path
+    let infos = qb.get_torrents_info(vec![hash.clone()]).await?;
+    let save_path = infos
+        .first()
+        .map(|t| t.save_path.clone())
+        .ok_or_else(|| AppError::Any("Torrent not found".into()))?;
+
+    // 获取文件列表
+    let files = qb.get_torrent_files(&hash).await?;
+
+    // 找第一个视频文件
+    let video_file = files
+        .iter()
+        .find(|f| {
+            let name_lower = f.name.to_lowercase();
+            client::VIDEO_EXTENSIONS
+                .iter()
+                .any(|ext| name_lower.ends_with(ext))
+        })
+        .ok_or_else(|| AppError::Any("No video file found".into()))?;
+
+    // 构造完整路径
+    let path = std::path::Path::new(&save_path).join(&video_file.name);
+
+    // 使用系统默认播放器打开
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", "", &path.to_string_lossy()])
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
     }
 
     Ok(())

@@ -10,6 +10,13 @@ use std::hash::{Hash, Hasher};
 use tokio::sync::RwLock;
 use ts_rs::TS;
 
+// Video file extensions for identifying playable files
+pub static VIDEO_EXTENSIONS: &[&str] = &[
+    ".mkv", ".mp4", ".avi", ".wmv", ".webm",
+    ".flv", ".m4v", ".mov", ".rm", ".rmvb",
+    ".ts", ".mts", ".m2ts", ".3gp",
+];
+
 struct SessionState {
     cookie: String,
     config_hash: u64,
@@ -34,6 +41,22 @@ pub struct TorrentInfo {
     pub dlspeed: i64, // 字节/秒
     pub eta: i64,     // 秒
     pub save_path: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TorrentFile {
+    pub index: usize,
+    pub name: String,
+    pub size: i64,
+    #[serde(default)]
+    pub progress: f64,
+    #[serde(default)]
+    pub priority: i32,
+    #[serde(default)]
+    pub is_seed: bool,
+    #[serde(default)]
+    pub name_html: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -231,6 +254,17 @@ impl QbitClient {
             .await?;
         resp.error_for_status_ref()?;
         Ok(())
+    }
+
+    pub async fn get_torrent_files(&self, hash: &str) -> Result<Vec<TorrentFile>, AppError> {
+        let resp = self
+            .request(reqwest::Method::GET, "/api/v2/torrents/files")
+            .query(&[("hash", hash)])
+            .send()
+            .await?;
+        resp.error_for_status_ref()?;
+        let files: Vec<TorrentFile> = resp.json().await?;
+        Ok(files)
     }
 }
 

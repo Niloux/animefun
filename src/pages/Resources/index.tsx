@@ -40,6 +40,7 @@ const ResourcesPage: FC = () => {
     handlePause,
     handleResume,
     handleDelete,
+    handlePlayVideo,
   } = useDownloadList();
   const [itemToDelete, setItemToDelete] = useState<DownloadItem | null>(null);
 
@@ -64,6 +65,19 @@ const ResourcesPage: FC = () => {
         await openDownloadFolder(item.save_path);
       } catch (error) {
         console.error("Failed to open folder:", error);
+      }
+    }
+  };
+
+  const handlePlay = async (item: DownloadItem) => {
+    if (item.progress >= 100) {
+      try {
+        await handlePlayVideo(item.hash);
+      } catch {
+        // 如果播放失败，降级到打开文件夹
+        if (item.save_path) {
+          await openDownloadFolder(item.save_path);
+        }
       }
     }
   };
@@ -169,6 +183,7 @@ const ResourcesPage: FC = () => {
             onDelete={() => setItemToDelete(item)}
             onOpenFolder={() => handleOpenFolder(item)}
             onCoverClick={() => handleCoverClick(item.subject_id)}
+            onPlay={() => handlePlay(item)}
           />
         ))}
       </div>

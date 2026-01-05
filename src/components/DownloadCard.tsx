@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import { DownloadItem } from "@/types/gen/downloader";
-import { Folder, Pause, Play, Trash2 } from "lucide-react";
+import { Film, Folder, Pause, Play, Trash2 } from "lucide-react";
 import { memo } from "react";
 
 interface DownloadCardProps {
@@ -14,10 +14,11 @@ interface DownloadCardProps {
   onDelete: () => void;
   onOpenFolder?: () => void;
   onCoverClick?: () => void;
+  onPlay?: () => void;
 }
 
 export const DownloadCard = memo<DownloadCardProps>(
-  ({ item, onPause, onResume, onDelete, onOpenFolder, onCoverClick }) => {
+  ({ item, onPause, onResume, onDelete, onOpenFolder, onCoverClick, onPlay }) => {
     const isPaused =
       item.status.toLowerCase().includes("paused") ||
       item.status.toLowerCase().includes("stop");
@@ -76,6 +77,33 @@ export const DownloadCard = memo<DownloadCardProps>(
               </div>
 
               <div className="flex shrink-0 items-center gap-1">
+                {/* 下载中: 暂停/恢复按钮 | 下载完成: 播放按钮 */}
+                {isCompleted ? (
+                  onPlay && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-muted-foreground transition-colors hover:text-green-500 cursor-pointer"
+                      onClick={onPlay}
+                      title="播放视频"
+                    >
+                      <Film className="h-4 w-4" />
+                    </Button>
+                  )
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    onClick={isPaused ? onResume : onPause}
+                  >
+                    {isPaused ? (
+                      <Play className="h-4 w-4" />
+                    ) : (
+                      <Pause className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
                 {isCompleted && item.save_path && onOpenFolder && (
                   <Button
                     size="icon"
@@ -87,19 +115,6 @@ export const DownloadCard = memo<DownloadCardProps>(
                     <Folder className="h-4 w-4" />
                   </Button>
                 )}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                  onClick={isPaused ? onResume : onPause}
-                  disabled={isCompleted}
-                >
-                  {isPaused ? (
-                    <Play className="h-4 w-4" />
-                  ) : (
-                    <Pause className="h-4 w-4" />
-                  )}
-                </Button>
                 <Button
                   size="icon"
                   variant="ghost"

@@ -7,6 +7,7 @@ import {
   pauseDownload,
   resumeDownload,
   deleteDownload,
+  playVideo,
 } from "@/lib/api";
 import { toast } from "sonner";
 import { useConnectionState } from "./use-connection-state";
@@ -128,6 +129,17 @@ export function useDownloadList() {
     }
   };
 
+  const handlePlayVideo = async (hash: string) => {
+    try {
+      await playVideo(hash);
+      toast.success("Playing");
+    } catch (e) {
+      console.error("Failed to play video:", e);
+      toast.error("Failed to play video");
+      throw e;
+    }
+  };
+
   return {
     items,
     loading,
@@ -137,5 +149,6 @@ export function useDownloadList() {
     handlePause,
     handleResume,
     handleDelete,
+    handlePlayVideo,
   };
 }
