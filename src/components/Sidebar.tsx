@@ -58,8 +58,12 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   };
 
   const getAvatarSrc = useCallback(() => {
-    if (profile.has_custom_avatar && avatarDataUrl) {
-      return avatarDataUrl;
+    if (profile.has_custom_avatar) {
+      if (avatarDataUrl) {
+        return avatarDataUrl;
+      }
+      // 正在加载头像，暂时返回默认头像
+      return new URL("../assets/ikuyo-avatar.png", import.meta.url).href;
     }
     return new URL("../assets/ikuyo-avatar.png", import.meta.url).href;
   }, [profile.has_custom_avatar, avatarDataUrl]);

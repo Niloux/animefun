@@ -33,6 +33,7 @@ export function useUserProfile() {
     queryFn: getAvatarDataUrl,
     enabled: profile.data?.has_custom_avatar ?? false,
     staleTime: Infinity,
+    gcTime: 0, // 不持久化到 localStorage，避免重启后显示旧头像
   });
 
   const updateMutation = useMutation({
