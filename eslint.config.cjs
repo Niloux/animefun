@@ -20,8 +20,6 @@ const browserGlobals = {
   KeyboardEvent: "readonly",
   HTMLButtonElement: "readonly",
   HTMLDivElement: "readonly",
-  URL: "readonly",
-  FileReader: "readonly",
 };
 
 // Node 全局变量

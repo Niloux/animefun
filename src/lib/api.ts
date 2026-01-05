@@ -5,7 +5,6 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import type { DownloadItem } from "@/types/gen/downloader";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import { TorrentInfo } from "@/types/gen/torrent_info";
-import type { UserProfile } from "@/types/gen/user_profile";
 import {
   CalendarDay,
   Anime,
@@ -204,20 +203,3 @@ export const downloadAndInstall = async (
 };
 
 export const restartApp = () => relaunch();
-
-// --- User Profile ---
-
-export const getUserProfile = () =>
-  invoke<UserProfile>("get_user_profile");
-
-export const getAvatarDataUrl = () =>
-  invoke<string>("get_avatar_data_url");
-
-export const updateUserProfile = (name: string, bio: string) =>
-  invoke<UserProfile>("update_user_profile", { name, bio });
-
-export const updateUserAvatar = (base64Data: string) =>
-  invoke<UserProfile>("update_user_avatar", { base64Data });
-
-export const resetUserAvatar = () =>
-  invoke<UserProfile>("reset_user_avatar");
