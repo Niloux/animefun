@@ -88,12 +88,20 @@ export function UserProfileDialog({
     }
 
     // 先更新头像（如果有），再更新资料
+    // 使用回调链确保两个操作都成功后才关闭对话框
     if (previewUrl) {
-      updateAvatar(previewUrl);
+      updateAvatar(previewUrl, {
+        onSuccess: () => {
+          updateProfile({ name: trimmedName, bio: trimmedBio }, {
+            onSuccess: () => onOpenChange(false),
+          });
+        },
+      });
+    } else {
+      updateProfile({ name: trimmedName, bio: trimmedBio }, {
+        onSuccess: () => onOpenChange(false),
+      });
     }
-
-    updateProfile({ name: trimmedName, bio: trimmedBio });
-    onOpenChange(false);
   };
 
   const handleResetAvatar = () => {

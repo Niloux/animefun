@@ -24,9 +24,10 @@ pub async fn get_avatar_data_url() -> CommandResult<String> {
     let bytes = fs::read(&path).await?;
 
     // 简单检测文件类型
+    // PNG 魔术字节: 89 50 4E 47 0D 0A 1A 0A (\x89PNG\r\n\x1a\n)
     let mime = if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
         "image/jpeg"
-    } else if bytes.starts_with(b"PNG") {
+    } else if bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) {
         "image/png"
     } else if bytes.starts_with(b"RIFF") && bytes.get(8..12) == Some(b"WEBP") {
         "image/webp"
