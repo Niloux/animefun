@@ -5,3 +5,4 @@ pub mod cache;
 pub mod downloader;
 pub mod mikan;
 pub mod subscriptions;
+pub mod user_profile;

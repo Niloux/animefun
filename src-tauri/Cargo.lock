@@ -51,6 +51,7 @@ dependencies = [
 name = "animefun"
 version = "0.2.8"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "deadpool-sqlite",
  "futures",
