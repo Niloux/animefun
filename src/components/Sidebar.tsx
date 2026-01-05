@@ -43,7 +43,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   const location = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const { items } = useDownloadList();
-  const { profile } = useUserProfile();
+  const { profile, avatarDataUrl } = useUserProfile();
   const [showProfileDialog, setShowProfileDialog] = useState(false);
 
   const downloadingCount = useMemo(
@@ -58,11 +58,11 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   };
 
   const getAvatarSrc = useCallback(() => {
-    if (profile.has_custom_avatar) {
-      return "asset://localhost/.animefun/avatar.png";
+    if (profile.has_custom_avatar && avatarDataUrl) {
+      return avatarDataUrl;
     }
     return new URL("../assets/ikuyo-avatar.png", import.meta.url).href;
-  }, [profile.has_custom_avatar]);
+  }, [profile.has_custom_avatar, avatarDataUrl]);
 
   const menuItems: MenuItem[] = [
     { title: "首页", url: ROUTES.HOME, icon: Home },

@@ -57,6 +57,7 @@ pub fn run() {
             commands::downloader::open_download_folder,
             commands::downloader::play_video,
             commands::user_profile::get_user_profile,
+            commands::user_profile::get_avatar_data_url,
             commands::user_profile::update_user_profile,
             commands::user_profile::update_user_avatar,
             commands::user_profile::reset_user_avatar,

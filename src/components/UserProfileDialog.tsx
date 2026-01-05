@@ -26,6 +26,7 @@ export function UserProfileDialog({
 }: UserProfileDialogProps) {
   const {
     profile,
+    avatarDataUrl,
     updateProfile,
     updateAvatar,
     resetAvatar,
@@ -80,6 +81,7 @@ export function UserProfileDialog({
       return;
     }
 
+    // 先更新头像（如果有），再更新资料
     if (previewUrl) {
       updateAvatar(previewUrl);
     }
@@ -95,8 +97,8 @@ export function UserProfileDialog({
 
   const getDisplayAvatar = () => {
     if (previewUrl) return previewUrl;
-    if (profile.has_custom_avatar) {
-      return "asset://localhost/.animefun/avatar.png";
+    if (profile.has_custom_avatar && avatarDataUrl) {
+      return avatarDataUrl;
     }
     return new URL("../assets/ikuyo-avatar.png", import.meta.url).href;
   };

@@ -210,11 +210,14 @@ export const restartApp = () => relaunch();
 export const getUserProfile = () =>
   invoke<UserProfile>("get_user_profile");
 
+export const getAvatarDataUrl = () =>
+  invoke<string>("get_avatar_data_url");
+
 export const updateUserProfile = (name: string, bio: string) =>
-  invoke<void>("update_user_profile", { name, bio });
+  invoke<UserProfile>("update_user_profile", { name, bio });
 
 export const updateUserAvatar = (base64Data: string) =>
-  invoke<void>("update_user_avatar", { base64Data });
+  invoke<UserProfile>("update_user_avatar", { base64Data });
 
 export const resetUserAvatar = () =>
-  invoke<void>("reset_user_avatar");
+  invoke<UserProfile>("reset_user_avatar");

@@ -1,15 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getUserProfile,
+  getAvatarDataUrl,
   updateUserProfile,
   updateUserAvatar,
   resetUserAvatar,
 } from "@/lib/api";
 import { toast } from "sonner";
+import type { UserProfile } from "@/types/gen/user_profile";
 
-const QUERY_KEY = ["user-profile"];
+const QUERY_KEY = ["user-profile"] as const;
+const AVATAR_QUERY_KEY = ["avatar-data-url"] as const;
 
-const DEFAULT_PROFILE = {
+const DEFAULT_PROFILE: UserProfile = {
   name: "喜多郁代",
   bio: "きた,いくよ",
   has_custom_avatar: false,
@@ -24,11 +27,20 @@ export function useUserProfile() {
     staleTime: Infinity,
   });
 
+  // 头像 data URL 查询
+  const avatarDataUrl = useQuery({
+    queryKey: [...AVATAR_QUERY_KEY, profile.data?.has_custom_avatar],
+    queryFn: getAvatarDataUrl,
+    enabled: profile.data?.has_custom_avatar ?? false,
+    staleTime: Infinity,
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ name, bio }: { name: string; bio: string }) =>
       updateUserProfile(name, bio),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    onSuccess: (updatedProfile) => {
+      // 直接设置新数据，避免竞态条件
+      queryClient.setQueryData(QUERY_KEY, updatedProfile);
       toast.success("资料已更新");
     },
     onError: (error) => {
@@ -40,8 +52,10 @@ export function useUserProfile() {
 
   const avatarMutation = useMutation({
     mutationFn: updateUserAvatar,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    onSuccess: (updatedProfile) => {
+      queryClient.setQueryData(QUERY_KEY, updatedProfile);
+      // 头像更新后，重新获取 data URL
+      queryClient.invalidateQueries({ queryKey: AVATAR_QUERY_KEY });
       toast.success("头像已更新");
     },
     onError: (error) => {
@@ -53,8 +67,9 @@ export function useUserProfile() {
 
   const resetAvatarMutation = useMutation({
     mutationFn: resetUserAvatar,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    onSuccess: (updatedProfile) => {
+      queryClient.setQueryData(QUERY_KEY, updatedProfile);
+      queryClient.setQueryData([...AVATAR_QUERY_KEY, true], null);
       toast.success("头像已重置");
     },
     onError: (error) => {
@@ -66,6 +81,7 @@ export function useUserProfile() {
 
   return {
     profile: profile.data ?? DEFAULT_PROFILE,
+    avatarDataUrl: avatarDataUrl.data ?? "",
     isLoading: profile.isPending,
     updateProfile: updateMutation.mutate,
     isUpdating: updateMutation.isPending,
