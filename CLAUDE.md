@@ -59,6 +59,7 @@ pnpm types:gen      # Runs `cargo test` to generate src/types/gen/ from Rust via
 ### Backend Structure
 
 - `src-tauri/src/commands/` - Tauri command handlers (IPC layer)
+
   - `bangumi.rs` - Anime data, episodes, search
   - `subscriptions.rs` - Subscription CRUD, background refresh
   - `mikan.rs` - Torrent resource aggregation
@@ -66,12 +67,14 @@ pnpm types:gen      # Runs `cargo test` to generate src/types/gen/ from Rust via
   - `cache.rs` - Image cache management
 
 - `src-tauri/src/services/` - Business logic layer
+
   - `bangumi/` - Bangumi API integration
   - `subscriptions/` - Background worker (10-min refresh), repository
   - `mikan/` - RSS parsing, preheating, episode mapping
   - `downloader/` - Client abstraction (qBittorrent/transmission), status monitoring
 
 - `src-tauri/src/infra/` - Infrastructure
+
   - `db.rs` - SQLite connection pools (main + cache)
   - `http.rs` - Shared reqwest client with rate limiting (governor)
   - `media_cache.rs` - Image caching with automatic cleanup
@@ -87,6 +90,7 @@ pnpm types:gen      # Runs `cargo test` to generate src/types/gen/ from Rust via
 2. **Data Flow**: React components → custom hooks → Tauri invoke → Rust commands → services → infrastructure
 
 3. **Background Workers**: Services run as async tasks via `tauri::async_runtime::spawn`:
+
    - `subscriptions::worker` - Polls subscription updates (10-min interval, 4 concurrent)
    - `mikan::preheat` - Preheats RSS cache (15-min interval, 4 concurrent)
    - `downloader::monitor` - Tracks download status continuously
@@ -98,6 +102,7 @@ pnpm types:gen      # Runs `cargo test` to generate src/types/gen/ from Rust via
 ## Data Storage
 
 All user data in `~/.animefun/`:
+
 - `data.sqlite` - Subscriptions, user preferences
 - `cache.sqlite` - Temporary cached data
 - `images/` - Downloaded cover art
@@ -126,6 +131,6 @@ To release a new version (e.g., v0.2.1 → v0.2.2):
 4. Create and push git tag:
 
 ```bash
-git tag -a v0.2.2 -m "Release v0.2.2"
+git tag -a v0.2.2 -m "{the detailed release notes in Chinese}"
 git push origin v0.2.2
 ```
