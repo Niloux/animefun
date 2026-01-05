@@ -52,10 +52,10 @@ export function useUserProfile() {
 
   const avatarMutation = useMutation({
     mutationFn: updateUserAvatar,
-    onSuccess: (updatedProfile) => {
+    onSuccess: (updatedProfile, variables) => {
       queryClient.setQueryData(QUERY_KEY, updatedProfile);
-      // 清除旧头像缓存，确保下次启动时从后端重新获取
-      queryClient.setQueryData(AVATAR_QUERY_KEY, undefined);
+      // 直接用上传的图片更新缓存，确保重启后显示正确的头像
+      queryClient.setQueryData([...AVATAR_QUERY_KEY, true], variables);
       toast.success("头像已更新");
     },
     onError: (error) => {
