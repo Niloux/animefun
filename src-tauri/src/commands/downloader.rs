@@ -87,7 +87,14 @@ pub async fn add_torrent_and_track(
     };
 
     // 2. 先记录到数据库
-    repo::insert(&hash, subject_id, episode, episode_range.as_deref(), meta_json.as_deref()).await?;
+    repo::insert(
+        &hash,
+        subject_id,
+        episode,
+        episode_range.as_deref(),
+        meta_json.as_deref(),
+    )
+    .await?;
 
     // 3. 检查 qBittorrent 中是否已存在该 hash
     let qb = get_client().await?;
@@ -381,10 +388,32 @@ pub async fn play_video(hash: String) -> CommandResult<()> {
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd")
-            .args(["/c", "start", "", &path.to_string_lossy()])
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
+        use std::ffi::OsStr;
+        use std::os::windows::ffi::OsStrExt;
+        use std::ptr;
+        use windows_sys::Win32::Foundation::HWND;
+        use windows_sys::Win32::UI::Shell::ShellExecuteW;
+        use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+        let path_w: Vec<u16> = OsStr::new(&path)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        let res = unsafe {
+            ShellExecuteW(
+                HWND(0),
+                ptr::null(),
+                path_w.as_ptr(),
+                ptr::null(),
+                ptr::null(),
+                SW_SHOWNORMAL,
+            )
+        } as isize;
+
+        if res <= 32 {
+            return Err(AppError::Any(format!("Failed to play video: ShellExecuteW returned {}", res)));
+        }
     }
 
     #[cfg(target_os = "linux")]
