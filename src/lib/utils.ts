@@ -112,3 +112,11 @@ export function formatRelativeTime(date: Date | null | undefined): string {
   if (diffMs < 3600000) return `${Math.floor(diffMs / 60000)} 分钟前`;
   return date.toLocaleTimeString();
 }
+
+/**
+ * 将 HTTP URL 转换为 HTTPS URL，避免 macOS ATS 拦截
+ */
+export function ensureHttps(url: string | undefined | null): string {
+  if (!url) return "";
+  return url.replace(/^http:\/\//i, "https://");
+}

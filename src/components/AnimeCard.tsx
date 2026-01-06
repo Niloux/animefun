@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCachedImage } from "../hooks/use-cached-image";
-import { getRatingColorClass, navigateToAnimeDetail } from "../lib/utils";
+import { ensureHttps, getRatingColorClass, navigateToAnimeDetail } from "../lib/utils";
 import { Anime, CalendarItem } from "../types/gen/bangumi";
 import { AspectRatio } from "./ui/aspect-ratio";
 import { Badge } from "./ui/badge";
@@ -17,12 +17,13 @@ interface AnimeCardProps {
 export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
   const navigate = useNavigate();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const rawImgSrc =
+  const rawImgSrc = ensureHttps(
     anime.images?.large ||
     anime.images?.common ||
     anime.images?.medium ||
     anime.images?.small ||
-    "https://lain.bgm.tv/img/no_icon_subject.png";
+    "https://lain.bgm.tv/img/no_icon_subject.png"
+  );
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
 
   const handleAnimeClick = () => {
