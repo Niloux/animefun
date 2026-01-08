@@ -53,3 +53,6 @@ sha1 = "0.10"
 serde_bencode = "0.2"
 hex = "0.4"
 futures = "0.3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
