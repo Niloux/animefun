@@ -402,7 +402,7 @@ pub async fn play_video(hash: String) -> CommandResult<()> {
 
         let res = unsafe {
             ShellExecuteW(
-                HWND(0),
+                0,
                 ptr::null(),
                 path_w.as_ptr(),
                 ptr::null(),
