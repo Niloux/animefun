@@ -18,8 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { LoadingButton } from "@/components/ui/loading-button";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { UpdateDialog } from "@/components/UpdateDialog";
@@ -324,26 +324,42 @@ const SettingsPage: FC = () => {
                   <Separator />
 
                   <div className="flex flex-col-reverse sm:flex-row gap-3">
-                    <LoadingButton
+                    <Button
                       type="button"
                       variant="outline"
                       onClick={testConnection}
-                      loading={isTesting}
-                      loadingText="测试中..."
-                      icon={<CheckCircle2 className="h-4 w-4" />}
-                      className="w-full sm:w-auto bg-transparent"
+                      disabled={isTesting}
+                      className="w-full sm:w-auto bg-transparent cursor-pointer"
                     >
-                      测试连接
-                    </LoadingButton>
-                    <LoadingButton
+                      {isTesting ? (
+                        <>
+                          <Spinner className="mr-2 h-4 w-4" />
+                          测试中...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          测试连接
+                        </>
+                      )}
+                    </Button>
+                    <Button
                       type="submit"
-                      loading={form.formState.isSubmitting}
-                      loadingText="保存中..."
-                      icon={<Download className="h-4 w-4" />}
-                      className="w-full sm:w-auto sm:ml-auto"
+                      disabled={form.formState.isSubmitting}
+                      className="w-full sm:w-auto sm:ml-auto cursor-pointer"
                     >
-                      保存配置
-                    </LoadingButton>
+                      {form.formState.isSubmitting ? (
+                        <>
+                          <Spinner className="mr-2 h-4 w-4" />
+                          保存中...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          保存配置
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </form>
               </Form>
@@ -427,16 +443,24 @@ const SettingsPage: FC = () => {
                     点击下方按钮测试通知功能。
                   </p>
                 </div>
-                <LoadingButton
+                <Button
                   variant="outline"
                   onClick={handleTestNotification}
-                  loading={isTestingNotification}
-                  loadingText="发送中..."
-                  icon={<Bell className="h-4 w-4" />}
-                  className="shrink-0"
+                  disabled={isTestingNotification}
+                  className="shrink-0 cursor-pointer"
                 >
-                  测试通知
-                </LoadingButton>
+                  {isTestingNotification ? (
+                    <>
+                      <Spinner className="mr-2 h-4 w-4" />
+                      发送中...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="mr-2 h-4 w-4" />
+                      测试通知
+                    </>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -501,16 +525,25 @@ const SettingsPage: FC = () => {
                       应用启动时会自动检查更新
                     </p>
                   </div>
-                  <LoadingButton
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={handleCheckUpdate}
-                    loading={isCheckingUpdate}
-                    loadingText="检查中..."
-                    icon={<RefreshCw className="h-4 w-4" />}
+                    disabled={isCheckingUpdate}
+                    className="cursor-pointer"
                   >
-                    检查更新
-                  </LoadingButton>
+                    {isCheckingUpdate ? (
+                      <>
+                        <Spinner className="mr-2 h-4 w-4" />
+                        检查中...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        检查更新
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
               <Separator />

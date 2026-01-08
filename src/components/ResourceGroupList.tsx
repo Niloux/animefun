@@ -6,7 +6,7 @@ import { formatBytes } from "../lib/utils";
 import type { MikanResourceItem } from "../types/gen/mikan";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { LoadingButton } from "./ui/loading-button";
+import { Spinner } from "./ui/spinner";
 
 interface ResourceGroupListProps {
   groups: { group: string; items: MikanResourceItem[] }[];
@@ -72,22 +72,11 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                       </Button>
                     )}
                     {it.torrent_url && (
-                      <LoadingButton
+                      <Button
                         className="cursor-pointer"
                         variant={isConnected ? "outline" : "secondary"}
                         size="sm"
                         disabled={isCheckingConnection}
-                        loading={
-                          isDownloading ? isDownloading(it.torrent_url!) : false
-                        }
-                        loadingText="种子"
-                        icon={
-                          isConnected ? (
-                            <Download className="w-4 h-4" />
-                          ) : (
-                            <WifiOff className="w-4 h-4 opacity-70" />
-                          )
-                        }
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -96,27 +85,30 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           }
                         }}
                       >
-                        {isConnected ? "种子" : "去配置"}
-                      </LoadingButton>
+                        {isDownloading && isDownloading(it.torrent_url!) ? (
+                          <>
+                            <Spinner className="mr-2 h-4 w-4" />
+                            种子
+                          </>
+                        ) : (
+                          <>
+                            {isConnected ? (
+                              <Download className="mr-2 w-4 h-4" />
+                            ) : (
+                              <WifiOff className="mr-2 w-4 h-4 opacity-70" />
+                            )}
+                            {isConnected ? "种子" : "去配置"}
+                          </>
+                        )}
+                      </Button>
                     )}
                     {/*磁力按钮不会出现，因为从rss中解析到的mikan资源都没有磁力链接信息，只有torrent_url*/}
                     {it.magnet && (
-                      <LoadingButton
+                      <Button
                         className="cursor-pointer"
                         variant={isConnected ? "outline" : "secondary"}
                         size="sm"
                         disabled={isCheckingConnection}
-                        loading={
-                          isDownloading ? isDownloading(it.magnet!) : false
-                        }
-                        loadingText="磁力"
-                        icon={
-                          isConnected ? (
-                            <Download className="w-4 h-4" />
-                          ) : (
-                            <WifiOff className="w-4 h-4 opacity-70" />
-                          )
-                        }
                         onClick={() => {
                           if (!isConnected) {
                             navigate("/settings");
@@ -125,8 +117,22 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
                           }
                         }}
                       >
-                        {isConnected ? "磁力" : "去配置"}
-                      </LoadingButton>
+                        {isDownloading && isDownloading(it.magnet!) ? (
+                          <>
+                            <Spinner className="mr-2 h-4 w-4" />
+                            磁力
+                          </>
+                        ) : (
+                          <>
+                            {isConnected ? (
+                              <Download className="mr-2 w-4 h-4" />
+                            ) : (
+                              <WifiOff className="mr-2 w-4 h-4 opacity-70" />
+                            )}
+                            {isConnected ? "磁力" : "去配置"}
+                          </>
+                        )}
+                      </Button>
                     )}
                   </div>
                 </div>
