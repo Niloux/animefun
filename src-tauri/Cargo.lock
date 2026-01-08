@@ -49,7 +49,7 @@ dependencies = [
 
 [[package]]
 name = "animefun"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "chrono",
  "deadpool-sqlite",
@@ -79,7 +79,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "ts-rs",
- "windows-sys 0.59.0",
 ]
 
 [[package]]

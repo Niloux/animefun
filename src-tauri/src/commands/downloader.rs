@@ -7,6 +7,7 @@ use crate::services::downloader::{
 
 use futures::StreamExt;
 use std::collections::HashMap;
+use tauri_plugin_opener::OpenerExt;
 
 fn is_metadata_valid(meta_str: &Option<String>) -> bool {
     meta_str.as_ref().and_then(|s| parse_metadata(s)).is_some()
@@ -319,38 +320,18 @@ pub async fn delete_download(hash: String, delete_files: bool) -> CommandResult<
 }
 
 #[tauri::command]
-pub async fn open_download_folder(save_path: String) -> CommandResult<()> {
+pub async fn open_download_folder(app: tauri::AppHandle, save_path: String) -> CommandResult<()> {
     let path = std::path::Path::new(&save_path);
 
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(path)
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(path)
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(path)
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
-    }
+    app.opener()
+        .open_path(path.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub async fn play_video(hash: String) -> CommandResult<()> {
+pub async fn play_video(app: tauri::AppHandle, hash: String) -> CommandResult<()> {
     let qb = get_client().await?;
 
     // 获取 save_path
@@ -377,30 +358,9 @@ pub async fn play_video(hash: String) -> CommandResult<()> {
     // 构造完整路径
     let path = std::path::Path::new(&save_path).join(&video_file.name);
 
-    // 使用系统默认播放器打开
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
-    }
+    app.opener()
+        .open_path(path.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
 
     Ok(())
 }
