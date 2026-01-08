@@ -5,7 +5,7 @@ import AppSidebar from "./Sidebar";
 import { Loader2 } from "lucide-react";
 
 interface LayoutProps {
-  preloadMap: Record<string, () => void>;
+  preloadMap: Record<string, () => Promise<unknown>>;
 }
 
 export function Layout({ preloadMap }: LayoutProps) {

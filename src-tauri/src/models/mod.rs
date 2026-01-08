@@ -2,3 +2,4 @@
 
 pub mod bangumi;
 pub mod mikan;
+pub mod profile;

@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { DownloadItem } from "@/types/gen/downloader";
 import {
-  getTrackedDownloads,
-  getLiveDownloadInfo,
-  pauseDownload,
-  resumeDownload,
   deleteDownload,
+  getLiveDownloadInfo,
+  getTrackedDownloads,
+  pauseDownload,
   playVideo,
+  resumeDownload,
 } from "@/lib/api";
+import { DownloadItem } from "@/types/gen/downloader";
+import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useConnectionState } from "./use-connection-state";
 
@@ -101,30 +101,30 @@ export function useDownloadList() {
   const handlePause = async (hash: string) => {
     try {
       await pauseDownload(hash);
-      toast.success("Paused");
+      toast.success("已暂停");
     } catch {
-      toast.error("Failed to pause");
+      toast.error("暂停失败");
     }
   };
 
   const handleResume = async (hash: string) => {
     try {
       await resumeDownload(hash);
-      toast.success("Resumed");
+      toast.success("已恢复");
     } catch {
-      toast.error("Failed to resume");
+      toast.error("恢复失败");
     }
   };
 
   const handleDelete = async (hash: string) => {
     try {
       await deleteDownload(hash, true);
-      toast.success("Deleted");
+      toast.success("已删除");
       // 不再本地乐观更新，等待后端事件 "download-status-updated" 来更新列表
       // 这样可以确保前后端状态一致
       return true;
     } catch {
-      toast.error("Failed to delete");
+      toast.error("删除失败");
       return false;
     }
   };
@@ -132,10 +132,10 @@ export function useDownloadList() {
   const handlePlayVideo = async (hash: string) => {
     try {
       await playVideo(hash);
-      toast.success("Playing");
+      toast.success("正在播放");
     } catch (e) {
       console.error("Failed to play video:", e);
-      toast.error("Failed to play video");
+      toast.error("播放失败");
       throw e;
     }
   };

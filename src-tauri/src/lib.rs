@@ -29,6 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::bangumi::get_calendar,
             commands::bangumi::get_episodes,
@@ -56,6 +57,9 @@ pub fn run() {
             commands::downloader::delete_download,
             commands::downloader::open_download_folder,
             commands::downloader::play_video,
+            commands::profile::get_user_profile,
+            commands::profile::update_user_profile,
+            commands::profile::upload_avatar,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

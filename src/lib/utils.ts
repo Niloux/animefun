@@ -1,11 +1,26 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { NavigateFunction } from "react-router-dom";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { Anime } from "../types/gen/bangumi";
 import { ROUTES } from "../constants/routes";
+import ikuyoAvatar from "../assets/ikuyo-avatar.png";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export function resolveAvatarUrl(path: string | null | undefined): string {
+  if (!path || path.trim() === "") {
+    return ikuyoAvatar;
+  }
+  try {
+    return convertFileSrc(path);
+  } catch {
+    // convertFileSrc 在路径格式错误时可能抛错
+    // 虽然 Rust 层已经验证过路径，但作为前端防御性编程，这里提供 fallback
+    return ikuyoAvatar;
+  }
 }
 
 export function getRatingColorClass(score: number): string {

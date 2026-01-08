@@ -1,6 +1,6 @@
 [package]
 name = "animefun"
-version = "0.2.8.1"
+version = "0.2.9"
 description = "看动画的app"
 authors = ["Niloux3d"]
 edition = "2021"
@@ -23,6 +23,7 @@ tauri-plugin-opener = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.13", features = [

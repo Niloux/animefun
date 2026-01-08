@@ -4,6 +4,7 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import type { DownloadItem } from "@/types/gen/downloader";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
+import type { UserProfile } from "@/types/gen/profile.rs";
 import { TorrentInfo } from "@/types/gen/torrent_info";
 import {
   CalendarDay,
@@ -44,8 +45,7 @@ export const deleteDownload = (hash: string, deleteFiles: boolean) =>
 export const openDownloadFolder = (savePath: string) =>
   invoke<void>("open_download_folder", { savePath });
 
-export const playVideo = (hash: string) =>
-  invoke<void>("play_video", { hash });
+export const playVideo = (hash: string) => invoke<void>("play_video", { hash });
 
 export const addTorrentAndTrack = (
   url: string,
@@ -54,7 +54,13 @@ export const addTorrentAndTrack = (
   episodeRange: string | null,
   metaJson: string | null,
 ) =>
-  invoke<void>("add_torrent_and_track", { url, subjectId, episode, episodeRange, metaJson });
+  invoke<void>("add_torrent_and_track", {
+    url,
+    subjectId,
+    episode,
+    episodeRange,
+    metaJson,
+  });
 
 // --- Bangumi ---
 
@@ -152,7 +158,9 @@ export interface UpdateInfo {
 
 export const checkUpdate = async (): Promise<UpdateInfo | null> => {
   try {
-    const update = await check({ headers: { "Accept-Encoding": "gzip, deflate" } });
+    const update = await check({
+      headers: { "Accept-Encoding": "gzip, deflate" },
+    });
     if (!update?.available) {
       return { available: false, currentVersion: await getVersion() };
     }
@@ -170,7 +178,11 @@ export const checkUpdate = async (): Promise<UpdateInfo | null> => {
 };
 
 export const downloadAndInstall = async (
-  onProgress: (progress: { current: number; total: number; percent: number }) => void,
+  onProgress: (progress: {
+    current: number;
+    total: number;
+    percent: number;
+  }) => void,
 ): Promise<void> => {
   const update = await check();
   if (!update) throw new Error("No update available");
@@ -188,7 +200,10 @@ export const downloadAndInstall = async (
         onProgress({
           current: downloaded,
           total: contentLength,
-          percent: contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0,
+          percent:
+            contentLength > 0
+              ? Math.round((downloaded / contentLength) * 100)
+              : 0,
         });
         break;
       case "Finished":
@@ -203,3 +218,12 @@ export const downloadAndInstall = async (
 };
 
 export const restartApp = () => relaunch();
+
+// --- User Profile ---
+
+export const getUserProfile = () => invoke<UserProfile>("get_user_profile");
+
+export const updateUserProfile = (username: string, signature: string) =>
+  invoke<void>("update_user_profile", { username, signature });
+
+export const uploadAvatar = () => invoke<UserProfile>("upload_avatar");
