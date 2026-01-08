@@ -388,32 +388,10 @@ pub async fn play_video(hash: String) -> CommandResult<()> {
 
     #[cfg(target_os = "windows")]
     {
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
-        use std::ptr;
-        use windows_sys::Win32::Foundation::HWND;
-        use windows_sys::Win32::UI::Shell::ShellExecuteW;
-        use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
-
-        let path_w: Vec<u16> = OsStr::new(&path)
-            .encode_wide()
-            .chain(std::iter::once(0))
-            .collect();
-
-        let res = unsafe {
-            ShellExecuteW(
-                0,
-                ptr::null(),
-                path_w.as_ptr(),
-                ptr::null(),
-                ptr::null(),
-                SW_SHOWNORMAL,
-            )
-        } as isize;
-
-        if res <= 32 {
-            return Err(AppError::Any(format!("Failed to play video: ShellExecuteW returned {}", res)));
-        }
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
