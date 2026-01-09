@@ -1,27 +1,30 @@
 import { useMemo } from "react";
-import type {
-  MikanResourcesResponse,
-  MikanResourceItem,
-} from "../types/gen/mikan";
 import type { Episode } from "../types/gen/bangumi";
+import type {
+  MikanResourceItem,
+  MikanResourcesResponse,
+} from "../types/gen/mikan";
 
-function epNoOf(e: Episode | null): number | null {
-  if (!e) return null;
-  return e.sort ?? e.ep ?? null;
+function getEpisodeCandidates(e: Episode | null): number[] {
+  if (!e) return [];
+  const nums = [];
+  if (typeof e.sort === "number") nums.push(e.sort);
+  if (typeof e.ep === "number" && e.sort != e.ep) nums.push(e.ep);
+  return nums;
 }
 
-function matchRange(range?: string, no?: number): boolean {
-  if (!range || typeof no !== "number") return false;
+function matchRange(range?: string, candidates?: number[]): boolean {
+  if (!range || !candidates || candidates.length === 0) return false;
   const m = range.match(/(\d{1,3})\s*-\s*(\d{1,3})/);
   if (m) {
     const a = parseInt(m[1], 10);
     const b = parseInt(m[2], 10);
-    return no >= a && no <= b;
+    return candidates.some((no) => no >= a && no <= b);
   }
   const n = range.match(/(\d{1,3})/);
   if (n) {
     const v = parseInt(n[1], 10);
-    return no === v;
+    return candidates.includes(v);
   }
   return false;
 }
@@ -31,15 +34,19 @@ export function useEpisodeResources(
   episode?: Episode | null,
   isSingle?: boolean,
 ) {
-  const epNo = useMemo(() => epNoOf(episode ?? null), [episode]);
+  const epCandidates = useMemo(
+    () => getEpisodeCandidates(episode ?? null),
+    [episode],
+  );
 
   const matched = useMemo<MikanResourceItem[]>(() => {
     if (!resources?.mapped || !resources.items) return [];
     if (resources.items.length === 0) return [];
-    if (epNo == null) return resources.items;
+    if (epCandidates.length === 0) return resources.items;
     const filtered = resources.items.filter((it) => {
-      if (typeof it.episode === "number") return it.episode === epNo;
-      return matchRange(it.episode_range, epNo);
+      if (typeof it.episode === "number")
+        return epCandidates.includes(it.episode);
+      return matchRange(it.episode_range, epCandidates);
     });
     if (filtered.length === 0) {
       const hasEpisodeInfo = resources.items.some(
@@ -48,7 +55,7 @@ export function useEpisodeResources(
       if (!hasEpisodeInfo || isSingle) return resources.items;
     }
     return filtered;
-  }, [resources, epNo, isSingle]);
+  }, [resources, epCandidates, isSingle]);
 
   const grouped = useMemo(() => {
     const m = new Map<string, MikanResourceItem[]>();
@@ -63,5 +70,5 @@ export function useEpisodeResources(
 
   const mapped = !!(resources && resources.mapped);
 
-  return { epNo, matched, grouped, mapped };
+  return { epNo: epCandidates[0] ?? null, matched, grouped, mapped };
 }
