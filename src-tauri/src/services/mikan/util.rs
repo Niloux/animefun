@@ -2,20 +2,7 @@
 const TRAILING_PUNCTUATION: &[char] = &['。', '.', '!', '！', '?', '？', '·', '•'];
 
 /// 规范化番剧名称（优先使用中文名）
-///
-/// # 参数
-/// - `name`: 原始名称（通常是日文名）
-/// - `alt`: 替代名称（通常是中文名）
-///
-/// # 返回
 /// 优先返回 `alt`（去除尾部标点），如果为空则返回 `name`。
-///
-/// # 示例
-/// ```
-/// assert_eq!(normalize_name("Name", "中文名"), "中文名");
-/// assert_eq!(normalize_name("Name", ""), "Name");
-/// assert_eq!(normalize_name("Name", "标题！"), "标题");
-/// ```
 pub fn normalize_name(name: &str, alt: &str) -> String {
     if alt.trim().is_empty() {
         name.to_string()

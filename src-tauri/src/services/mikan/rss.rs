@@ -210,8 +210,9 @@ static RE_EPISODE: Lazy<Regex> =
 static RE_RANGE: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"(?i)\b(\d{1,3})\s*-\s*(\d{1,3})(?:\s*[\[(（]?(?:全集|END|完)[\])）]?)?").unwrap()
 });
-static RE_BRACKET_NUM: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)[\[(（]\s*(\d{1,3})\s*[\])）]").unwrap());
+static RE_BRACKET_NUM: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?i)[\[(【]\s*(?:OAD|OVA|SP|Special|特典)?\s*(\d{1,3})\s*[\])）】]").unwrap()
+});
 static RE_DASH_NUM: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)[\s\-]\s*(\d{1,3})\b").unwrap());
 
 fn parse_episode_info(title: &str) -> (Option<u32>, Option<String>) {
@@ -439,5 +440,46 @@ mod tests {
         let (lang2, typ2) = parse_subtitle("title", d);
         assert_eq!(lang2.as_deref(), Some("繁体"));
         assert_eq!(typ2.as_deref(), Some("内封"));
+    }
+
+    #[test]
+    fn test_parse_episode_special_oad() {
+        let t = "【DHR动研字幕组】[魔物娘的同居日常_Everyday Life with Monster Girls][OAD2][繁体][720P][MP4]";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(2));
+        assert!(range.is_none());
+    }
+
+    #[test]
+    fn test_parse_episode_special_ova() {
+        let t = "[Group] Anime Title [OVA1][1080P]";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(1));
+        assert!(range.is_none());
+    }
+
+    #[test]
+    fn test_parse_episode_special_sp() {
+        let t = "【字幕组】作品名 [SP3] 繁体";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(3));
+        assert!(range.is_none());
+    }
+
+    #[test]
+    fn test_parse_episode_special_tokuten() {
+        let t = "【字幕组】作品名 【特典5】 1080P";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(5));
+        assert!(range.is_none());
+    }
+
+    #[test]
+    fn test_parse_episode_bracket_backward_compatibility() {
+        // 确保原有的纯数字括号还能工作
+        let t = "[Group] Anime Title [12][1080P]";
+        let (ep, range) = parse_episode_info(t);
+        assert_eq!(ep, Some(12));
+        assert!(range.is_none());
     }
 }
