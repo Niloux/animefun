@@ -6,7 +6,28 @@ use crate::services::bangumi;
 const MAX_CONCURRENCY: usize = 5;
 const NO_MAP_TTL_SECS: i64 = 3600;
 
-use crate::services::mikan::util::{normalize_for_search, normalize_name};
+use crate::services::mikan::util::{
+    generate_search_terms_by_stripping, normalize_name, replace_and_split,
+};
+use std::collections::HashSet;
+
+/// 生成降级搜索词
+fn generate_search_terms(name: &str) -> Vec<String> {
+    let mut terms_set = HashSet::new();
+
+    // Level 0: 原始标题
+    terms_set.insert(name.to_string());
+
+    // Level 1+: 符号替换 + 逐步剔除
+    let words = replace_and_split(name);
+    let stripped_terms = generate_search_terms_by_stripping(&words);
+    terms_set.extend(stripped_terms);
+
+    // 转换为 Vec 并按长度降序排序（优先尝试更精确的搜索词）
+    let mut terms: Vec<_> = terms_set.into_iter().collect();
+    terms.sort_by_key(|s| std::cmp::Reverse(s.len()));
+    terms
+}
 
 pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
     // 检查持久化存储中的映射
@@ -22,30 +43,39 @@ pub async fn ensure_map(sid: u32) -> Result<Option<u32>, AppError> {
         return Ok(None);
     }
 
-    // 执行映射逻辑
     let subject = bangumi::api::fetch_subject(sid).await?;
-    let normalized_name = normalize_name(subject.name, subject.name_cn);
-    let sanitized_name = normalize_for_search(&normalized_name);
+    let normalized_name = normalize_name(&subject.name, &subject.name_cn);
 
-    // 先尝试清理后的名称（移除季号+括号），失败则回退到原始名称
-    let candidates = if sanitized_name == normalized_name {
-        // 没有需要清理的内容，直接使用原始名称
-        search::search_candidates(&normalized_name).await?
-    } else if sanitized_name.len() < normalized_name.len() / 2 {
-        // 清理后太短，使用原始名称避免误匹配
-        search::search_candidates(&normalized_name).await?
-    } else {
-        // 先试清理后的名称
-        match search::search_candidates(&sanitized_name).await {
-            Ok(c) if !c.is_empty() => c,
-            _ => {
-                // 清理后无结果，回退到原始名称
-                search::search_candidates(&normalized_name).await?
+    tracing::debug!("Searching for Mikan ID: {}", normalized_name);
+
+    // 生成降级搜索词（原始 → 符号替换 → 逐步剔除）
+    let search_terms = generate_search_terms(&normalized_name);
+    tracing::debug!(
+        "Generated {} search terms: {:?}",
+        search_terms.len(),
+        search_terms
+    );
+
+    // 依次尝试每一级，直到 resolver 成功才停止
+    let mut resolved_id = None;
+    for term in &search_terms {
+        let candidates = search::search_candidates(term).await?;
+        tracing::debug!("Search '{}' found {} candidates", term, candidates.len());
+
+        if !candidates.is_empty() {
+            match resolver::resolve_candidates(sid, candidates, MAX_CONCURRENCY).await? {
+                Some(id) => {
+                    tracing::info!("Successfully mapped to Mikan ID: {}", id);
+                    resolved_id = Some(id);
+                    break;
+                }
+                None => {
+                    tracing::debug!("Candidates found but none matched, trying next...");
+                    continue;
+                }
             }
         }
-    };
-
-    let resolved_id = resolver::resolve_candidates(sid, candidates, MAX_CONCURRENCY).await?;
+    }
 
     match resolved_id {
         Some(bid) => {
