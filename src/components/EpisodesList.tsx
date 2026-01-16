@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { PaginationBar } from "./PaginationBar";
 import {
@@ -129,9 +129,9 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
       {/* 剧集网格 */}
       <div className="p-6">
         {loading && data.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 border-4 border-gray-300 dark:border-slate-700 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">加载中...</p>
+          <div className="text-center py-12 flex flex-col items-center gap-3">
+            <Loader2 className="w-10 h-10 text-muted-foreground animate-spin" />
+            <p className="text-muted-foreground text-sm">加载剧集信息...</p>
           </div>
         ) : data.length > 0 ? (
           <>
@@ -150,7 +150,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                 (_, idx) => (
                   <div
                     key={`ph-${idx}`}
-                    className="invisible pointer-events-none relative overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 h-40"
+                    className="invisible pointer-events-none relative overflow-hidden rounded-lg border border-border/40 bg-muted/10 p-4 h-40"
                   />
                 ),
               )}
@@ -165,8 +165,8 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
             )}
           </>
         ) : !loading && data.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400">暂无剧集信息</p>
+          <div className="text-center py-12 text-muted-foreground">
+            <p>暂无剧集信息</p>
           </div>
         ) : null}
       </div>

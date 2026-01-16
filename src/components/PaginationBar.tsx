@@ -38,7 +38,7 @@ export const PaginationBar = React.memo(
                 className={
                   currentPage <= 1
                     ? "pointer-events-none opacity-50"
-                    : undefined
+                    : "cursor-pointer"
                 }
                 onClick={(e) => {
                   e.preventDefault();
@@ -57,6 +57,7 @@ export const PaginationBar = React.memo(
                   <PaginationLink
                     href="#"
                     isActive={p === currentPage}
+                    className="cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       if (p !== currentPage) onPageChange(Number(p));
@@ -74,7 +75,7 @@ export const PaginationBar = React.memo(
                 className={
                   currentPage >= totalPages
                     ? "pointer-events-none opacity-50"
-                    : undefined
+                    : "cursor-pointer"
                 }
                 onClick={(e) => {
                   e.preventDefault();

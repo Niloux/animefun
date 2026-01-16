@@ -108,11 +108,11 @@ const SearchPage = () => {
             <Badge
               key={genre}
               variant="default"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
             >
               {genre}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() => handleRemoveFilter("genre", genre)}
               >
                 <X className="h-3 w-3" />
@@ -120,10 +120,13 @@ const SearchPage = () => {
             </Badge>
           ))}
           {filters.minRating > 0 && (
-            <Badge variant="default" className="flex items-center gap-1">
+            <Badge
+              variant="default"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
+            >
               评分 ≥ {filters.minRating}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() =>
                   handleRemoveFilter("minRating", filters.minRating)
                 }
@@ -133,10 +136,13 @@ const SearchPage = () => {
             </Badge>
           )}
           {filters.maxRating < 10 && (
-            <Badge variant="default" className="flex items-center gap-1">
+            <Badge
+              variant="default"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
+            >
               评分 ≤ {filters.maxRating}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() =>
                   handleRemoveFilter("maxRating", filters.maxRating)
                 }
@@ -170,7 +176,9 @@ const SearchPage = () => {
                 <Filter className="h-8 w-8 opacity-50" />
               </div>
               <p>未找到匹配的番剧</p>
-              <p className="text-sm mt-2 opacity-70">尝试更换关键词或筛选条件</p>
+              <p className="text-sm mt-2 opacity-70">
+                尝试更换关键词或筛选条件
+              </p>
             </div>
           ) : null}
         </div>

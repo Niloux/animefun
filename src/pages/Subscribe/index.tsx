@@ -47,7 +47,7 @@ const SubscribePage = () => {
 
   const sortedItems = useMemo(
     () => sortAnimeList(list, filters.sort),
-    [list, filters.sort],
+    [list, filters.sort]
   );
 
   return (
@@ -100,11 +100,11 @@ const SubscribePage = () => {
             <Badge
               key={genre}
               variant="default"
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
             >
               {genre}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() => {
                   setFilters({
                     ...filters,
@@ -113,40 +113,49 @@ const SubscribePage = () => {
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3 cursor-pointer" />
+                <X className="h-3 w-3" />
               </button>
             </Badge>
           ))}
           {filters.minRating > 0 && (
-            <Badge variant="default" className="flex items-center gap-1">
+            <Badge
+              variant="default"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
+            >
               评分 ≥ {filters.minRating}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() => {
                   setFilters({ ...filters, minRating: 0 });
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3 cursor-pointer" />
+                <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {filters.maxRating < 10 && (
-            <Badge variant="default" className="flex items-center gap-1">
+            <Badge
+              variant="default"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
+            >
               评分 ≤ {filters.maxRating}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() => {
                   setFilters({ ...filters, maxRating: 10 });
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3 cursor-pointer" />
+                <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
           {(filters.statusCode ?? null) && (
-            <Badge variant="default" className="flex items-center gap-1">
+            <Badge
+              variant="default"
+              className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
+            >
               {filters.statusCode === "Airing"
                 ? "连载中"
                 : filters.statusCode === "Finished"
@@ -157,13 +166,13 @@ const SubscribePage = () => {
                       ? "停更"
                       : "未知"}
               <button
-                className="ml-1 rounded-full hover:bg-primary/20 p-0.5"
+                className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 transition-colors cursor-pointer"
                 onClick={() => {
                   setFilters({ ...filters, statusCode: null });
                   setPage(1);
                 }}
               >
-                <X className="h-3 w-3 cursor-pointer" />
+                <X className="h-3 w-3" />
               </button>
             </Badge>
           )}
@@ -235,7 +244,7 @@ const SubscribePage = () => {
         <AnimeGrid
           items={sortedItems.slice(
             (safeListPage - 1) * limit,
-            safeListPage * limit,
+            safeListPage * limit
           )}
         />
       )}

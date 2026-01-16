@@ -222,11 +222,11 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   <Badge
                     key={t}
                     variant="default"
-                    className="flex items-center gap-1"
+                    className="flex items-center gap-1 hover:bg-primary/90 transition-colors"
                   >
                     {t}
                     <button
-                      className="ml-1 rounded-full hover:bg-primary/20 p-0.5 cursor-pointer"
+                      className="ml-1 rounded-full hover:bg-primary-foreground/20 p-0.5 cursor-pointer transition-colors"
                       onClick={() => removeTag(t)}
                     >
                       <X className="h-3 w-3" />
