@@ -84,11 +84,11 @@ const ResourcesPage: FC = () => {
 
   const downloadingItems = useMemo(
     () => items.filter((item) => item.progress < 100),
-    [items],
+    [items]
   );
   const downloadedItems = useMemo(
     () => items.filter((item) => item.progress >= 100),
-    [items],
+    [items]
   );
 
   // 计算总下载速度
@@ -150,7 +150,7 @@ const ResourcesPage: FC = () => {
   const renderList = (
     list: DownloadItem[],
     emptyMsg: string,
-    icon?: React.ReactNode,
+    icon?: React.ReactNode
   ) => {
     if (loading && items.length === 0) {
       return (
@@ -198,34 +198,43 @@ const ResourcesPage: FC = () => {
         }`}
       >
         <Tabs defaultValue="downloading" className="w-full">
-          <div className="flex items-center justify-between mb-6">
-            <TabsList className="grid w-full max-w-xs md:max-w-md grid-cols-3">
-              <TabsTrigger value="downloading" className="gap-2 cursor-pointer">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+            <TabsList className="grid w-full max-w-xs md:max-w-md grid-cols-3 bg-muted/50 p-1 rounded-xl">
+              <TabsTrigger
+                value="downloading"
+                className="gap-2 cursor-pointer rounded-lg data-[state=active]:shadow-sm"
+              >
                 <Download className="size-4" />
                 下载中
                 <Badge
                   variant="secondary"
-                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs"
+                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-background/50"
                 >
                   {downloadingItems.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="downloaded" className="gap-2 cursor-pointer">
+              <TabsTrigger
+                value="downloaded"
+                className="gap-2 cursor-pointer rounded-lg data-[state=active]:shadow-sm"
+              >
                 <CheckCircle2 className="size-4" />
                 已完成
                 <Badge
                   variant="secondary"
-                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs"
+                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-background/50"
                 >
                   {downloadedItems.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="all" className="gap-2 cursor-pointer">
+              <TabsTrigger
+                value="all"
+                className="gap-2 cursor-pointer rounded-lg data-[state=active]:shadow-sm"
+              >
                 <ListFilter className="size-4" />
                 全部
                 <Badge
                   variant="secondary"
-                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs"
+                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-background/50"
                 >
                   {items.length}
                 </Badge>
@@ -233,10 +242,10 @@ const ResourcesPage: FC = () => {
             </TabsList>
 
             {totalSpeed > 0 && (
-              <div className="hidden sm:flex items-center gap-2 rounded-md border bg-muted px-3 py-1.5">
+              <div className="hidden sm:flex items-center gap-2 rounded-lg border bg-card shadow-sm px-3 py-1.5">
                 <div className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
                 </div>
                 <span className="text-sm font-medium tabular-nums">
                   {formatTotalSpeed(totalSpeed)}
@@ -250,14 +259,14 @@ const ResourcesPage: FC = () => {
               {renderList(
                 downloadingItems,
                 "暂无进行中的下载任务",
-                <Download className="size-10 opacity-40" />,
+                <Download className="size-10 opacity-40" />
               )}
             </TabsContent>
             <TabsContent value="downloaded" className="mt-0 outline-none">
               {renderList(
                 downloadedItems,
                 "暂无已完成的资源",
-                <CheckCircle2 className="size-10 opacity-40" />,
+                <CheckCircle2 className="size-10 opacity-40" />
               )}
             </TabsContent>
             <TabsContent value="all" className="mt-0 outline-none">

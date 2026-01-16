@@ -105,14 +105,14 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
                   <img
                     src={currentAvatar}
                     alt="avatar"
-                    className="rounded-xl w-10 h-10 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8 ring-2 ring-transparent hover:ring-primary/30 transition-all object-cover shrink-0"
+                    className="rounded-xl w-10 h-10 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8 ring-2 ring-transparent hover:ring-primary/50 transition-all object-cover shrink-0 shadow-sm"
                   />
                   <div className="text-left overflow-hidden whitespace-nowrap flex-1 min-w-0 ml-2">
                     <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity flex items-center gap-1">
                       <span className="truncate">{displayUsername}</span>
                       <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity shrink-0" />
                     </div>
-                    <div className="text-xs text-gray-400 opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity truncate">
+                    <div className="text-xs text-muted-foreground opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity truncate">
                       {displaySignature}
                     </div>
                   </div>
