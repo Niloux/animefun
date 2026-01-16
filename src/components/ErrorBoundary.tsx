@@ -30,16 +30,20 @@ export default class ErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-6">
-          <h2 className="text-2xl font-bold text-destructive">程序出错了</h2>
-          <p className="text-muted-foreground text-center">
-            抱歉，程序发生了错误，请尝试刷新页面
-          </p>
+        <div className="flex h-full w-full flex-col items-center justify-center gap-6 p-6 animate-in fade-in-50 duration-500">
+          <div className="rounded-full bg-destructive/10 p-4">
+            <Loader2Icon className="w-8 h-8 text-destructive animate-spin" />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight">程序出错了</h2>
+            <p className="text-muted-foreground text-sm">
+              抱歉，遇到了一些意外情况。
+            </p>
+          </div>
           <button
             onClick={this.handleReload}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md transition-all active:scale-95 cursor-pointer"
           >
-            <Loader2Icon className="w-4 h-4" />
             刷新页面
           </button>
         </div>

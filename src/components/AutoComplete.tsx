@@ -76,7 +76,6 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 0,
-    placeholderData: (prev) => prev,
   });
 
   const suggestions = queryResult.data ?? [];
@@ -240,7 +239,7 @@ function highlight(q: string, text: string) {
   return (
     <span>
       {pre}
-      <span className="bg-primary/10 rounded px-0.5">{mid}</span>
+      <span className="bg-primary/20 text-primary font-semibold rounded-[2px] px-0.5 mx-px">{mid}</span>
       {post}
     </span>
   );
