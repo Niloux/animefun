@@ -32,7 +32,7 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
 
   return (
     <div
-      className="bg-card rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/60 flex flex-col hover:translate-y-[-6px] active:translate-y-0 cursor-pointer hover:border-primary/50"
+      className="bg-card rounded-xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 border border-border/60 flex flex-col hover:translate-y-[-4px] active:translate-y-0 cursor-pointer hover:border-primary/50 group"
       onClick={handleAnimeClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -48,7 +48,7 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
           <img
             src={cachedSrc ?? rawImgSrc}
             alt={anime.name}
-            className={`w-full h-full object-fill transition-opacity duration-300 ${
+            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${
               isImageLoaded ? "opacity-100" : "opacity-0"
             }`}
             loading={index < 8 ? "eager" : "lazy"}

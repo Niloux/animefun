@@ -62,7 +62,7 @@ const SearchPage = () => {
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <div className="px-4 py-0">
+    <div className="py-0">
       {/* Search Bar */}
       <div className="mb-6 flex gap-2">
         <div className="grow">
@@ -165,7 +165,13 @@ const SearchPage = () => {
               条结果
             </div>
           ) : query ? (
-            <div className="text-muted-foreground">未找到匹配的番剧</div>
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground animate-in fade-in-50">
+              <div className="rounded-full bg-muted/50 p-4 mb-4">
+                <Filter className="h-8 w-8 opacity-50" />
+              </div>
+              <p>未找到匹配的番剧</p>
+              <p className="text-sm mt-2 opacity-70">尝试更换关键词或筛选条件</p>
+            </div>
           ) : null}
         </div>
       )}

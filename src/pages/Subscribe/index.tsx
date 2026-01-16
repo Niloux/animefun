@@ -1,5 +1,5 @@
 import { navigateToAnimeDetail, sortAnimeList } from "@/lib/utils";
-import { Filter, Loader2, X } from "lucide-react";
+import { BookOpen, Filter, Loader2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimeGrid } from "../../components/AnimeGrid";
@@ -51,7 +51,7 @@ const SubscribePage = () => {
   );
 
   return (
-    <div className="px-4 py-0 space-y-4">
+    <div className="py-0 space-y-4">
       <div className="mb-6 flex gap-2">
         <div className="grow">
           <AutoComplete
@@ -201,7 +201,12 @@ const SubscribePage = () => {
               条结果
             </div>
           ) : (
-            <div className="text-muted-foreground">未找到匹配的番剧</div>
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground animate-in fade-in-50">
+              <div className="rounded-full bg-muted/50 p-4 mb-4">
+                <Filter className="h-8 w-8 opacity-50" />
+              </div>
+              <p>未找到匹配的番剧</p>
+            </div>
           )}
         </div>
       ) : null}
@@ -213,7 +218,19 @@ const SubscribePage = () => {
           <AnimeGrid items={results} />
         )
       ) : list.length === 0 ? (
-        <div className="text-muted-foreground">暂无订阅</div>
+        <div className="flex flex-col items-center justify-center h-[60vh] text-muted-foreground animate-in fade-in-50">
+          <div className="rounded-full bg-muted/50 p-6 mb-4">
+            <BookOpen className="h-10 w-10 opacity-50" />
+          </div>
+          <h3 className="text-lg font-medium mb-2">暂无订阅</h3>
+          <p className="text-sm opacity-70">去发现一些喜欢的番剧吧</p>
+          <Button
+            className="mt-4 cursor-pointer"
+            onClick={() => navigate("/search")}
+          >
+            去搜索
+          </Button>
+        </div>
       ) : (
         <AnimeGrid
           items={sortedItems.slice(

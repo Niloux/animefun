@@ -27,5 +27,6 @@ dist-ssr
 .claude/
 .serena/
 plans/
+.shared/
 
 CLAUDE.md

@@ -22,10 +22,10 @@ const WeekDayNavBase = ({ selectedDay, onDayChange }: WeekDayNavProps) => {
         <button
           key={day.id}
           onClick={() => onDayChange(day.id)}
-          className={`px-4 py-2 rounded-full cursor-pointer text-sm font-medium transition-all duration-200 min-w-[68px] ${
+          className={`px-4 py-2 rounded-full cursor-pointer text-sm font-medium transition-all duration-200 min-w-[68px] active:scale-95 ${
             selectedDay === day.id
-              ? "bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 hover:shadow-xl"
-              : "bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground border hover:border-accent/50"
+              ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30"
+              : "bg-card text-card-foreground hover:bg-accent hover:text-accent-foreground border hover:border-accent/50 hover:shadow-sm"
           }`}
         >
           {day.name}

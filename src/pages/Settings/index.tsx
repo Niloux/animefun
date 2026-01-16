@@ -151,7 +151,7 @@ const SettingsPage: FC = () => {
 
   return (
     <div
-      className={`px-4 py-0 mx-auto transition-opacity duration-300 ${
+      className={`py-0 mx-auto transition-opacity duration-300 ${
         isContentVisible ? "opacity-100" : "opacity-0"
       }`}
     >

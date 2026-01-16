@@ -193,7 +193,7 @@ const ResourcesPage: FC = () => {
   return (
     <>
       <div
-        className={`container mx-auto w-full px-4 py-0 space-y-4 transition-opacity duration-300 ${
+        className={`container mx-auto w-full py-0 space-y-4 transition-opacity duration-300 ${
           isContentVisible ? "opacity-100" : "opacity-0"
         }`}
       >
