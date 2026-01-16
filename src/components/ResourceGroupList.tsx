@@ -27,11 +27,16 @@ export const ResourceGroupList: FC<ResourceGroupListProps> = ({
   return (
     <div className="space-y-4">
       {groups.map((g) => (
-        <div key={g.group} className="border rounded-md">
-          <div className="px-3 py-2 font-semibold text-sm">{g.group}</div>
+        <div key={g.group} className="border rounded-md overflow-hidden">
+          <div className="px-4 py-2.5 font-semibold text-sm bg-muted/40 border-b">
+            {g.group}
+          </div>
           <div className="divide-y">
             {g.items.map((it, idx) => (
-              <div key={idx} className="p-3 space-y-2">
+              <div
+                key={idx}
+                className="p-3 space-y-2 hover:bg-muted/30 transition-colors"
+              >
                 <div className="text-sm font-medium">{it.title}</div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
