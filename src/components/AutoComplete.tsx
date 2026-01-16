@@ -34,7 +34,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
   const [isComposing, setIsComposing] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(
-    undefined,
+    undefined
   );
   const [popoverMaxHeight, setPopoverMaxHeight] = useState<number>(300);
 
@@ -141,7 +141,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
         align="start"
         side="bottom"
         sideOffset={6}
-        className="p-1"
+        className="p-1 shadow-xl border-border/60 bg-popover/95 backdrop-blur-sm"
         style={{ width: popoverWidth }}
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
@@ -168,7 +168,7 @@ const AutoComplete: React.FC<AutoCompleteProps> = ({
               {suggestions.map((anime) => (
                 <CommandItem
                   key={anime.id}
-                  className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2 cursor-pointer"
+                  className="grid grid-cols-[48px_1fr_auto] items-center gap-3 p-2 cursor-pointer aria-selected:bg-primary/10 aria-selected:text-foreground transition-colors rounded-md"
                   onSelect={() => {
                     onSelect(anime);
                     setIsOpen(false);
@@ -239,7 +239,9 @@ function highlight(q: string, text: string) {
   return (
     <span>
       {pre}
-      <span className="bg-primary/20 text-primary font-semibold rounded-[2px] px-0.5 mx-px">{mid}</span>
+      <span className="bg-primary/20 text-primary font-semibold rounded-[2px] px-0.5 mx-px">
+        {mid}
+      </span>
       {post}
     </span>
   );

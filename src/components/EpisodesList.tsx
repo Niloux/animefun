@@ -165,8 +165,9 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
             )}
           </>
         ) : !loading && data.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>暂无剧集信息</p>
+          <div className="text-center py-16 text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border/50 mx-auto max-w-md">
+            <p className="font-medium">暂无剧集信息</p>
+            <p className="text-xs mt-1 opacity-70">稍后再来看看吧</p>
           </div>
         ) : null}
       </div>

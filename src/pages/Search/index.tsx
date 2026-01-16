@@ -171,13 +171,13 @@ const SearchPage = () => {
               条结果
             </div>
           ) : query ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground animate-in fade-in-50">
-              <div className="rounded-full bg-muted/50 p-4 mb-4">
-                <Filter className="h-8 w-8 opacity-50" />
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground animate-in fade-in-50 bg-muted/5 rounded-xl border border-dashed border-border/50 mx-auto max-w-lg">
+              <div className="rounded-full bg-muted/50 p-6 mb-4 shadow-inner">
+                <Filter className="h-10 w-10 opacity-40" />
               </div>
-              <p>未找到匹配的番剧</p>
-              <p className="text-sm mt-2 opacity-70">
-                尝试更换关键词或筛选条件
+              <p className="text-lg font-medium text-foreground/80">未找到匹配的番剧</p>
+              <p className="text-sm mt-2 opacity-70 max-w-xs text-center leading-relaxed">
+                尝试更换关键词、减少筛选条件，或者换个姿势搜索
               </p>
             </div>
           ) : null}
