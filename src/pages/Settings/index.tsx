@@ -472,25 +472,37 @@ const SettingsPage: FC = () => {
               {/* Data Sources */}
               <div className="py-4 space-y-3">
                 <div className="text-sm font-medium">数据来源</div>
-                <div className="flex gap-4">
-                  <a
-                    href="https://bgm.tv"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 cursor-pointer hover:bg-muted"
+                    asChild
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Bangumi 番组计划
-                  </a>
-                  <a
-                    href="https://mikanani.me"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    <a
+                      href="https://bgm.tv"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Bangumi 番组计划
+                    </a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 cursor-pointer hover:bg-muted"
+                    asChild
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Mikan Project
-                  </a>
+                    <a
+                      href="https://mikanani.me"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Mikan Project
+                    </a>
+                  </Button>
                 </div>
               </div>
 

@@ -64,7 +64,7 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
           <Badge
             className={`absolute top-3 right-3 ${getRatingColorClass(
               anime.rating.score,
-            )} text-white rounded-full text-xs font-medium`}
+            )} text-white rounded-full text-xs font-medium shadow-md border-white/20 backdrop-blur-sm`}
           >
             {anime.rating.score.toFixed(1)}
           </Badge>
