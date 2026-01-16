@@ -13,7 +13,6 @@ import {
   ResizablePanelGroup,
 } from "../../components/ui/resizable";
 import { Separator } from "../../components/ui/separator";
-import { Spinner } from "../../components/ui/spinner";
 import { useAnimeDetail } from "../../hooks/use-anime-detail";
 import { useCachedImage } from "../../hooks/use-cached-image";
 import { useFadeIn } from "../../hooks/use-fade-in";
@@ -72,11 +71,34 @@ const AnimeDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="flex flex-col items-center gap-4">
-          <Spinner className="size-10" />
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            加载详情中
+      <div className="p-0 animate-in fade-in-50 duration-500">
+        <div className="flex flex-col md:flex-row gap-8 md:gap-10 mb-8">
+          {/* Skeleton for Poster */}
+          <div className="w-36 md:w-56 shrink-0">
+            <div className="relative rounded-lg overflow-hidden shadow-2xl border border-border">
+              <AspectRatio ratio={2 / 3}>
+                <div className="w-full h-full bg-muted animate-pulse" />
+              </AspectRatio>
+            </div>
+          </div>
+
+          {/* Skeleton for Info */}
+          <div className="flex-1 flex flex-col gap-6">
+            <div className="space-y-4">
+              <div className="h-10 w-3/4 bg-muted animate-pulse rounded" />
+              <div className="h-6 w-1/2 bg-muted animate-pulse rounded" />
+            </div>
+            <div className="flex gap-4">
+              <div className="h-5 w-20 bg-muted animate-pulse rounded" />
+              <div className="h-5 w-20 bg-muted animate-pulse rounded" />
+              <div className="h-5 w-20 bg-muted animate-pulse rounded" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-6 w-16 bg-muted animate-pulse rounded-full" />
+              ))}
+            </div>
+            <div className="mt-auto h-12 w-40 bg-muted animate-pulse rounded" />
           </div>
         </div>
       </div>

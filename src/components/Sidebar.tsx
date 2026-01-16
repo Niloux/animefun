@@ -59,7 +59,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   // 计算下载中的任务数量
   const downloadingCount = useMemo(
     () => items.filter((item) => item.progress < 100).length,
-    [items],
+    [items]
   );
 
   const mainMenuItems: MenuItem[] = [
@@ -99,15 +99,15 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
               <TooltipTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="group-data-[state=collapsed]:size-10 p-8 hover:bg-accent/80 cursor-pointer transition-colors"
+                  className="group-data-[state=collapsed]:size-10 p-2 h-14 hover:bg-accent/80 cursor-pointer transition-colors"
                   onClick={() => setIsDialogOpen(true)}
                 >
                   <img
                     src={currentAvatar}
                     alt="avatar"
-                    className="rounded-2xl w-14 h-14 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8 ring-2 ring-transparent hover:ring-primary/30 transition-all object-cover"
+                    className="rounded-xl w-10 h-10 group-data-[state=collapsed]:w-8 group-data-[state=collapsed]:h-8 ring-2 ring-transparent hover:ring-primary/30 transition-all object-cover shrink-0"
                   />
-                  <div className="text-left overflow-hidden whitespace-nowrap flex-1 min-w-0">
+                  <div className="text-left overflow-hidden whitespace-nowrap flex-1 min-w-0 ml-2">
                     <div className="font-semibold opacity-100 group-data-[state=collapsed]:opacity-0 group-data-[state=collapsed]:pointer-events-none transition-opacity flex items-center gap-1">
                       <span className="truncate">{displayUsername}</span>
                       <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity shrink-0" />
