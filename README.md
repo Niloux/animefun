@@ -1,36 +1,40 @@
-<div align="center">
-  <a href="https://github.com/Niloux/animefun">
-    <img src="src/assets/ikuyo-avatar.png" width="160" height="160" alt="AnimeFun Logo">
-  </a>
-
-  <h1>AnimeFun</h1>
-
-  <p>
-    <strong>极客的番剧订阅管理器</strong>
-    <br/>
-    <sub>订阅一次 · 自动追番 · 本地优先</sub>
-  </p>
-
-  <p align="center">
-    <a href="https://github.com/Niloux/animefun/releases">
-      <img src="https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=007AFF&label=Release" alt="Release">
-    </a>
-    <a href="https://github.com/Niloux/animefun/releases">
-      <img src="https://img.shields.io/github/downloads/Niloux/animefun/total?style=flat-square&color=34C759&label=Downloads" alt="Downloads">
-    </a>
-    <a href="https://github.com/Niloux/animefun/stargazers">
-      <img src="https://img.shields.io/github/stars/Niloux/animefun?style=flat-square&color=FFD60A&label=Stars" alt="Stars">
-    </a>
-    <a href="LICENSE">
-      <img src="https://img.shields.io/badge/license-MIT-AF52DE?style=flat-square" alt="License">
-    </a>
-  </p>
-  
-  <p align="center">
-    <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows">
-    <img src="https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS">
-    <img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux">
-  </p>
+<div>
+  <table border="0">
+    <tr>
+      <td width="30%" align="center">
+        <a href="https://github.com/Niloux/animefun">
+          <img src="src/assets/ikuyo-avatar.png" width="180" height="180" alt="AnimeFun Logo">
+        </a>
+      </td>
+      <td width="70%">
+        <h1>AnimeFun</h1>
+        <p>
+          <strong>专注于追番体验的动画app</strong>
+          <br/>
+          <sub>订阅一次 · 自动追番 · 本地优先</sub>
+        </p>
+        <p>
+          <a href="https://github.com/Niloux/animefun/releases">
+            <img src="https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=007AFF&label=Release" alt="Release">
+          </a>
+          <a href="https://github.com/Niloux/animefun/releases">
+            <img src="https://img.shields.io/github/downloads/Niloux/animefun/total?style=flat-square&color=34C759&label=Downloads" alt="Downloads">
+          </a>
+          <a href="https://github.com/Niloux/animefun/stargazers">
+            <img src="https://img.shields.io/github/stars/Niloux/animefun?style=flat-square&color=FFD60A&label=Stars" alt="Stars">
+          </a>
+          <a href="LICENSE">
+            <img src="https://img.shields.io/badge/license-MIT-AF52DE?style=flat-square" alt="License">
+          </a>
+        </p>
+        <p>
+          <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows">
+          <img src="https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS">
+          <img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux">
+        </p>
+      </td>
+    </tr>
+  </table>
 </div>
 
 <br/>
