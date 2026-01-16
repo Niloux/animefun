@@ -15,7 +15,7 @@ const HomePage = () => {
 
   // 直接查找选中日期数据（日历数据按星期几有序，查找效率高）
   const selectedDayData = calendarData.find(
-    (day) => day.weekday.id === selectedDay,
+    (day) => day.weekday.id === selectedDay
   );
 
   // 计算今天的 id
@@ -54,8 +54,8 @@ const HomePage = () => {
                   </h2>
                 </div>
                 <div className="flex-1 h-px bg-border ml-3"></div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-card/80 text-card-foreground border border-border/60">
-                  <Calendar className="w-4 h-4" />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground border border-border/50 shadow-sm">
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>{selectedDayData?.items.length || 0} 部番剧</span>
                 </div>
               </div>

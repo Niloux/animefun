@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Button } from "./ui/button";
-import { Heart } from "lucide-react";
+import { Heart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -73,12 +73,16 @@ export function SubscribeButton({
           <Button
             variant="default"
             size={size}
-            className={className}
+            className={`cursor-pointer ${className}`}
             aria-pressed={true}
             title="已订阅"
             disabled={loading}
           >
-            <Heart className="h-4 w-4" fill="currentColor" />
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Heart className="h-4 w-4 fill-white text-white" />
+            )}
             已订阅
           </Button>
         </AlertDialogTrigger>
@@ -104,13 +108,17 @@ export function SubscribeButton({
     <Button
       variant="outline"
       size={size}
-      className={className}
+      className={`cursor-pointer group hover:border-primary/50 hover:text-primary ${className}`}
       aria-pressed={false}
       onClick={handleSubscribe}
       title="未订阅"
       disabled={loading}
     >
-      <Heart className="h-4 w-4" />
+      {loading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Heart className="h-4 w-4 transition-colors group-hover:text-primary" />
+      )}
       未订阅
     </Button>
   );

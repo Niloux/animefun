@@ -38,7 +38,7 @@ const AnimeDetailPage = () => {
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
   const { status, loading: statusLoading } = useSubjectStatus(
-    id ? Number(id) : undefined,
+    id ? Number(id) : undefined
   );
   const mikan = useMikanResources(id ? Number(id) : undefined);
 
@@ -95,7 +95,10 @@ const AnimeDetailPage = () => {
             </div>
             <div className="flex gap-2 pt-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-6 w-16 bg-muted animate-pulse rounded-full" />
+                <div
+                  key={i}
+                  className="h-6 w-16 bg-muted animate-pulse rounded-full"
+                />
               ))}
             </div>
             <div className="mt-auto h-12 w-40 bg-muted animate-pulse rounded" />
@@ -239,10 +242,20 @@ const AnimeDetailPage = () => {
                   variant={getNotify(data.id) ? "default" : "outline"}
                   size="lg"
                   onClick={() => setNotify(data.id, !getNotify(data.id))}
-                  className="flex-1 md:flex-none cursor-pointer"
+                  className={`flex-1 md:flex-none cursor-pointer group ${
+                    getNotify(data.id)
+                      ? ""
+                      : "hover:border-primary/50 hover:text-primary"
+                  }`}
                   title={getNotify(data.id) ? "点击关闭通知" : "点击开启通知"}
                 >
-                  <Bell className="h-4 w-4" />
+                  <Bell
+                    className={`h-4 w-4 ${
+                      getNotify(data.id)
+                        ? "fill-white text-white"
+                        : "transition-colors group-hover:text-primary"
+                    }`}
+                  />
                   {getNotify(data.id) ? "已开启通知" : "未开启通知"}
                 </Button>
               )}
@@ -280,7 +293,7 @@ const AnimeDetailPage = () => {
                         >
                           {tag.name}
                         </span>
-                      ),
+                      )
                     )}
                   </div>
                 </div>
