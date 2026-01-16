@@ -1,13 +1,15 @@
 <div align="center">
   <a href="https://github.com/Niloux/animefun">
-    <img src="src/assets/ikuyo-avatar.png" width="120" height="120" alt="AnimeFun Logo">
+    <img src="src/assets/ikuyo-avatar.png" width="160" height="160" alt="AnimeFun Logo">
   </a>
 
-# AnimeFun
+  <h1>AnimeFun</h1>
 
-**专注于体验的番剧订阅管理器**
-
-_订阅一次 · 自动追番 · 本地优先_
+  <p>
+    <strong>极客的番剧订阅管理器</strong>
+    <br/>
+    <sub>订阅一次 · 自动追番 · 本地优先</sub>
+  </p>
 
   <p align="center">
     <a href="https://github.com/Niloux/animefun/releases">
