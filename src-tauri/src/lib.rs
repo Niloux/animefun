@@ -3,6 +3,7 @@ pub mod error;
 pub mod infra;
 mod models;
 pub mod services;
+pub mod utils;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

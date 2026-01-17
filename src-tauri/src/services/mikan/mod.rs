@@ -6,7 +6,7 @@ use crate::services::bangumi;
 const MAX_CONCURRENCY: usize = 5;
 const NO_MAP_TTL_SECS: i64 = 3600;
 
-use crate::services::mikan::util::{
+use crate::utils::string::{
     generate_search_terms_by_stripping, normalize_name, replace_and_split,
 };
 use std::collections::HashSet;
@@ -116,7 +116,6 @@ pub use preheat::spawn_preheat_worker;
 
 pub mod preheat;
 pub mod resolver;
-pub mod util;
 
 pub mod bangumi_page;
 pub mod map_store;

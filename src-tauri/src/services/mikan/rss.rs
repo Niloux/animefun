@@ -3,7 +3,7 @@ use crate::infra::cache;
 use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
 use crate::models::mikan::MikanResourceItem;
-use crate::services::parser::parse_resolution;
+use crate::utils::parser::parse_resolution;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::header::{ETAG, LAST_MODIFIED};

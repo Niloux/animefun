@@ -1,5 +1,4 @@
-use super::{client, config, parse_metadata, repo, DownloadItem};
-use crate::services::parser::parse_resolution;
+use super::{client, config, extract_resolution, parse_metadata, repo, DownloadItem};
 use tauri::{AppHandle, Emitter};
 use tokio::time::{interval, Duration};
 
@@ -108,7 +107,7 @@ fn merge_items(
                     .and_then(|s| parse_metadata(s))
                     .unwrap_or_else(|| (l.name.clone(), String::new()));
 
-                let resolution = parse_resolution(&l.name).or_else(|| parse_resolution(&title));
+                let resolution = extract_resolution(Some(&l.name), &title);
 
                 DownloadItem {
                     hash: t.hash,
@@ -132,7 +131,7 @@ fn merge_items(
                     .and_then(|s| parse_metadata(s))
                     .unwrap_or_else(|| ("Unknown".to_string(), String::new()));
 
-                let resolution = parse_resolution(&title);
+                let resolution = extract_resolution(None, &title);
 
                 DownloadItem {
                     hash: t.hash,
