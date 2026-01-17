@@ -4,6 +4,7 @@ use crate::infra::http::{wait_api_limit, CLIENT};
 use crate::services::downloader::{
     build_metadata, client, config, parse_metadata, repo, DownloadItem,
 };
+use crate::services::parser::parse_resolution;
 
 use futures::StreamExt;
 use std::collections::HashMap;
@@ -247,11 +248,13 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
             let live = live_infos.iter().find(|l| l.hash == t.hash);
 
             if let Some(l) = live {
+                let resolution = parse_resolution(&l.name).or_else(|| parse_resolution(&title));
                 DownloadItem {
                     hash: t.hash,
                     subject_id: t.subject_id,
                     episode: t.episode,
                     episode_range: t.episode_range,
+                    resolution,
                     status: l.state.clone(),
                     progress: l.progress * 100.0,
                     dlspeed: l.dlspeed,
@@ -262,11 +265,13 @@ pub async fn get_tracked_downloads() -> CommandResult<Vec<DownloadItem>> {
                     save_path: Some(l.save_path.clone()),
                 }
             } else {
+                let resolution = parse_resolution(&title);
                 DownloadItem {
                     hash: t.hash,
                     subject_id: t.subject_id,
                     episode: t.episode,
                     episode_range: t.episode_range,
+                    resolution,
                     status: "stopped".to_string(),
                     progress: 0.0,
                     dlspeed: 0,

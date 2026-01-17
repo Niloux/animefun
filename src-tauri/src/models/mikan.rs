@@ -21,7 +21,7 @@ pub struct MikanResourceItem {
     #[ts(optional)]
     pub episode_range: Option<String>,
     #[ts(optional)]
-    pub resolution: Option<u16>,
+    pub resolution: Option<u32>,
     #[ts(optional)]
     pub subtitle_lang: Option<String>,
     #[ts(optional)]

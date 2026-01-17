@@ -9,8 +9,9 @@ use tracing::debug;
 use crate::infra::config::BGM_API_HOST;
 use crate::infra::http::CLIENT;
 
-const TTL_CALENDAR_SECS: i64 = 6 * 3600;
-const TTL_SUBJECT_SECS: i64 = 24 * 3600;
+/// TODO: 后边可以考虑做进setting可配置项中
+const TTL_CALENDAR_SECS: i64 = 3600;
+const TTL_SUBJECT_SECS: i64 = 3600;
 const TTL_SEARCH_SECS: i64 = 3600;
 const TTL_EPISODES_SECS: i64 = 3600;
 

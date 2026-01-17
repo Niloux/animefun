@@ -54,9 +54,11 @@ export const DownloadCard = memo<DownloadCardProps>(
                 No Cover
               </div>
             )}
-            <div className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
-              1080P
-            </div>
+            {item.resolution && (
+              <div className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                {item.resolution}P
+              </div>
+            )}
           </div>
 
           {/* Content */}
@@ -167,7 +169,8 @@ export const DownloadCard = memo<DownloadCardProps>(
       prev.item.progress === next.item.progress &&
       prev.item.status === next.item.status &&
       prev.item.dlspeed === next.item.dlspeed &&
-      prev.item.eta === next.item.eta
+      prev.item.eta === next.item.eta &&
+      prev.item.resolution === next.item.resolution
     );
   },
 );

@@ -1,4 +1,5 @@
 use super::{client, config, parse_metadata, repo, DownloadItem};
+use crate::services::parser::parse_resolution;
 use tauri::{AppHandle, Emitter};
 use tokio::time::{interval, Duration};
 
@@ -107,11 +108,14 @@ fn merge_items(
                     .and_then(|s| parse_metadata(s))
                     .unwrap_or_else(|| (l.name.clone(), String::new()));
 
+                let resolution = parse_resolution(&l.name).or_else(|| parse_resolution(&title));
+
                 DownloadItem {
                     hash: t.hash,
                     subject_id: t.subject_id,
                     episode: t.episode,
                     episode_range: t.episode_range,
+                    resolution,
                     status: l.state.clone(),
                     progress: l.progress * 100.0,
                     dlspeed: l.dlspeed,
@@ -128,11 +132,14 @@ fn merge_items(
                     .and_then(|s| parse_metadata(s))
                     .unwrap_or_else(|| ("Unknown".to_string(), String::new()));
 
+                let resolution = parse_resolution(&title);
+
                 DownloadItem {
                     hash: t.hash,
                     subject_id: t.subject_id,
                     episode: t.episode,
                     episode_range: t.episode_range,
+                    resolution,
                     status: "stopped".to_string(),
                     progress: 0.0,
                     dlspeed: 0,

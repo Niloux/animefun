@@ -14,6 +14,8 @@ pub struct DownloadItem {
     pub episode: Option<u32>,
     #[ts(optional)]
     pub episode_range: Option<String>,
+    #[ts(optional)]
+    pub resolution: Option<u32>,
     pub status: String,
     pub progress: f64,
     pub dlspeed: i64,

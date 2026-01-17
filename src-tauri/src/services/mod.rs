@@ -3,5 +3,6 @@
 pub mod bangumi;
 pub mod downloader;
 pub mod mikan;
+pub mod parser;
 pub mod profile;
 pub mod subscriptions;

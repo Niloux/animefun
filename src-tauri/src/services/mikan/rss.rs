@@ -3,6 +3,7 @@ use crate::infra::cache;
 use crate::infra::config::MIKAN_HOST;
 use crate::infra::http::CLIENT;
 use crate::models::mikan::MikanResourceItem;
+use crate::services::parser::parse_resolution;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reqwest::header::{ETAG, LAST_MODIFIED};
@@ -315,23 +316,7 @@ fn parse_dash_number(title: &str) -> Option<u32> {
         .last()
 }
 
-static RE_RESOLUTION: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(?i)\b(2160|1080|720|480)\s*[pP]\b").unwrap());
-static RE_4K: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b4\s*K\b").unwrap());
 
-fn parse_resolution(text: &str) -> Option<u16> {
-    // Try standard resolution pattern first
-    if let Some(c) = RE_RESOLUTION.captures(text) {
-        if let Ok(res) = c.get(1)?.as_str().parse::<u16>() {
-            return Some(res);
-        }
-    }
-    // Try 4K pattern
-    if RE_4K.is_match(text) {
-        return Some(2160);
-    }
-    None
-}
 
 fn parse_subtitle(title: &str, desc: Option<&str>) -> (Option<String>, Option<String>) {
     // Check title first, then description
@@ -422,13 +407,7 @@ mod tests {
         assert!(range.is_none());
     }
 
-    #[test]
-    fn test_parse_resolution() {
-        let t = "[ANi] 更衣人偶坠入爱河 1080P";
-        assert_eq!(parse_resolution(t), Some(1080));
-        let t2 = "更衣人偶坠入爱河 4K WEB-DL";
-        assert_eq!(parse_resolution(t2), Some(2160));
-    }
+
 
     #[test]
     fn test_parse_subtitle() {
