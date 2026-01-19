@@ -25,7 +25,7 @@ export const DownloadCard = memo<DownloadCardProps>(
     const isCompleted = item.progress >= 100;
 
     return (
-      <Card className="py-2 group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-lg hover:-translate-y-1">
+      <Card className="py-2 group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:shadow-md hover:shadow-primary/10">
         <div className="flex items-center gap-4 px-2">
           {/* Thumbnail */}
           <div
@@ -46,7 +46,7 @@ export const DownloadCard = memo<DownloadCardProps>(
                   src={item.cover}
                   alt={item.title}
                   loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90"
                 />
               </AspectRatio>
             ) : (
