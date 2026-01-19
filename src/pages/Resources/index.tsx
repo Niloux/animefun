@@ -208,7 +208,7 @@ const ResourcesPage: FC = () => {
                 下载中
                 <Badge
                   variant="secondary"
-                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-background/50"
+                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-foreground/10 text-foreground"
                 >
                   {downloadingItems.length}
                 </Badge>
@@ -221,7 +221,7 @@ const ResourcesPage: FC = () => {
                 已完成
                 <Badge
                   variant="secondary"
-                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-background/50"
+                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-foreground/10 text-foreground"
                 >
                   {downloadedItems.length}
                 </Badge>
@@ -234,7 +234,7 @@ const ResourcesPage: FC = () => {
                 全部
                 <Badge
                   variant="secondary"
-                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-background/50"
+                  className="ml-1 h-5 min-w-[1.25rem] px-1.5 text-xs bg-foreground/10 text-foreground"
                 >
                   {items.length}
                 </Badge>
