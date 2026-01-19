@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -40,9 +39,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: "Noto Sans JP", "Open Sans", sans-serif;
+  --font-sans: "Noto Sans SC", "Noto Sans JP", system-ui, sans-serif;
   --font-mono: Menlo, monospace;
-  --font-serif: "Noto Serif JP", Georgia, serif;
+  --font-serif: "Noto Serif SC", "Noto Serif JP", Georgia, serif;
   --radius: 1.3rem;
   --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
   --tracking-tight: calc(var(--tracking-normal) - 0.025em);
@@ -103,8 +102,8 @@
   --sidebar-border: oklch(0.9271 0.0101 238.5177);
   --sidebar-ring: oklch(0.6818 0.1584 243.354);
   --destructive-foreground: oklch(1 0 0);
-  --font-sans: "Noto Sans JP", "Open Sans", sans-serif;
-  --font-serif: "Noto Serif JP", Georgia, serif;
+  --font-sans: "Noto Sans SC", "Noto Sans JP", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Noto Serif JP", Georgia, serif;
   --font-mono: Menlo, monospace;
   --shadow-color: rgba(29, 161, 242, 0.15);
   --shadow-opacity: 0;
@@ -169,8 +168,8 @@
   --sidebar-ring: oklch(0.6818 0.1584 243.354);
   --destructive-foreground: oklch(1 0 0);
   --radius: 1.3rem;
-  --font-sans: "Noto Sans JP", "Open Sans", sans-serif;
-  --font-serif: "Noto Serif JP", Georgia, serif;
+  --font-sans: "Noto Sans SC", "Noto Sans JP", system-ui, sans-serif;
+  --font-serif: "Noto Serif SC", "Noto Serif JP", Georgia, serif;
   --font-mono: Menlo, monospace;
   --shadow-color: rgba(29, 161, 242, 0.25);
   --shadow-opacity: 0;
