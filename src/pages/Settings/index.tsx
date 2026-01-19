@@ -41,6 +41,8 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   HelpCircle,
   Info,
   Loader2,
@@ -63,6 +65,7 @@ const SettingsPage: FC = () => {
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: version } = useSimpleQuery<string>({
     queryKey: ["app-version"],
@@ -167,16 +170,19 @@ const SettingsPage: FC = () => {
             </div>
             <Badge
               variant={isConnected ? "default" : "secondary"}
-              className="flex items-center px-3 py-1.5 text-sm"
+              className={`flex items-center px-3 py-1.5 text-sm transition-all duration-300 ${isConnected ? "shadow-md shadow-green-500/20" : ""}`}
             >
               {isConnected ? (
                 <>
-                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <div className="relative mr-2 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                  </div>
                   已连接
                 </>
               ) : (
                 <>
-                  <XCircle className="h-3.5 w-3.5" />
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
                   未连接
                 </>
               )}
@@ -286,11 +292,26 @@ const SettingsPage: FC = () => {
                           <FormItem>
                             <FormLabel>密码</FormLabel>
                             <FormControl>
-                              <Input
-                                type="password"
-                                {...field}
-                                className="border-border"
-                              />
+                              <div className="relative">
+                                <Input
+                                  type={showPassword ? "text" : "password"}
+                                  {...field}
+                                  className="border-border pr-10"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                >
+                                  {showPassword ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

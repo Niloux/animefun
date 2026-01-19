@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCachedImage } from "../hooks/use-cached-image";
-import { ensureHttps, getRatingColorClass, navigateToAnimeDetail } from "../lib/utils";
+import {
+  ensureHttps,
+  getRatingColorClass,
+  navigateToAnimeDetail,
+} from "../lib/utils";
 import { Anime, CalendarItem } from "../types/gen/bangumi";
 import { AspectRatio } from "./ui/aspect-ratio";
 import { Badge } from "./ui/badge";
@@ -19,10 +23,10 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const rawImgSrc = ensureHttps(
     anime.images?.large ||
-    anime.images?.common ||
-    anime.images?.medium ||
-    anime.images?.small ||
-    "https://lain.bgm.tv/img/no_icon_subject.png"
+      anime.images?.common ||
+      anime.images?.medium ||
+      anime.images?.small ||
+      "https://lain.bgm.tv/img/no_icon_subject.png",
   );
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
 
@@ -32,7 +36,7 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
 
   return (
     <div
-      className="bg-card rounded-xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 border border-border/60 flex flex-col hover:translate-y-[-4px] active:translate-y-0 cursor-pointer hover:border-primary/50 group"
+      className="bg-card rounded-xl shadow-sm overflow-hidden hover:shadow-xl transition-all duration-300 border border-border/60 flex flex-col hover:translate-y-[-4px] active:translate-y-0 cursor-pointer hover:border-primary group focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 outline-none"
       onClick={handleAnimeClick}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -48,7 +52,7 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
           <img
             src={cachedSrc ?? rawImgSrc}
             alt={anime.name}
-            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${
+            className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 group-hover:brightness-105 ${
               isImageLoaded ? "opacity-100" : "opacity-0"
             }`}
             loading={index < 8 ? "eager" : "lazy"}
@@ -57,26 +61,29 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
             onLoad={() => setIsImageLoaded(true)}
             onError={() => setIsImageLoaded(false)}
           />
+          <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </AspectRatio>
-        {!isImageLoaded && <Skeleton className="absolute inset-0" />}
+        {!isImageLoaded && (
+          <Skeleton className="absolute inset-0 bg-muted animate-pulse" />
+        )}
         {/* 评分标签 */}
         {anime.rating && anime.rating.score !== 0 && (
           <Badge
             className={`absolute top-3 right-3 ${getRatingColorClass(
               anime.rating.score,
-            )} text-white rounded-full text-xs font-medium shadow-md border-white/20 backdrop-blur-sm`}
+            )} text-white rounded-full text-xs font-medium shadow-md border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-300`}
           >
             {anime.rating.score.toFixed(1)}
           </Badge>
         )}
       </div>
       {/* 番剧信息 */}
-      <div className="p-4 flex flex-col grow justify-between">
-        <h3 className="text-sm font-semibold line-clamp-1 hover:text-primary">
+      <div className="p-4 flex flex-col grow justify-between bg-card transition-colors duration-300 group-hover:bg-primary/2">
+        <h3 className="text-sm font-semibold line-clamp-1 group-hover:text-primary transition-colors duration-200">
           {anime.name_cn || anime.name}
         </h3>
         {("air_date" in anime ? anime.air_date : anime.date) && (
-          <div className="text-xs text-muted-foreground mt-2">
+          <div className="text-xs text-muted-foreground mt-2 group-hover:text-muted-foreground/80">
             {"air_date" in anime ? anime.air_date : anime.date}
           </div>
         )}

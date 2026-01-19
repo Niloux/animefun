@@ -73,15 +73,15 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
   }, [totalPages, currentPage, jumpToPage]);
 
   return (
-    <div className="w-full bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+    <div className="w-full bg-card rounded-xl shadow-sm border border-border/60 overflow-hidden">
       {/* 头部 */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+      <div className="px-6 py-4 border-b border-border/60 bg-muted/20">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold tracking-tight">
               剧集列表
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1 font-medium">
               共 {totalEpisodes} 话
             </p>
           </div>
@@ -93,15 +93,15 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-1 cursor-pointer"
+                  className="flex items-center gap-1 cursor-pointer hover:border-primary/50 transition-colors focus-visible:ring-2 focus-visible:ring-primary"
                   disabled={loading}
                 >
                   第 {currentPage + 1} / {totalPages} 页
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="w-3 h-3 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-56 max-h-80 overflow-y-auto"
+                className="w-56 max-h-80 overflow-y-auto animate-in zoom-in-95 duration-200"
                 align="end"
               >
                 {pageItems}
@@ -113,13 +113,13 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
 
       {/* 错误信息 */}
       {error && (
-        <div className="px-6 py-4 text-red-600 dark:text-red-400">
-          <p>{error}</p>
+        <div className="px-6 py-4 bg-destructive/5 text-destructive border-b border-destructive/10">
+          <p className="font-medium">{error}</p>
           <Button
             variant="outline"
             size="sm"
             onClick={handleReload}
-            className="mt-2"
+            className="mt-2 border-destructive/20 hover:bg-destructive/10 hover:text-destructive"
           >
             重试
           </Button>
@@ -127,15 +127,15 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
       )}
 
       {/* 剧集网格 */}
-      <div className="p-6">
+      <div className="p-6 bg-background/50">
         {loading && data.length === 0 ? (
           <div className="text-center py-12 flex flex-col items-center gap-3">
-            <Loader2 className="w-10 h-10 text-muted-foreground animate-spin" />
-            <p className="text-muted-foreground text-sm">加载剧集信息...</p>
+            <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            <p className="text-muted-foreground text-sm font-medium">正在加载剧集信息...</p>
           </div>
         ) : data.length > 0 ? (
-          <>
-            <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">
+            <div className="grid grid-cols-3 gap-5 mb-6">
               {data.map((episode) => (
                 <EpisodeCard
                   key={episode.id}
@@ -163,7 +163,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
                 onPageChange={(p) => jumpToPage(p - 1)}
               />
             )}
-          </>
+          </div>
         ) : !loading && data.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border/50 mx-auto max-w-md">
             <p className="font-medium">暂无剧集信息</p>

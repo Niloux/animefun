@@ -82,6 +82,12 @@ function ProfileEditDialogContent({
   const isSignatureInvalid = signature.length > 200;
   const isFormInvalid = isUsernameInvalid || isSignatureInvalid;
 
+  const getLengthColor = (current: number, max: number) => {
+    if (current > max) return "text-destructive";
+    if (current >= max * 0.9) return "text-yellow-500 dark:text-yellow-400";
+    return "text-muted-foreground/60";
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormInvalid) return;
@@ -100,10 +106,25 @@ function ProfileEditDialogContent({
   };
 
   return (
-    <form onSubmit={handleSave} className="flex flex-col">
+    <form onSubmit={handleSave} className="flex flex-col relative">
+      {/* Loading Overlay */}
+      {isUpdating && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-[1px] rounded-lg animate-in fade-in duration-200">
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <span className="text-xs font-medium text-muted-foreground">
+              保存中...
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Decorative Banner */}
-      <div className="h-32 bg-linear-to-br from-primary/20 via-primary/10 to-background w-full relative">
+      <div className="h-32 bg-linear-to-br from-primary/20 via-primary/10 to-background w-full relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02]" />
+        <div className="absolute inset-0 bg-linear-to-t from-background/80 to-transparent" />
+        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/5 blur-3xl animate-pulse" />
+        <div className="absolute left-10 top-10 h-20 w-20 rounded-full bg-primary/10 blur-2xl animate-bounce duration-3000" />
       </div>
 
       <div className="px-6 pb-6 -mt-12 flex flex-col gap-6">
@@ -122,7 +143,7 @@ function ProfileEditDialogContent({
               }
             }}
           >
-            <div className="relative w-24 h-24 rounded-full border-4 border-background shadow-lg overflow-hidden transition-transform duration-300 group-hover:scale-105">
+            <div className="relative w-24 h-24 rounded-full border-4 border-background shadow-lg overflow-hidden transition-transform duration-300 group-hover:scale-105 ring-1 ring-border/10">
               <img
                 src={avatarUrl}
                 alt="头像"
@@ -165,9 +186,7 @@ function ProfileEditDialogContent({
               <span
                 className={cn(
                   "text-[10px] font-medium transition-colors",
-                  isUsernameInvalid
-                    ? "text-destructive"
-                    : "text-muted-foreground/60",
+                  getLengthColor(username.length, 50),
                 )}
               >
                 {username.length}/50
@@ -203,9 +222,7 @@ function ProfileEditDialogContent({
               <span
                 className={cn(
                   "text-[10px] font-medium transition-colors",
-                  isSignatureInvalid
-                    ? "text-destructive"
-                    : "text-muted-foreground/60",
+                  getLengthColor(signature.length, 200),
                 )}
               >
                 {signature.length}/200

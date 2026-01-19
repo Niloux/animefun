@@ -154,7 +154,7 @@ const AnimeDetailPage = () => {
                 <img
                   src={(cachedSrc ?? rawImgSrc) as string}
                   alt={data.name}
-                  className="w-full h-full object-fill"
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                   decoding="async"
                   fetchPriority="high"
                 />
@@ -265,7 +265,7 @@ const AnimeDetailPage = () => {
 
         {/* 主要内容区 - 可调整大小的两列布局 */}
         <div className="flex-1 min-h-0">
-          <ResizablePanelGroup direction="horizontal" className="gap-6 h-full">
+          <ResizablePanelGroup direction="horizontal" className="gap-6 h-full" autoSaveId="anime-detail-layout">
             {/* 左侧 - 剧情介绍和标签 */}
             <ResizablePanel defaultSize={66} minSize={50}>
               <div ref={leftPanelRef} className="space-y-6">
@@ -289,7 +289,7 @@ const AnimeDetailPage = () => {
                       (tag: { name: string }, idx: number) => (
                         <span
                           key={idx}
-                          className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                          className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium hover:bg-primary/20 transition-colors cursor-default"
                         >
                           {tag.name}
                         </span>
