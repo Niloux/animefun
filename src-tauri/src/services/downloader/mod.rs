@@ -42,7 +42,6 @@ pub fn parse_metadata(meta_str: &str) -> Option<(String, String)> {
     Some((meta.resource_title, meta.cover_url))
 }
 
-
 /// Extract resolution from live torrent name or parsed title.
 /// Prioritizes the live torrent name, falls back to title.
 pub fn extract_resolution(live_name: Option<&str>, title: &str) -> Option<u32> {

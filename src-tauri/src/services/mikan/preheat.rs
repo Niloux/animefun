@@ -1,7 +1,7 @@
-use crate::utils::round_robin::{next_offset, round_robin_take};
 use crate::services::mikan::map_store;
 use crate::services::mikan::rss;
 use crate::services::subscriptions::{self, update_last_seen_ep};
+use crate::utils::round_robin::{next_offset, round_robin_take};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -58,11 +58,8 @@ pub fn spawn_preheat_worker() {
                                 // The fetch_rss function handles cache internally
                                 if let Ok(items) = rss::fetch_rss(mid).await {
                                     // Find max episode in the RSS
-                                    let new_max_ep = items
-                                        .iter()
-                                        .filter_map(|i| i.episode)
-                                        .max()
-                                        .unwrap_or(0);
+                                    let new_max_ep =
+                                        items.iter().filter_map(|i| i.episode).max().unwrap_or(0);
 
                                     // Check for new episode
                                     if new_max_ep > last_seen_ep {
@@ -89,10 +86,16 @@ pub fn spawn_preheat_worker() {
                                                 );
                                                 notified_clone.fetch_add(1, Ordering::Relaxed);
                                             } else {
-                                                warn!(subject_id = sid, "anime name not found, skipping notification");
+                                                warn!(
+                                                    subject_id = sid,
+                                                    "anime name not found, skipping notification"
+                                                );
                                             }
                                         } else {
-                                            info!(subject_id = sid, "notification disabled for this subscription");
+                                            info!(
+                                                subject_id = sid,
+                                                "notification disabled for this subscription"
+                                            );
                                         }
 
                                         // Update DB; failure is logged but doesn't affect notification

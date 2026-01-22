@@ -7,25 +7,27 @@ pub async fn list() -> Result<Vec<(u32, i64, bool, u32, Option<String>)>, AppErr
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let out = conn
-        .interact(|conn| -> Result<Vec<(u32, i64, bool, u32, Option<String>)>, rusqlite::Error> {
-            let mut stmt = conn.prepare(
-                "SELECT s.subject_id, s.added_at, s.notify, s.last_seen_ep, i.name_cn
+        .interact(
+            |conn| -> Result<Vec<(u32, i64, bool, u32, Option<String>)>, rusqlite::Error> {
+                let mut stmt = conn.prepare(
+                    "SELECT s.subject_id, s.added_at, s.notify, s.last_seen_ep, i.name_cn
                  FROM subscriptions s
                  LEFT JOIN subjects_index i ON i.subject_id = s.subject_id
                  ORDER BY s.added_at DESC",
-            )?;
-            let mut rows = stmt.query([])?;
-            let mut out = Vec::new();
-            while let Some(row) = rows.next()? {
-                let id: u32 = row.get::<_, i64>(0)? as u32;
-                let added_at: i64 = row.get(1)?;
-                let notify_i: i64 = row.get(2)?;
-                let last_seen_ep: u32 = row.get::<_, i64>(3)? as u32;
-                let name_cn: Option<String> = row.get(4)?;
-                out.push((id, added_at, notify_i != 0, last_seen_ep, name_cn));
-            }
-            Ok(out)
-        })
+                )?;
+                let mut rows = stmt.query([])?;
+                let mut out = Vec::new();
+                while let Some(row) = rows.next()? {
+                    let id: u32 = row.get::<_, i64>(0)? as u32;
+                    let added_at: i64 = row.get(1)?;
+                    let notify_i: i64 = row.get(2)?;
+                    let last_seen_ep: u32 = row.get::<_, i64>(3)? as u32;
+                    let name_cn: Option<String> = row.get(4)?;
+                    out.push((id, added_at, notify_i != 0, last_seen_ep, name_cn));
+                }
+                Ok(out)
+            },
+        )
         .await??;
     Ok(out)
 }

@@ -12,9 +12,8 @@ use ts_rs::TS;
 
 // Video file extensions for identifying playable files
 pub static VIDEO_EXTENSIONS: &[&str] = &[
-    ".mkv", ".mp4", ".avi", ".wmv", ".webm",
-    ".flv", ".m4v", ".mov", ".rm", ".rmvb",
-    ".ts", ".mts", ".m2ts", ".3gp",
+    ".mkv", ".mp4", ".avi", ".wmv", ".webm", ".flv", ".m4v", ".mov", ".rm", ".rmvb", ".ts", ".mts",
+    ".m2ts", ".3gp",
 ];
 
 struct SessionState {

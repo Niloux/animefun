@@ -84,8 +84,14 @@ mod tests {
         assert_eq!(parse_resolution("4  K"), Some(2160));
 
         // Real-world examples
-        assert_eq!(parse_resolution("[ANi] 更衣人偶坠入爱河 - 01 [1080P][Bilibili]"), Some(1080));
-        assert_eq!(parse_resolution("[ANi] 更衣人偶坠入爱河 4K HEVC"), Some(2160));
+        assert_eq!(
+            parse_resolution("[ANi] 更衣人偶坠入爱河 - 01 [1080P][Bilibili]"),
+            Some(1080)
+        );
+        assert_eq!(
+            parse_resolution("[ANi] 更衣人偶坠入爱河 4K HEVC"),
+            Some(2160)
+        );
         assert_eq!(parse_resolution("动漫名称 720p MP4"), Some(720));
     }
 }

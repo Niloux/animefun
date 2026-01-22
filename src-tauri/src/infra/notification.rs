@@ -8,7 +8,9 @@ static APP_HANDLE: OnceCell<AppHandle> = OnceCell::new();
 /// Initialize the notification module with the AppHandle
 pub fn init(handle: AppHandle) {
     if APP_HANDLE.set(handle).is_err() {
-        error!("Notification module initialized multiple times, notification will not work correctly");
+        error!(
+            "Notification module initialized multiple times, notification will not work correctly"
+        );
     }
 }
 
@@ -25,7 +27,10 @@ fn send_notification(title: &str, body: &str) {
             error!(error = %e, title, body, "failed to send notification");
         }
     } else {
-        error!(title, body, "app handle not initialized, cannot send notification");
+        error!(
+            title,
+            body, "app handle not initialized, cannot send notification"
+        );
     }
 }
 

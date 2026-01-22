@@ -316,8 +316,6 @@ fn parse_dash_number(title: &str) -> Option<u32> {
         .last()
 }
 
-
-
 fn parse_subtitle(title: &str, desc: Option<&str>) -> (Option<String>, Option<String>) {
     // Check title first, then description
     let (lang, typ) = parse_subtitle_text(title);
@@ -406,8 +404,6 @@ mod tests {
         assert_eq!(ep, Some(23));
         assert!(range.is_none());
     }
-
-
 
     #[test]
     fn test_parse_subtitle() {

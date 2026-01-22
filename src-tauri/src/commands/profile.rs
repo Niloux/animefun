@@ -21,16 +21,10 @@ pub fn get_user_profile() -> UserProfile {
 #[tauri::command]
 pub fn update_user_profile(username: String, signature: String) -> Result<(), String> {
     if username.chars().count() > MAX_USERNAME_LEN {
-        return Err(format!(
-            "用户名长度不能超过 {} 个字符",
-            MAX_USERNAME_LEN
-        ));
+        return Err(format!("用户名长度不能超过 {} 个字符", MAX_USERNAME_LEN));
     }
     if signature.chars().count() > MAX_SIGNATURE_LEN {
-        return Err(format!(
-            "个性签名长度不能超过 {} 个字符",
-            MAX_SIGNATURE_LEN
-        ));
+        return Err(format!("个性签名长度不能超过 {} 个字符", MAX_SIGNATURE_LEN));
     }
 
     // Atomic update via service transaction
