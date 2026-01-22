@@ -1,4 +1,4 @@
-use crate::infra::tasks::{next_offset, round_robin_take};
+use crate::utils::round_robin::{next_offset, round_robin_take};
 use crate::services::mikan::map_store;
 use crate::services::mikan::rss;
 use crate::services::subscriptions::{self, update_last_seen_ep};

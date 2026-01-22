@@ -7,4 +7,5 @@
 //! - Can be used by any layer
 
 pub mod parser;
+pub mod round_robin;
 pub mod string;

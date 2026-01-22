@@ -1,4 +1,4 @@
-use crate::infra::tasks::{next_offset, round_robin_take};
+use crate::utils::round_robin::{next_offset, round_robin_take};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::sync::Semaphore;
