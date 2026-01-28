@@ -1,6 +1,6 @@
 [package]
 name = "animefun"
-version = "0.2.12"
+version = "0.2.13"
 description = "看动画的app"
 authors = ["Niloux3d"]
 edition = "2021"
