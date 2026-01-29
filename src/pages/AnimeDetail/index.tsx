@@ -18,7 +18,7 @@ import { useCachedImage } from "../../hooks/use-cached-image";
 import { useFadeIn } from "../../hooks/use-fade-in";
 import { useMikanResources } from "../../hooks/use-mikan-resources";
 import { useSubjectStatus } from "../../hooks/use-subject-status";
-import { formatVoteCount } from "../../lib/utils";
+import { formatVoteCount, isValidRating } from "../../lib/utils";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 
 const AnimeDetailPage = () => {
@@ -191,7 +191,7 @@ const AnimeDetailPage = () => {
                 <Film className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span>{data.eps || data.total_episodes || 0} 话</span>
               </div>
-              {data.rating?.score && data.rating.score > 0 && (
+              {isValidRating(data.rating?.score) && (
                 <>
                   <Separator orientation="vertical" />
                   <div

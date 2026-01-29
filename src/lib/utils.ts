@@ -146,10 +146,10 @@ export function formatVoteCount(count: number): string {
     return "0";
   }
 
-  return new Intl.NumberFormat('zh-CN', {
-    notation: 'compact',
-    compactDisplay: 'short',
-    maximumFractionDigits: 1
+  return new Intl.NumberFormat("zh-CN", {
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 1,
   }).format(count);
 }
 

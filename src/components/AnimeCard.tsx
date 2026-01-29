@@ -4,6 +4,7 @@ import { useCachedImage } from "../hooks/use-cached-image";
 import {
   ensureHttps,
   getRatingColorClass,
+  isValidRating,
   navigateToAnimeDetail,
 } from "../lib/utils";
 import { Anime, CalendarItem } from "../types/gen/bangumi";
@@ -67,7 +68,7 @@ export const AnimeCard = ({ anime, index }: AnimeCardProps) => {
           <Skeleton className="absolute inset-0 bg-muted animate-pulse" />
         )}
         {/* 评分标签 */}
-        {anime.rating && anime.rating.score !== 0 && (
+        {isValidRating(anime.rating?.score) && (
           <Badge
             className={`absolute top-3 right-3 ${getRatingColorClass(
               anime.rating.score,
