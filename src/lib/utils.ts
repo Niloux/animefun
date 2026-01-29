@@ -135,3 +135,31 @@ export function ensureHttps(url: string | undefined | null): string {
   if (!url) return "";
   return url.replace(/^http:\/\//i, "https://");
 }
+
+/**
+ * Format vote count with Chinese localization support.
+ * Uses Intl.NumberFormat for proper i18n (displays "万" for large numbers).
+ * Handles edge cases: NaN, Infinity, negative values.
+ */
+export function formatVoteCount(count: number): string {
+  if (!Number.isFinite(count) || count < 0) {
+    return "0";
+  }
+
+  return new Intl.NumberFormat('zh-CN', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1
+  }).format(count);
+}
+
+/**
+ * Validate rating score for defensive programming.
+ * Returns true for valid scores (0-10), false for NaN/Infinity/out of range.
+ */
+export function isValidRating(score: unknown): score is number {
+  return typeof score === "number"
+    && Number.isFinite(score)
+    && score >= 0
+    && score <= 10;
+}
