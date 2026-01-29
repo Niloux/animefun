@@ -1,4 +1,4 @@
-import { Bell, Calendar, Film, Tv2Icon } from "lucide-react";
+import { Bell, Calendar, Film, Star, Tv2Icon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimeInfoBox } from "../../components/AnimeInfoBox";
@@ -18,6 +18,7 @@ import { useCachedImage } from "../../hooks/use-cached-image";
 import { useFadeIn } from "../../hooks/use-fade-in";
 import { useMikanResources } from "../../hooks/use-mikan-resources";
 import { useSubjectStatus } from "../../hooks/use-subject-status";
+import { formatVoteCount } from "../../lib/utils";
 import { useSubscriptions } from "../../hooks/use-subscriptions";
 
 const AnimeDetailPage = () => {
@@ -190,6 +191,22 @@ const AnimeDetailPage = () => {
                 <Film className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 <span>{data.eps || data.total_episodes || 0} 话</span>
               </div>
+              {data.rating?.score && data.rating.score > 0 && (
+                <>
+                  <Separator orientation="vertical" />
+                  <div
+                    className="flex items-center gap-2"
+                    title={`评分：${data.rating.score.toFixed(1)}分，共${data.rating.total}人评分`}
+                    aria-label={`${data.rating.score.toFixed(1)}分，${data.rating.total}人评分`}
+                  >
+                    <Star className="w-4 h-4 text-yellow-500 dark:text-yellow-400 fill-current" aria-hidden="true" />
+                    <span className="font-semibold tabular-nums">{data.rating.score.toFixed(1)}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      ({formatVoteCount(data.rating.total)})
+                    </span>
+                  </div>
+                </>
+              )}
               <Separator orientation="vertical" />
               <div className="flex items-center gap-2">
                 {statusLoading ? (
