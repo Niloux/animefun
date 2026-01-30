@@ -11,9 +11,9 @@ interface LayoutProps {
 export function Layout({ preloadMap }: LayoutProps) {
   return (
     <SidebarProvider>
-      <div className="flex w-full h-svh overflow-auto">
+      <div className="flex w-full h-svh overflow-hidden">
         <AppSidebar preloadMap={preloadMap} />
-        <SidebarInset>
+        <SidebarInset className="min-h-0 overflow-auto">
           <div className="p-4 md:p-6">
             <Suspense
               fallback={
