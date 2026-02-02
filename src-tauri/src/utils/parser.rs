@@ -17,7 +17,7 @@ static RE_4K: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\b4\s*K\b").unwrap());
 /// # Examples
 ///
 /// ```
-/// use animefun::utils::parser::parse_resolution;
+/// use animefun_lib::utils::parser::parse_resolution;
 ///
 /// assert_eq!(parse_resolution("[ANi] 更衣人偶坠入爱河 1080P"), Some(1080));
 /// assert_eq!(parse_resolution("更衣人偶坠入爱河 4K WEB-DL"), Some(2160));

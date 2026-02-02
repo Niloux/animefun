@@ -14,7 +14,7 @@ const TRAILING_PUNCTUATION: &[char] = &['。', '.', '!', '！', '?', '？', '·'
 /// # Examples
 ///
 /// ```
-/// use animefun::utils::string::normalize_name;
+/// use animefun_lib::utils::string::normalize_name;
 ///
 /// assert_eq!(normalize_name("Name", "中文名"), "中文名");
 /// assert_eq!(normalize_name("Name", ""), "Name");
@@ -35,7 +35,7 @@ pub fn normalize_name(name: &str, alt: &str) -> String {
 /// # Examples
 ///
 /// ```
-/// use animefun::utils::string::replace_and_split;
+/// use animefun_lib::utils::string::replace_and_split;
 ///
 /// assert_eq!(
 ///     replace_and_split("A-B:C!!D"),
@@ -70,7 +70,7 @@ pub fn replace_and_split(name: &str) -> Vec<String> {
 /// # Examples
 ///
 /// ```
-/// use animefun::utils::string::generate_search_terms_by_stripping;
+/// use animefun_lib::utils::string::generate_search_terms_by_stripping;
 ///
 /// let input = vec!["A".to_string(), "B".to_string(), "C".to_string(), "D".to_string()];
 /// assert_eq!(
