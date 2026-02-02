@@ -16,7 +16,7 @@ const HomePage = () => {
 
   // 直接查找选中日期数据（日历数据按星期几有序，查找效率高）
   const selectedDayData = calendarData.find(
-    (day) => day.weekday.id === selectedDay
+    (day) => day.weekday.id === selectedDay,
   );
 
   // 计算今天的 id
@@ -53,7 +53,10 @@ const HomePage = () => {
                   <h2 className="text-2xl font-bold flex items-center gap-2">
                     {selectedDayData?.weekday.cn || "未找到数据"}
                     {selectedDay === todayId && (
-                      <Badge variant="outline" className="text-xs font-normal bg-primary/10 text-primary border-primary/20 animate-pulse">
+                      <Badge
+                        variant="outline"
+                        className="text-xs font-normal bg-primary/10 text-primary border-primary/20 animate-pulse"
+                      >
                         今日
                       </Badge>
                     )}
@@ -65,18 +68,28 @@ const HomePage = () => {
                   <span>{selectedDayData?.items.length || 0} 部番剧</span>
                 </div>
               </div>
-              
+
               {selectedDayData?.items && selectedDayData.items.length > 0 ? (
-                <div key={selectedDay} className="animate-in fade-in slide-in-from-right-8 duration-500 fill-mode-both">
+                <div
+                  key={selectedDay}
+                  className="animate-in fade-in slide-in-from-right-8 duration-500 fill-mode-both"
+                >
                   <AnimeGrid items={selectedDayData.items} />
                 </div>
               ) : (
-                <div key={selectedDay} className="flex flex-col items-center justify-center py-24 animate-in zoom-in-95 duration-300">
+                <div
+                  key={selectedDay}
+                  className="flex flex-col items-center justify-center py-24 animate-in zoom-in-95 duration-300"
+                >
                   <div className="bg-muted/30 p-8 rounded-full mb-6 ring-1 ring-border/50">
                     <Ghost className="w-16 h-16 text-muted-foreground/40" />
                   </div>
-                  <h3 className="text-lg font-medium text-muted-foreground">今天没有更新的番剧哦</h3>
-                  <p className="text-sm text-muted-foreground/60 mt-2">去看看其他日期的吧 ~</p>
+                  <h3 className="text-lg font-medium text-muted-foreground">
+                    今天没有更新的番剧哦
+                  </h3>
+                  <p className="text-sm text-muted-foreground/60 mt-2">
+                    去看看其他日期的吧 ~
+                  </p>
                 </div>
               )}
             </>

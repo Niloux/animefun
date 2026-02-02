@@ -78,9 +78,7 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
       <div className="px-6 py-4 border-b border-border/60 bg-muted/20">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold tracking-tight">
-              剧集列表
-            </h2>
+            <h2 className="text-xl font-bold tracking-tight">剧集列表</h2>
             <p className="text-sm text-muted-foreground mt-1 font-medium">
               共 {totalEpisodes} 话
             </p>
@@ -131,7 +129,9 @@ const EpisodesList: React.FC<EpisodesListProps> = ({
         {loading && data.length === 0 ? (
           <div className="text-center py-12 flex flex-col items-center gap-3">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
-            <p className="text-muted-foreground text-sm font-medium">正在加载剧集信息...</p>
+            <p className="text-muted-foreground text-sm font-medium">
+              正在加载剧集信息...
+            </p>
           </div>
         ) : data.length > 0 ? (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both">

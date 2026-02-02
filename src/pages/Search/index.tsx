@@ -175,7 +175,9 @@ const SearchPage = () => {
               <div className="rounded-full bg-muted/50 p-6 mb-4 shadow-inner">
                 <Filter className="h-10 w-10 opacity-40" />
               </div>
-              <p className="text-lg font-medium text-foreground/80">未找到匹配的番剧</p>
+              <p className="text-lg font-medium text-foreground/80">
+                未找到匹配的番剧
+              </p>
               <p className="text-sm mt-2 opacity-70 max-w-xs text-center leading-relaxed">
                 尝试更换关键词、减少筛选条件，或者换个姿势搜索
               </p>

@@ -59,7 +59,7 @@ export const AppSidebar = function AppSidebar({ preloadMap }: AppSidebarProps) {
   // 计算下载中的任务数量
   const downloadingCount = useMemo(
     () => items.filter((item) => item.progress < 100).length,
-    [items]
+    [items],
   );
 
   const mainMenuItems: MenuItem[] = [

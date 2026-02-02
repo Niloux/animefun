@@ -158,8 +158,10 @@ export function formatVoteCount(count: number): string {
  * Returns true for valid scores (0-10), false for NaN/Infinity/out of range.
  */
 export function isValidRating(score: unknown): score is number {
-  return typeof score === "number"
-    && Number.isFinite(score)
-    && score >= 0
-    && score <= 10;
+  return (
+    typeof score === "number" &&
+    Number.isFinite(score) &&
+    score >= 0 &&
+    score <= 10
+  );
 }

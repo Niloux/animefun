@@ -18,7 +18,15 @@ interface DownloadCardProps {
 }
 
 export const DownloadCard = memo<DownloadCardProps>(
-  ({ item, onPause, onResume, onDelete, onOpenFolder, onCoverClick, onPlay }) => {
+  ({
+    item,
+    onPause,
+    onResume,
+    onDelete,
+    onOpenFolder,
+    onCoverClick,
+    onPlay,
+  }) => {
     const isPaused =
       item.status.toLowerCase().includes("paused") ||
       item.status.toLowerCase().includes("stop");

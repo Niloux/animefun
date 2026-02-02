@@ -23,7 +23,8 @@ import {
 } from "./lib/lazy-pages";
 
 function AppContent() {
-  const { updateInfo, showDialog, setShowDialog, checkForUpdates } = useAutoUpdateCheck();
+  const { updateInfo, showDialog, setShowDialog, checkForUpdates } =
+    useAutoUpdateCheck();
 
   useEffect(() => {
     // 延迟检查更新，避免影响启动速度
@@ -43,14 +44,8 @@ function AppContent() {
           <Route path={ROUTES.SUBSCRIBE} element={<SubscribePage />} />
           <Route path={ROUTES.RESOURCES} element={<ResourcesPage />} />
           <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
-          <Route
-            path={ROUTES.ANIME_DETAIL}
-            element={<AnimeDetailPage />}
-          />
-          <Route
-            path="*"
-            element={<Navigate to={ROUTES.HOME} replace />}
-          />
+          <Route path={ROUTES.ANIME_DETAIL} element={<AnimeDetailPage />} />
+          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
         </Route>
       </Routes>
       <UpdateDialog

@@ -39,7 +39,7 @@ const AnimeDetailPage = () => {
     : undefined;
   const { src: cachedSrc } = useCachedImage(rawImgSrc);
   const { status, loading: statusLoading } = useSubjectStatus(
-    id ? Number(id) : undefined
+    id ? Number(id) : undefined,
   );
   const mikan = useMikanResources(id ? Number(id) : undefined);
 
@@ -199,8 +199,13 @@ const AnimeDetailPage = () => {
                     title={`评分：${data.rating.score.toFixed(1)}分，共${data.rating.total}人评分`}
                     aria-label={`${data.rating.score.toFixed(1)}分，${data.rating.total}人评分`}
                   >
-                    <Star className="w-4 h-4 text-yellow-500 dark:text-yellow-400 fill-current" aria-hidden="true" />
-                    <span className="font-semibold tabular-nums">{data.rating.score.toFixed(1)}</span>
+                    <Star
+                      className="w-4 h-4 text-yellow-500 dark:text-yellow-400 fill-current"
+                      aria-hidden="true"
+                    />
+                    <span className="font-semibold tabular-nums">
+                      {data.rating.score.toFixed(1)}
+                    </span>
                     <span className="text-xs text-muted-foreground tabular-nums">
                       ({formatVoteCount(data.rating.total)})
                     </span>
@@ -282,7 +287,11 @@ const AnimeDetailPage = () => {
 
         {/* 主要内容区 - 可调整大小的两列布局 */}
         <div className="flex-1 min-h-0">
-          <ResizablePanelGroup direction="horizontal" className="gap-6 h-full" autoSaveId="anime-detail-layout">
+          <ResizablePanelGroup
+            direction="horizontal"
+            className="gap-6 h-full"
+            autoSaveId="anime-detail-layout"
+          >
             {/* 左侧 - 剧情介绍和标签 */}
             <ResizablePanel defaultSize={66} minSize={50}>
               <div ref={leftPanelRef} className="space-y-6">
@@ -310,7 +319,7 @@ const AnimeDetailPage = () => {
                         >
                           {tag.name}
                         </span>
-                      )
+                      ),
                     )}
                   </div>
                 </div>

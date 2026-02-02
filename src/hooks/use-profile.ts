@@ -20,7 +20,8 @@ export function useProfile() {
     },
     onError: (error) => {
       // TanStack Query 的 onError 接收的错误可能是字符串或 Error 对象
-      const message = typeof error === "string" ? error : (error as Error).message;
+      const message =
+        typeof error === "string" ? error : (error as Error).message;
       toast.error(message || "更新失败，请重试");
     },
   });
@@ -33,7 +34,8 @@ export function useProfile() {
     },
     onError: (error) => {
       // TanStack Query 的 onError 接收的错误可能是字符串或 Error 对象
-      const message = typeof error === "string" ? error : (error as Error).message;
+      const message =
+        typeof error === "string" ? error : (error as Error).message;
       toast.error(message || "上传失败，请重试");
     },
   });

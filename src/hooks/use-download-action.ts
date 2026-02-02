@@ -14,7 +14,9 @@ export function useDownloadAction({
   subjectCover,
   episode,
 }: UseDownloadActionProps) {
-  const [downloadingUrls, setDownloadingUrls] = useState<Set<string>>(new Set());
+  const [downloadingUrls, setDownloadingUrls] = useState<Set<string>>(
+    new Set(),
+  );
 
   const handleDownload = useCallback(
     async (url: string, title: string, episodeRange: string | null) => {
