@@ -26,6 +26,12 @@
           <a href="LICENSE">
             <img src="https://img.shields.io/badge/license-MIT-AF52DE?style=flat-square" alt="License">
           </a>
+          <a href="https://github.com/Niloux/animefun/actions/workflows/repo-tokens.yml">
+            <img src=".github/badges/tokens.svg" alt="Tokens">
+          </a>
+        </p>
+        <p>
+          <sub><!-- token-count -->—<!-- /token-count --></sub>
         </p>
         <p>
           <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows">

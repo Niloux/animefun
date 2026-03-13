@@ -1,0 +1,45 @@
+name: Update token count
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "README.md"
+      - ".github/workflows/repo-tokens.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-tokens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Ensure badge dir
+        run: mkdir -p .github/badges
+
+      - uses: qwibitai/nanoclaw/repo-tokens@v1
+        id: tokens
+        with:
+          include: "src/**/*.ts src/**/*.tsx src-tauri/src/**/*.rs src-tauri/tests/**/*.rs"
+          exclude: "src/types/gen/** src/**/*.d.ts src/**/*.test.ts src/**/*.test.tsx src/**/*.spec.ts src/**/*.spec.tsx"
+          badge-path: ".github/badges/tokens.svg"
+
+      - name: Commit if changed
+        run: |
+          git add README.md .github/badges/tokens.svg
+          git diff --cached --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: update token count to ${{ steps.tokens.outputs.badge }}"
+          git push
