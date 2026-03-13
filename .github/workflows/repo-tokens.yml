@@ -28,7 +28,7 @@ jobs:
       - name: Ensure badge dir
         run: mkdir -p .github/badges
 
-      - uses: qwibitai/nanoclaw/repo-tokens@v1
+      - uses: qwibitai/nanoclaw/repo-tokens@v1.2.0
         id: tokens
         with:
           include: "src/**/*.ts src/**/*.tsx src-tauri/src/**/*.rs src-tauri/tests/**/*.rs"
