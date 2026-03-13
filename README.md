@@ -31,7 +31,7 @@
           </a>
         </p>
         <p>
-          <sub><!-- token-count -->—<!-- /token-count --></sub>
+          <sub><!-- token-count --><a href="https://github.com/qwibitai/nanoclaw/tree/main/repo-tokens">132k tokens · 66% of context window</a><!-- /token-count --></sub>
         </p>
         <p>
           <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows">
