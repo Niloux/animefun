@@ -43,10 +43,10 @@ fn determine_code(
 
     if pre_air {
         SubjectStatusCode::PreAir
-    } else if calendar_on_air || recently_updated {
-        SubjectStatusCode::Airing
     } else if finished {
         SubjectStatusCode::Finished
+    } else if calendar_on_air || recently_updated {
+        SubjectStatusCode::Airing
     } else if first_air.is_some() {
         SubjectStatusCode::OnHiatus
     } else {
