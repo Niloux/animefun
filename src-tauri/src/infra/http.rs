@@ -13,6 +13,7 @@ pub static CLIENT: Lazy<reqwest::Client> = Lazy::new(|| {
         reqwest::header::HeaderValue::from_static("gzip, deflate"),
     );
     reqwest::Client::builder()
+        .http1_only()
         .user_agent(USER_AGENT)
         .default_headers(headers)
         .pool_max_idle_per_host(10)
