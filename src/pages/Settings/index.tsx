@@ -1,13 +1,5 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -33,13 +25,12 @@ import {
   setDownloaderConfig,
   type UpdateInfo,
 } from "@/lib/api";
-import { formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 import type { DownloaderConfig } from "@/types/gen/downloader_config";
 import {
   AlertCircle,
   Bell,
   CheckCircle2,
-  Download,
   ExternalLink,
   Eye,
   EyeOff,
@@ -47,9 +38,9 @@ import {
   Info,
   Loader2,
   RefreshCw,
-  XCircle,
+  Save,
 } from "lucide-react";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -59,6 +50,96 @@ type FormConfig = {
   username: string;
   password: string;
 };
+
+interface SettingsPanelProps {
+  title: string;
+  description: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}
+
+interface SettingsRowProps {
+  title: string;
+  description?: string;
+  children?: ReactNode;
+  className?: string;
+}
+
+const SettingsPanel: FC<SettingsPanelProps> = ({
+  title,
+  description,
+  action,
+  children,
+  className,
+}) => (
+  <section
+    className={cn(
+      "overflow-hidden rounded-xl border border-border/60 bg-card/80 shadow-sm",
+      className,
+    )}
+  >
+    <div className="flex flex-col gap-3 border-b border-border/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 space-y-1">
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      {action && (
+        <div className="flex shrink-0 items-center gap-2">{action}</div>
+      )}
+    </div>
+    {children}
+  </section>
+);
+
+const SettingsRow: FC<SettingsRowProps> = ({
+  title,
+  description,
+  children,
+  className,
+}) => (
+  <div
+    className={cn(
+      "flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between",
+      className,
+    )}
+  >
+    <div className="min-w-0 space-y-1 pr-0 sm:pr-6">
+      <div className="text-sm font-medium">{title}</div>
+      {description && (
+        <div className="text-sm leading-relaxed text-muted-foreground">
+          {description}
+        </div>
+      )}
+    </div>
+    {children && (
+      <div className="flex shrink-0 items-center gap-2">{children}</div>
+    )}
+  </div>
+);
+
+const ConnectionStatusPill: FC<{ isConnected: boolean }> = ({
+  isConnected,
+}) => (
+  <span
+    className={cn(
+      "inline-flex h-7 items-center gap-2 rounded-full border px-3 text-xs font-medium",
+      isConnected
+        ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
+        : "border-border/70 bg-muted/40 text-muted-foreground",
+    )}
+  >
+    <span
+      className={cn(
+        "size-2 rounded-full",
+        isConnected ? "bg-green-500" : "bg-muted-foreground/60",
+      )}
+    />
+    {isConnected ? "已连接" : "未连接"}
+  </span>
+);
 
 const SettingsPage: FC = () => {
   const [isTestingNotification, setIsTestingNotification] = useState(false);
@@ -132,7 +213,7 @@ const SettingsPage: FC = () => {
         setShowUpdateDialog(true);
       } else {
         toast.success("已是最新版本", {
-          description: `当前版本 ${result.currentVersion}已是最新`,
+          description: `当前版本 ${result.currentVersion} 已是最新`,
         });
       }
     } catch {
@@ -146,60 +227,53 @@ const SettingsPage: FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <div
-      className={`py-0 mx-auto transition-opacity duration-300 ${
+      className={`w-full space-y-6 py-0 transition-opacity duration-300 ${
         isContentVisible ? "opacity-100" : "opacity-0"
       }`}
     >
-      <div className="space-y-12">
-        {/* 下载配置 Group */}
-        <section>
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight">下载配置</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                配置 qBittorrent 连接以启用下载功能
-              </p>
-            </div>
-            <Badge
-              variant={isConnected ? "default" : "secondary"}
-              className={`flex items-center px-3 py-1.5 text-sm transition-all duration-300 ${isConnected ? "shadow-md shadow-green-500/20" : ""}`}
-            >
-              {isConnected ? (
-                <>
-                  <div className="relative mr-2 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                  </div>
-                  已连接
-                </>
-              ) : (
-                <>
-                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                  未连接
-                </>
-              )}
-            </Badge>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-1 rounded-full bg-primary" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">设置</h1>
+            <p className="text-sm text-muted-foreground">
+              下载服务、通知和应用偏好
+            </p>
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ConnectionStatusPill isConnected={isConnected} />
+          <span className="inline-flex h-7 items-center rounded-full border border-border/70 bg-muted/40 px-3 text-xs font-medium text-muted-foreground tabular-nums">
+            v{version ?? "..."}
+          </span>
+        </div>
+      </div>
 
-          <div className="space-y-4">
+      <div className="space-y-4">
+        <SettingsPanel
+          title="下载服务"
+          description="连接 qBittorrent Web UI 后，可以同步资源和管理下载任务"
+          action={<ConnectionStatusPill isConnected={isConnected} />}
+        >
+          <div className="space-y-5 px-5 py-5 sm:px-6">
             {!isConnected && (
-              <Alert variant="warning">
-                <AlertCircle className="h-4 w-4" />
+              <Alert variant="warning" className="border-border/60">
+                <AlertCircle className="size-4" />
                 <AlertDescription>
-                  未检测到 qBittorrent 连接。请确保 qBittorrent 正在运行并已启用
+                  未检测到 qBittorrent 连接。请确认 qBittorrent 正在运行并已启用
                   Web UI。
                   <Button
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 ml-1"
+                    className="ml-1 h-auto p-0"
                     asChild
                   >
                     <a
@@ -208,218 +282,179 @@ const SettingsPage: FC = () => {
                       rel="noopener noreferrer"
                     >
                       下载 qBittorrent
-                      <ExternalLink className="ml-1 h-3 w-3" />
+                      <ExternalLink className="ml-1 size-3" />
                     </a>
                   </Button>
                 </AlertDescription>
               </Alert>
             )}
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>连接设置</CardTitle>
-                    <CardDescription className="mt-1.5">
-                      输入 qBittorrent Web UI 的连接信息
-                    </CardDescription>
-                  </div>
-                  {lastCheck && (
-                    <span className="text-xs text-muted-foreground">
-                      最后检测: {formatRelativeTime(lastCheck)}
-                    </span>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-5"
+              >
+                <FormField
+                  control={form.control}
+                  name="api_url"
+                  rules={{
+                    required: "API 地址不能为空",
+                    pattern: {
+                      value: /^https?:\/\/.+/,
+                      message: "请输入有效的 URL",
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>API 地址</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="http://localhost:8080"
+                          className="border-border font-mono text-sm"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        默认为 http://localhost:8080
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-5"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="api_url"
-                      rules={{
-                        required: "API 地址不能为空",
-                        pattern: {
-                          value: /^https?:\/\/.+/,
-                          message: "请输入有效的 URL",
-                        },
-                      }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>API 地址</FormLabel>
-                          <FormControl>
+                />
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="username"
+                    rules={{ required: "用户名不能为空" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>用户名</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="admin"
+                            className="border-border"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    rules={{ required: "密码不能为空" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>密码</FormLabel>
+                        <FormControl>
+                          <div className="relative">
                             <Input
+                              type={showPassword ? "text" : "password"}
                               {...field}
-                              placeholder="http://localhost:8080"
-                              className="font-mono text-sm border-border"
+                              className="border-border pr-10"
                             />
-                          </FormControl>
-                          <FormDescription>
-                            默认为 http://localhost:8080
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground hover:bg-transparent hover:text-foreground"
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="size-4" />
+                              ) : (
+                                <Eye className="size-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <FormField
-                        control={form.control}
-                        name="username"
-                        rules={{ required: "用户名不能为空" }}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>用户名</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="admin"
-                                className="border-border"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        rules={{ required: "密码不能为空" }}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>密码</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type={showPassword ? "text" : "password"}
-                                  {...field}
-                                  className="border-border pr-10"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                >
-                                  {showPassword ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                <Separator />
 
-                    <Separator />
+                <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={testConnection}
+                    disabled={isTesting}
+                  >
+                    {isTesting ? (
+                      <>
+                        <Spinner />
+                        测试中...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 />
+                        测试连接
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                    className="w-full sm:ml-auto sm:w-auto"
+                  >
+                    {form.formState.isSubmitting ? (
+                      <>
+                        <Spinner />
+                        保存中...
+                      </>
+                    ) : (
+                      <>
+                        <Save />
+                        保存配置
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
 
-                    <div className="flex flex-col-reverse sm:flex-row gap-3">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={testConnection}
-                        disabled={isTesting}
-                        className="cursor-pointer transition-colors"
-                      >
-                        {isTesting ? (
-                          <>
-                            <Spinner />
-                            测试中...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 />
-                            测试连接
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={form.formState.isSubmitting}
-                        className="w-full sm:w-auto sm:ml-auto cursor-pointer transition-colors"
-                      >
-                        {form.formState.isSubmitting ? (
-                          <>
-                            <Spinner />
-                            保存中...
-                          </>
-                        ) : (
-                          <>
-                            <Download />
-                            保存配置
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
-              <HelpCircle className="h-4 w-4" />
+            <div className="flex flex-col gap-2 border-t border-border/60 pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                {lastCheck
+                  ? `最后检测 ${formatRelativeTime(lastCheck)}`
+                  : "尚未检测连接状态"}
+              </div>
               <a
                 href="https://github.com/qbittorrent/qBittorrent/wiki"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 hover:text-foreground hover:underline"
               >
-                查看 qBittorrent 官方文档
-                <ExternalLink className="h-3 w-3" />
+                <HelpCircle className="size-4" />
+                qBittorrent 文档
+                <ExternalLink className="size-3" />
               </a>
             </div>
           </div>
-        </section>
+        </SettingsPanel>
 
-        {/* 外观设置 Group */}
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold tracking-tight">外观设置</h2>
-            <p className="text-sm text-muted-foreground mt-1">自定义应用主题</p>
-          </div>
-          <Card>
-            <CardContent className="flex items-center justify-between py-5">
-              <div className="space-y-1">
-                <div className="font-medium">主题模式</div>
-                <div className="text-sm text-muted-foreground">
-                  切换应用外观颜色（浅色/深色/跟随系统）
-                </div>
-              </div>
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <SettingsPanel title="界面" description="调整应用显示方式">
+            <SettingsRow title="主题模式" description="浅色、深色或跟随系统">
               <ThemeToggle />
-            </CardContent>
-          </Card>
-        </section>
+            </SettingsRow>
+          </SettingsPanel>
 
-        {/* 通知设置 Group */}
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold tracking-tight">通知设置</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              管理系统通知功能
-            </p>
-          </div>
-          <Card>
-            <CardContent className="space-y-6 pt-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1 pr-4">
-                  <div className="font-medium">测试通知</div>
-                  <div className="text-sm text-muted-foreground">
-                    发送一条测试通知以确认系统权限设置正常
-                  </div>
-                </div>
+          <SettingsPanel title="通知" description="确认系统通知是否可用">
+            <div className="divide-y">
+              <SettingsRow
+                title="测试通知"
+                description="发送一条测试通知确认系统权限"
+              >
                 <Button
                   variant="outline"
                   onClick={handleTestNotification}
                   disabled={isTestingNotification}
-                  className="cursor-pointer transition-colors"
                 >
                   {isTestingNotification ? (
                     <>
@@ -433,48 +468,28 @@ const SettingsPage: FC = () => {
                     </>
                   )}
                 </Button>
+              </SettingsRow>
+
+              <div className="flex gap-3 px-5 py-4 text-sm">
+                <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <p className="leading-relaxed text-muted-foreground">
+                  订阅番剧有新资源发布时会发送通知。详情页开启“更新提醒”后生效。
+                </p>
               </div>
+            </div>
+          </SettingsPanel>
 
-              <Separator />
-
-              <div className="space-y-3">
-                <div className="flex gap-2 text-sm">
-                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-medium">关于通知功能</p>
-                    <p className="text-muted-foreground leading-relaxed">
-                      当您订阅的番剧有新资源发布时，应用会在后台检测并发送通知。
-                      请确保在番剧详情页开启&ldquo;更新提醒&rdquo;。
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* 关于应用 Group */}
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold tracking-tight">关于</h2>
-            <p className="text-sm text-muted-foreground mt-1">应用信息与更新</p>
-          </div>
-          <Card>
-            <CardContent className="divide-y">
-              {/* Version & Update */}
-              <div className="flex items-center justify-between py-4">
-                <div className="space-y-1">
-                  <div className="font-medium">AnimeFun 版本</div>
-                  <div className="text-sm text-muted-foreground">
-                    当前版本: v{version ?? "..."}
-                  </div>
-                </div>
+          <SettingsPanel title="关于" description="版本、来源与许可">
+            <div className="divide-y">
+              <SettingsRow
+                title="当前版本"
+                description={`AnimeFun v${version ?? "..."}`}
+              >
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCheckUpdate}
                   disabled={isCheckingUpdate}
-                  className="cursor-pointer transition-colors"
                 >
                   {isCheckingUpdate ? (
                     <>
@@ -488,16 +503,14 @@ const SettingsPage: FC = () => {
                     </>
                   )}
                 </Button>
-              </div>
+              </SettingsRow>
 
-              {/* Data Sources */}
-              <div className="py-4 space-y-3">
-                <div className="text-sm font-medium">数据来源</div>
-                <div className="flex gap-3">
+              <SettingsRow title="数据来源">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-2 cursor-pointer hover:bg-muted"
+                    className="h-8 gap-2 hover:bg-muted"
                     asChild
                   >
                     <a
@@ -505,14 +518,14 @@ const SettingsPage: FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Bangumi 番组计划
+                      <ExternalLink className="size-3.5" />
+                      Bangumi
                     </a>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-2 cursor-pointer hover:bg-muted"
+                    className="h-8 gap-2 hover:bg-muted"
                     asChild
                   >
                     <a
@@ -520,23 +533,25 @@ const SettingsPage: FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Mikan Project
+                      <ExternalLink className="size-3.5" />
+                      Mikan
                     </a>
                   </Button>
                 </div>
-              </div>
+              </SettingsRow>
 
-              {/* License */}
-              <div className="pt-4 flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">MIT License</div>
-                <div className="text-sm text-muted-foreground">
-                  Powered by Tauri & React
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+              <SettingsRow
+                title="许可"
+                description="MIT License"
+                className="sm:items-start"
+              >
+                <span className="text-sm text-muted-foreground">
+                  Tauri & React
+                </span>
+              </SettingsRow>
+            </div>
+          </SettingsPanel>
+        </div>
       </div>
 
       <UpdateDialog
