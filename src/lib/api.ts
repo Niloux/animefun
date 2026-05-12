@@ -184,8 +184,10 @@ export const downloadAndInstall = async (
     percent: number;
   }) => void,
 ): Promise<void> => {
-  const update = await check();
-  if (!update) throw new Error("No update available");
+  const update = await check({
+    headers: { "Accept-Encoding": "gzip, deflate" },
+  });
+  if (!update?.available) throw new Error("No update available");
 
   let downloaded = 0;
   let contentLength = 0;
