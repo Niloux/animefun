@@ -1,206 +1,166 @@
-<div>
-  <table border="0">
-    <tr>
-      <td width="30%" align="center">
-        <a href="https://github.com/Niloux/animefun">
-          <img src="src/assets/ikuyo-avatar.png" width="180" height="180" alt="AnimeFun Logo">
-        </a>
-      </td>
-      <td width="70%">
-        <h1>AnimeFun</h1>
-        <p>
-          <strong>专注于追番体验的动画app</strong>
-          <br/>
-          <sub>订阅一次 · 自动追番 · 本地优先</sub>
-        </p>
-        <p>
-          <a href="https://github.com/Niloux/animefun/releases">
-            <img src="https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=007AFF&label=Release" alt="Release">
-          </a>
-          <a href="https://github.com/Niloux/animefun/releases">
-            <img src="https://img.shields.io/github/downloads/Niloux/animefun/total?style=flat-square&color=34C759&label=Downloads" alt="Downloads">
-          </a>
-          <a href="https://github.com/Niloux/animefun/stargazers">
-            <img src="https://img.shields.io/github/stars/Niloux/animefun?style=flat-square&color=FFD60A&label=Stars" alt="Stars">
-          </a>
-          <a href="LICENSE">
-            <img src="https://img.shields.io/badge/license-MIT-AF52DE?style=flat-square" alt="License">
-          </a>
-          <a href="https://github.com/Niloux/animefun/actions/workflows/repo-tokens.yml">
-            <img src=".github/badges/tokens.svg" alt="Tokens">
-          </a>
-        </p>
-        <p>
-          <sub><!-- token-count --><a href="https://github.com/qwibitai/nanoclaw/tree/main/repo-tokens">133k tokens · 66% of context window</a><!-- /token-count --></sub>
-        </p>
-        <p>
-          <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows">
-          <img src="https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS">
-          <img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux">
-        </p>
-      </td>
-    </tr>
-  </table>
-</div>
+# AnimeFun
 
-<br/>
+本地优先的跨平台追番助手。订阅 Bangumi 番剧，匹配 Mikan RSS 资源，并推送到 qBittorrent Web UI。
 
-## ✨ 为什么用 AnimeFun?
+<p>
+  <a href="https://github.com/Niloux/animefun/releases">
+    <img src="https://img.shields.io/github/v/release/Niloux/animefun?style=flat-square&color=0EA5E9&label=release" alt="Release">
+  </a>
+  <a href="https://github.com/Niloux/animefun/actions/workflows/tauri-build.yml">
+    <img src="https://github.com/Niloux/animefun/actions/workflows/tauri-build.yml/badge.svg" alt="Tauri Build">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-111827?style=flat-square" alt="MIT License">
+  </a>
+</p>
 
-**传统追番**: 每天手动打开 Bangumi → 记住放送时间 → 搜索下载 → 添加到 BT 客户端
+<p>
+  <img src="docs/screenshots/readme-home.webp" alt="AnimeFun 首页，按星期展示正在追踪的番剧" width="100%">
+</p>
 
-**用 AnimeFun**: 订阅一次 → 自动检查更新 → 一键推送下载
+## 它解决什么问题
 
-- 🔄 **自动追番** — 后台自动检查更新，新番上线第一时间通知
-- 📅 **本周看什么** — 日历视图一目了然，不再错过放送
-- ⚡ **一键下载** — 看到想要的番，一键推送到本地 BT 客户端
-- 🔍 **智能筛选** — 按评分/类型/年份快速找到好番
-- 🎁 **资源聚合** — 自动整合番剧信息和下载来源
-- ✈️ **离线可用** — 图片缓存本地，网络断开也能浏览
-- 🔒 **隐私优先** — 所有数据存储本地，不上云端
+传统追番流程很碎：记放送时间，打开多个站点，手动找资源，再切到 BT 客户端添加任务。AnimeFun 把这些动作收进一个本地桌面应用里。
 
----
+| 你要做的事 | AnimeFun 的处理方式           |
+| ---------- | ----------------------------- |
+| 看本周更新 | 用星期视图展示每日番剧        |
+| 跟踪番剧   | 订阅后在本地保存状态          |
+| 找资源     | 根据番剧信息匹配 Mikan RSS    |
+| 添加下载   | 推送到本地 qBittorrent Web UI |
+| 离线浏览   | 缓存图片和应用数据到本机      |
 
-## 📸 界面预览
+## 功能
 
-<div align="center">
-  <table>
-    <tr>
-      <td width="50%" align="center">
-        <img src="docs/screenshots/home.png" alt="首页 - 快速浏览订阅" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <br/><b>🏠 首页 - 快速浏览订阅</b>
-      </td>
-      <td width="50%" align="center">
-        <img src="docs/screenshots/subscriptions.png" alt="订阅管理 - 自动同步更新" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <br/><b>📋 订阅管理 - 自动同步更新</b>
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <img src="docs/screenshots/detail.png" alt="番剧详情 - 资源一键推送" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <br/><b>🎬 番剧详情 - 资源一键推送</b>
-      </td>
-      <td align="center">
-        <img src="docs/screenshots/resources.png" alt="资源管理 - 查看所有剧集" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <br/><b>📦 资源管理 - 查看所有剧集</b>
-      </td>
-    </tr>
-    <tr>
-      <td align="center">
-        <img src="docs/screenshots/downloads.png" alt="下载管理 - 实时监控任务" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <br/><b>⬇️ 下载管理 - 实时监控任务</b>
-      </td>
-      <td align="center">
-        <img src="docs/screenshots/setting.png" alt="设置界面 - 客户端一键配置" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <br/><b>⚙️ 设置界面 - 客户端一键配置</b>
-      </td>
-    </tr>
-  </table>
-</div>
+- **番剧订阅**：搜索 Bangumi 条目，把想看的番剧加入订阅。
+- **放送日历**：按星期查看更新，不靠记忆追进度。
+- **资源匹配**：从 Mikan RSS 聚合可用资源，按集数查看。
+- **下载管理**：连接 qBittorrent Web UI，添加任务并查看下载状态。
+- **本地优先**：应用数据和图片缓存保存在本机，不依赖云端账号。
 
----
+## 界面预览
 
-## 📥 快速开始
+<details>
+<summary>查看更多截图</summary>
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/readme-subscriptions.webp" alt="订阅管理界面">
+      <br>
+      <strong>订阅管理</strong>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/readme-detail.webp" alt="番剧详情界面">
+      <br>
+      <strong>番剧详情</strong>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/readme-resources.webp" alt="资源列表界面">
+      <br>
+      <strong>资源列表</strong>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/readme-downloads.webp" alt="下载管理界面">
+      <br>
+      <strong>下载管理</strong>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <img src="docs/screenshots/readme-setting.webp" alt="设置界面">
+      <br>
+      <strong>设置</strong>
+    </td>
+  </tr>
+</table>
+
+</details>
+
+## 快速开始
 
 ### 安装
 
-下载 [Releases](https://github.com/Niloux/animefun/releases) 中的安装包：
+从 [Releases](https://github.com/Niloux/animefun/releases) 下载当前平台的安装包。发布资产以 Release 页面实际文件为准。
 
-| 平台    | 文件格式                      |
-| ------- | ----------------------------- |
-| macOS   | `.dmg` / `.app.tar.gz`        |
-| Linux   | `.AppImage` / `.deb` / `.rpm` |
-| Windows | `.msi` / `.nsis.exe`          |
+当前自动发布流程覆盖：
 
-### 配置
+| 平台    | 架构          |
+| ------- | ------------- |
+| macOS   | Apple Silicon |
+| Windows | x64           |
 
-1. 打开软件，进入设置页面
-2. 配置 BT 客户端地址（qBittorrent/Transmission）
-   - _提示：需开启 BT 客户端的 WebUI 功能_
-3. 搜索番剧，点击订阅
+Linux 可以从源码构建，Tauri 的系统依赖请参考 [官方前置要求](https://tauri.app/v2/guides/prerequisites/)。
 
----
+### 配置 qBittorrent
 
-## 💻 开发指南
+1. 启动 qBittorrent。
+2. 在 qBittorrent 中启用 Web UI。
+3. 打开 AnimeFun 的设置页，保存 qBittorrent Web UI 地址和账号信息。
+4. 搜索番剧并订阅，在番剧详情页查看资源和添加下载。
 
-**前置要求**：
+## 开发
 
-- Node.js 18+
-- pnpm (`npm i -g pnpm`)
-- Rust 工具链 (rustup.rs)
-- 平台依赖：见 [Tauri 官方文档](https://tauri.app/v2/guides/prerequisites/)
+### 前置要求
+
+- Node.js 20+
+- pnpm
+- Rust 工具链
+- Tauri 平台依赖
+
+### 常用命令
 
 ```bash
 git clone https://github.com/Niloux/animefun.git
 cd animefun
 pnpm install
-pnpm tauri dev      # 启动开发环境
-pnpm lint           # ESLint
-pnpm format         # Prettier
-pnpm types:gen      # 从 Rust 导出 TypeScript 类型
-pnpm tauri build    # 构建生产版本
+pnpm tauri dev
 ```
 
----
+```bash
+pnpm build       # 构建前端
+pnpm lint        # ESLint
+pnpm format      # Prettier
+pnpm types:gen   # 从 Rust 模型生成 TypeScript 类型
+pnpm tauri build # 构建桌面应用
+```
 
-## 🛠️ 技术实现
+## 技术栈
 
-- **跨平台**：Tauri 2 + Rust（比 Electron 轻量 5 倍）
-- **数据源**：[Bangumi API](https://github.com/bangumi/api)（番剧信息）+ [Mikan Project](https://mikanani.me)（下载资源）
-- **本地优先**：SQLite 存储，图片缓存，离线可用
-- **类型安全**：ts-rs 自动同步 Rust ↔ TypeScript 类型
+| 层         | 技术                                  |
+| ---------- | ------------------------------------- |
+| 桌面运行时 | Tauri 2, Rust                         |
+| 前端       | React 19, TypeScript, Tailwind CSS v4 |
+| UI 基础    | Radix UI, lucide-react                |
+| 数据获取   | Bangumi API, Mikan RSS                |
+| 本地存储   | SQLite, 文件缓存                      |
+| 类型同步   | ts-rs                                 |
 
-### 核心技术栈
+## 数据与隐私
 
-<div align="center">
+AnimeFun 不需要云端账号。应用配置、订阅状态、下载记录和图片缓存都保存在本机。
 
-![React](https://img.shields.io/badge/React_19-20232a?style=flat-square&logo=react&logoColor=61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_v4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)
-![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)
-![Tauri](https://img.shields.io/badge/Tauri_2-FFC131?style=flat-square&logo=tauri&logoColor=black)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
-
-</div>
-
----
-
-## 📂 数据存储
-
-| 平台    | 目录                                                |
+| 平台    | 数据目录                                            |
 | ------- | --------------------------------------------------- |
 | macOS   | `~/Library/Application Support/com.wuyou.animefun/` |
 | Linux   | `~/.config/com.wuyou.animefun/`                     |
 | Windows | `%APPDATA%\com.wuyou.animefun\`                     |
 
-所有数据仅存储在本地，网络请求仅限于 Bangumi 公开 API 与公开 RSS 数据源。
+网络请求用于访问 Bangumi 公开 API、Mikan RSS，以及你在设置中配置的 qBittorrent Web UI。
 
----
+## 免责声明
 
-## ⚖️ 免责声明
+AnimeFun 是开源桌面工具。MIT 许可证只覆盖本项目代码，不代表对第三方内容授予任何权利。
 
-**本项目 AnimeFun 严格遵守相关法律法规，仅供学习交流与个人研究使用。**
+- 本项目不提供、不存储、不分发任何受版权保护的视频、音频或图像文件。
+- 番剧元数据来源于 [Bangumi API](https://github.com/bangumi/api)，相关权利归原权利人所有。
+- 资源匹配基于公开 RSS 数据。用户需要自行确认数据源和下载行为符合法律法规。
+- 下载任务由用户配置的 qBittorrent 客户端执行，相关行为由用户自行负责。
 
-1. **本项目不提供、不存储、不分发任何受版权保护的内容**（包括但不限于视频、音频、图像等文件）。
+如有权利人认为本项目内容侵犯合法权益，请通过 [Issue](https://github.com/Niloux/animefun/issues) 联系维护者。
 
-2. 所有番剧元数据（封面、简介、评分等）均来源于 [Bangumi API](https://github.com/bangumi/api)，其版权归原权利人所有。
-
-3. 本项目支持调用本地已安装的 BT 客户端（如 qBittorrent、Transmission），但：
-
-   - 本项目不提供任何下载链接或资源地址
-   - 用户需自行配置 RSS 数据源
-   - 任何下载行为均由用户自行决定并承担责任
-
-4. **本项目禁止用于任何商业用途**。
-
-如有权利人认为本项目内容侵犯了您的合法权益，请通过 [Issue](https://github.com/Niloux/animefun/issues) 联系，项目维护者将在核实后及时处理。
-
----
-
-<p align="center">
-  Made with ❤️ by <a href="https://github.com/Niloux">Niloux</a>
-</p>
-
-## 📄 许可证
+## 许可证
 
 [MIT](LICENSE) © Niloux
