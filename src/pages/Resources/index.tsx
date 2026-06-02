@@ -70,7 +70,7 @@ const ResourcesPage: FC = () => {
   };
 
   const handlePlay = async (item: DownloadItem) => {
-    if (item.progress >= 100) {
+    if (item.external_state.kind === "live" && item.progress >= 100) {
       try {
         await handlePlayVideo(item.hash);
       } catch {
@@ -83,11 +83,17 @@ const ResourcesPage: FC = () => {
   };
 
   const downloadingItems = useMemo(
-    () => items.filter((item) => item.progress < 100),
+    () =>
+      items.filter(
+        (item) => item.external_state.kind !== "live" || item.progress < 100,
+      ),
     [items],
   );
   const downloadedItems = useMemo(
-    () => items.filter((item) => item.progress >= 100),
+    () =>
+      items.filter(
+        (item) => item.external_state.kind === "live" && item.progress >= 100,
+      ),
     [items],
   );
 

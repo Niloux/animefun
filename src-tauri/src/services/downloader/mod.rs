@@ -1,10 +1,20 @@
 pub mod client;
 pub mod config;
+pub mod lifecycle;
 pub mod monitor;
 pub mod repo;
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
+
+#[derive(Serialize, Clone, TS)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(export, export_to = "../../src/types/gen/downloader.ts")]
+pub enum DownloadExternalState {
+    Live { status: String },
+    Stale,
+    Missing,
+}
 
 #[derive(Serialize, Clone, TS)]
 #[ts(export, export_to = "../../src/types/gen/downloader.ts")]
@@ -16,7 +26,7 @@ pub struct DownloadItem {
     pub episode_range: Option<String>,
     #[ts(optional)]
     pub resolution: Option<u32>,
-    pub status: String,
+    pub external_state: DownloadExternalState,
     pub progress: f64,
     pub dlspeed: i64,
     pub eta: i64,

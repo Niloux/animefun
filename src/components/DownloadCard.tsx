@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import { DownloadItem } from "@/types/gen/downloader";
-import { Film, Folder, Pause, Play, Trash2 } from "lucide-react";
+import { AlertTriangle, Film, Folder, Pause, Play, Trash2 } from "lucide-react";
 import { memo } from "react";
 
 interface DownloadCardProps {
@@ -27,10 +27,20 @@ export const DownloadCard = memo<DownloadCardProps>(
     onCoverClick,
     onPlay,
   }) => {
+    const isLive = item.external_state.kind === "live";
+    const liveStatus =
+      item.external_state.kind === "live" ? item.external_state.status : "";
     const isPaused =
-      item.status.toLowerCase().includes("paused") ||
-      item.status.toLowerCase().includes("stop");
-    const isCompleted = item.progress >= 100;
+      isLive &&
+      (liveStatus.toLowerCase().includes("paused") ||
+        liveStatus.toLowerCase().includes("stop"));
+    const isCompleted = isLive && item.progress >= 100;
+    const stateLabel =
+      item.external_state.kind === "stale"
+        ? "状态暂不可用"
+        : item.external_state.kind === "missing"
+          ? "外部任务缺失"
+          : null;
 
     return (
       <Card className="py-2 group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:shadow-md hover:shadow-primary/10">
@@ -100,7 +110,7 @@ export const DownloadCard = memo<DownloadCardProps>(
                       <Film className="h-4 w-4" />
                     </Button>
                   )
-                ) : (
+                ) : isLive ? (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -113,7 +123,7 @@ export const DownloadCard = memo<DownloadCardProps>(
                       <Pause className="h-4 w-4" />
                     )}
                   </Button>
-                )}
+                ) : null}
                 {isCompleted && item.save_path && onOpenFolder && (
                   <Button
                     size="icon"
@@ -146,15 +156,20 @@ export const DownloadCard = memo<DownloadCardProps>(
                   <span className="font-semibold text-primary shrink-0">
                     {item.progress.toFixed(1)}%
                   </span>
-                  {!isCompleted && (
+                  {stateLabel ? (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <AlertTriangle className="size-3.5" />
+                      {stateLabel}
+                    </span>
+                  ) : !isCompleted ? (
                     <span className="text-muted-foreground truncate">
                       <span className="font-medium text-foreground">
                         {formatBytes(item.dlspeed)}/s
                       </span>
                     </span>
-                  )}
+                  ) : null}
                 </div>
-                {!isCompleted && item.eta > 0 && (
+                {isLive && !isCompleted && item.eta > 0 && (
                   <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                     <span>剩余 {formatDuration(item.eta)}</span>
                   </div>
@@ -175,7 +190,10 @@ export const DownloadCard = memo<DownloadCardProps>(
     return (
       prev.item.hash === next.item.hash &&
       prev.item.progress === next.item.progress &&
-      prev.item.status === next.item.status &&
+      prev.item.external_state.kind === next.item.external_state.kind &&
+      (prev.item.external_state.kind !== "live" ||
+        next.item.external_state.kind !== "live" ||
+        prev.item.external_state.status === next.item.external_state.status) &&
       prev.item.dlspeed === next.item.dlspeed &&
       prev.item.eta === next.item.eta &&
       prev.item.resolution === next.item.resolution
