@@ -1,18 +1,13 @@
-use rusqlite::params;
+use rusqlite::{params, ToSql};
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
 use crate::models::bangumi::{Images, SubjectRating, SubjectResponse, SubjectStatusCode};
+use crate::services::subscriptions::query::{self, QueryBind, SubscriptionQuery};
 use std::collections::HashMap;
 
 fn status_ord(code: &SubjectStatusCode) -> i64 {
-    match code {
-        SubjectStatusCode::Airing => 0,
-        SubjectStatusCode::PreAir => 1,
-        SubjectStatusCode::Finished => 2,
-        SubjectStatusCode::OnHiatus => 3,
-        SubjectStatusCode::Unknown => 4,
-    }
+    query::status_ord(code)
 }
 
 fn build_tags_csv(subject: &SubjectResponse) -> String {
@@ -210,95 +205,41 @@ fn make_subject_from_index(
     }
 }
 
-pub async fn query_full(
-    params: crate::commands::subscriptions::SubQueryParams,
-) -> Result<(Vec<SubjectResponse>, u32), AppError> {
+pub async fn query_full(query: SubscriptionQuery) -> Result<(Vec<SubjectResponse>, u32), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
     let (items, total) = conn
         .interact(move |conn| -> Result<(Vec<SubjectResponse>, u32), rusqlite::Error> {
-            let mut sql_where = String::new();
-            let mut binds: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-            if let Some(k) = params.keywords.as_ref() {
-                let q = k.trim().to_lowercase();
-                if !q.is_empty() {
-                    sql_where.push_str(" AND (LOWER(name) LIKE ? OR LOWER(name_cn) LIKE ?)");
-                    binds.push(Box::new(format!("%{}%", q)));
-                    binds.push(Box::new(format!("%{}%", q)));
-                }
-            }
-            if let Some(gs) = params.genres.as_ref() {
-                for g in gs.iter() {
-                    let v = g.trim().to_lowercase();
-                    if !v.is_empty() {
-                        sql_where.push_str(" AND (tags_csv LIKE ?)");
-                        binds.push(Box::new(format!("%,{},%", v)));
-                    }
-                }
-            }
-            if let Some(minr) = params.min_rating.as_ref() {
-                sql_where.push_str(" AND (rating_score IS NOT NULL AND rating_score >= ?)");
-                binds.push(Box::new(*minr));
-            }
-            if let Some(maxr) = params.max_rating.as_ref() {
-                sql_where.push_str(" AND (rating_score IS NOT NULL AND rating_score <= ?)");
-                binds.push(Box::new(*maxr));
-            }
-            if let Some(code) = params.status_code.as_ref() {
-                sql_where.push_str(" AND status_code = ?");
-                let cval: i64 = status_ord(code);
-                binds.push(Box::new(cval));
-            }
-            let mut match_q: Option<String> = None;
-            let order_by = match params.sort.as_deref() {
-                Some("status") => " ORDER BY status_ord ASC".to_string(),
-                Some("rank") => " ORDER BY (rating_rank IS NULL) ASC, rating_rank ASC".to_string(),
-                Some("score") => " ORDER BY COALESCE(rating_score, 0) DESC".to_string(),
-                Some("heat") => " ORDER BY COALESCE(rating_total, 0) DESC".to_string(),
-                Some("match") => {
-                    if let Some(k) = params.keywords.as_ref() {
-                        let q = k.trim().to_lowercase();
-                        if !q.is_empty() {
-                            sql_where.push_str(" AND (LOWER(name) LIKE ? OR LOWER(name_cn) LIKE ?)");
-                            binds.push(Box::new(format!("%{}%", q)));
-                            binds.push(Box::new(format!("%{}%", q)));
-                            match_q = Some(q);
-                            " ORDER BY CASE WHEN LOWER(name) LIKE ? THEN 2 WHEN LOWER(name_cn) LIKE ? THEN 1 ELSE 0 END DESC".to_string()
-                        } else { String::new() }
-                    } else { String::new() }
-                }
-                _ => " ORDER BY added_at DESC".to_string(),
-            };
+            let plan = query::build_query_plan(&query);
 
-            let limit = params.limit.unwrap_or(20) as i64;
-            let offset = params.offset.unwrap_or(0) as i64;
-
-            let count_sql = format!("SELECT COUNT(*) FROM subjects_index WHERE 1=1{}", sql_where);
+            let count_sql = format!(
+                "SELECT COUNT(*) FROM subjects_index WHERE 1=1{}",
+                plan.where_sql
+            );
             let mut count_stmt = conn.prepare(&count_sql)?;
             let total: u32 = {
-                let mut bind_refs: Vec<&dyn rusqlite::ToSql> = Vec::new();
-                for b in binds.iter() { bind_refs.push(&**b); }
-                let mut rows = count_stmt.query(rusqlite::params_from_iter(bind_refs.iter().copied()))?;
-                let cnt: u32 = if let Some(row) = rows.next()? { row.get::<_, i64>(0)? as u32 } else { 0 };
-                cnt
+                let filter_bind_refs = bind_refs(&plan.filter_binds);
+                let mut rows =
+                    count_stmt.query(rusqlite::params_from_iter(filter_bind_refs.iter().copied()))?;
+                if let Some(row) = rows.next()? {
+                    row.get::<_, i64>(0)? as u32
+                } else {
+                    0
+                }
             };
 
             let page_sql = format!(
                 "SELECT subject_id, name, name_cn, rating_score, rating_rank, rating_total, cover_url FROM subjects_index WHERE 1=1{}{} LIMIT ? OFFSET ?",
-                sql_where,
-                order_by,
+                plan.where_sql,
+                plan.order_sql,
             );
             let mut page_stmt = conn.prepare(&page_sql)?;
-            let mut bind_refs: Vec<&dyn rusqlite::ToSql> = Vec::new();
-            for b in binds.iter() { bind_refs.push(&**b); }
-            let (q_like1_opt, q_like2_opt) = if let Some(ref q) = match_q {
-                (Some(format!("%{}%", q)), Some(format!("%{}%", q)))
-            } else { (None, None) };
-            if let Some(ref v1) = q_like1_opt { bind_refs.push(v1 as &dyn rusqlite::ToSql); }
-            if let Some(ref v2) = q_like2_opt { bind_refs.push(v2 as &dyn rusqlite::ToSql); }
-            bind_refs.push(&limit);
-            bind_refs.push(&offset);
-            let mut rows = page_stmt.query(rusqlite::params_from_iter(bind_refs.iter().copied()))?;
+            let mut page_bind_refs = bind_refs(&plan.filter_binds);
+            page_bind_refs.extend(bind_refs(&plan.order_binds));
+            page_bind_refs.push(&plan.limit);
+            page_bind_refs.push(&plan.offset);
+            let mut rows =
+                page_stmt.query(rusqlite::params_from_iter(page_bind_refs.iter().copied()))?;
             let mut out: Vec<SubjectResponse> = Vec::new();
             while let Some(row) = rows.next()? {
                 let id: u32 = row.get::<_, i64>(0)? as u32;
@@ -323,6 +264,17 @@ pub async fn query_full(
         })
         .await??;
     Ok((items, total))
+}
+
+fn bind_refs(binds: &[QueryBind]) -> Vec<&dyn ToSql> {
+    binds
+        .iter()
+        .map(|bind| match bind {
+            QueryBind::Integer(value) => value as &dyn ToSql,
+            QueryBind::Real(value) => value as &dyn ToSql,
+            QueryBind::Text(value) => value as &dyn ToSql,
+        })
+        .collect()
 }
 
 pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppError> {

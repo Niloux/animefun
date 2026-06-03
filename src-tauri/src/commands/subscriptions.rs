@@ -82,9 +82,19 @@ pub struct SubQueryParams {
 pub async fn sub_query(
     params: SubQueryParams,
 ) -> CommandResult<crate::models::bangumi::SearchResponse> {
-    let limit = params.limit.unwrap_or(20);
-    let offset = params.offset.unwrap_or(0);
-    let (data, total) = subscriptions::query_full(params).await?;
+    let query = subscriptions::SubscriptionQuery::from_raw(
+        params.keywords,
+        params.sort,
+        params.genres,
+        params.min_rating,
+        params.max_rating,
+        params.status_code,
+        params.limit,
+        params.offset,
+    );
+    let limit = query.limit;
+    let offset = query.offset;
+    let (data, total) = subscriptions::query_full(query).await?;
     Ok(crate::models::bangumi::SearchResponse {
         total,
         limit,

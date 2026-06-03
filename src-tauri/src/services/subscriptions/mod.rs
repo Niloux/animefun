@@ -1,4 +1,5 @@
 pub mod index_repo;
+pub mod query;
 pub mod repo;
 pub mod status;
 pub mod worker;
@@ -11,6 +12,7 @@ use crate::error::AppError;
 use crate::models::bangumi::SubjectResponse;
 
 pub use index_repo::{batch_get_metadata, SubjectMetadata};
+pub use query::{SubscriptionQuery, SubscriptionSort};
 
 pub use repo::{get_last_seen_ep, get_notify, set_notify, update_last_seen_ep};
 
@@ -47,8 +49,6 @@ pub async fn list_full() -> Result<Vec<(u32, i64, bool, SubjectResponse)>, AppEr
     index_repo::list_full().await
 }
 
-pub async fn query_full(
-    params: crate::commands::subscriptions::SubQueryParams,
-) -> Result<(Vec<SubjectResponse>, u32), AppError> {
-    index_repo::query_full(params).await
+pub async fn query_full(query: SubscriptionQuery) -> Result<(Vec<SubjectResponse>, u32), AppError> {
+    index_repo::query_full(query).await
 }
