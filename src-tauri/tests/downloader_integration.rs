@@ -25,6 +25,10 @@ fn is_paused_state(s: &str) -> bool {
     t.contains("paused") || t == "stopped"
 }
 
+fn live_qbit_enabled() -> bool {
+    std::env::var("RUN_LIVE_QBIT_TESTS").as_deref() == Ok("1")
+}
+
 async fn server_available(base: &str) -> bool {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(3))
@@ -38,8 +42,13 @@ async fn server_available(base: &str) -> bool {
         .unwrap_or(false)
 }
 
+#[ignore]
 #[tokio::test]
-async fn test_qbit_add_pause_resume_delete() -> Result<(), AppError> {
+async fn live_qbit_add_pause_resume_delete() -> Result<(), AppError> {
+    if !live_qbit_enabled() {
+        return Ok(());
+    }
+
     let conf = test_conf();
     if !server_available(&conf.api_url).await {
         return Ok(());

@@ -139,24 +139,172 @@ mod tests {
         fetch_episodes as feps, fetch_subject as fsub, search_subject as ssub,
     };
 
-    async fn init_test_env() {
-        crate::infra::log::init(); // 已处理错误，只打印警告
+    fn date(s: &str) -> NaiveDate {
+        NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
+    }
+
+    fn episode(item_type: u8, sort: f32, airdate: &str) -> Episode {
+        Episode {
+            id: sort as u32,
+            item_type,
+            name: format!("ep-{sort}"),
+            name_cn: String::new(),
+            sort,
+            ep: Some(sort),
+            airdate: airdate.to_string(),
+            comment: 0,
+            duration: String::new(),
+            desc: String::new(),
+            disc: 0,
+            duration_seconds: None,
+            subject_id: None,
+        }
+    }
+
+    fn live_bangumi_enabled() -> bool {
+        std::env::var("RUN_LIVE_BANGUMI_TESTS").as_deref() == Ok("1")
+    }
+
+    async fn init_live_test_env() {
         let base = std::env::temp_dir().join("animefun-tests");
-        // 忽略数据库重复初始化错误（并行测试）
         let _ = crate::infra::db::init_pools(base).await;
     }
 
+    #[test]
+    fn determines_pre_air_when_first_air_is_future() {
+        let code = determine_code(
+            Some(date("2026-04-01")),
+            None,
+            false,
+            false,
+            date("2026-03-01"),
+            date("2026-02-08"),
+        );
+
+        assert!(matches!(code, SubjectStatusCode::PreAir));
+    }
+
+    #[test]
+    fn determines_finished_when_episode_count_reaches_expected() {
+        let code = determine_code(
+            Some(date("2026-01-01")),
+            None,
+            false,
+            true,
+            date("2026-03-01"),
+            date("2026-02-08"),
+        );
+
+        assert!(matches!(code, SubjectStatusCode::Finished));
+    }
+
+    #[test]
+    fn determines_airing_when_calendar_has_subject() {
+        let code = determine_code(
+            Some(date("2026-01-01")),
+            None,
+            true,
+            false,
+            date("2026-03-01"),
+            date("2026-02-08"),
+        );
+
+        assert!(matches!(code, SubjectStatusCode::Airing));
+        assert_eq!(status_reason(&code, true), "当周日历在播");
+    }
+
+    #[test]
+    fn determines_airing_when_latest_episode_is_recent() {
+        let code = determine_code(
+            Some(date("2026-01-01")),
+            Some(date("2026-02-20")),
+            false,
+            false,
+            date("2026-03-01"),
+            date("2026-02-08"),
+        );
+
+        assert!(matches!(code, SubjectStatusCode::Airing));
+        assert_eq!(status_reason(&code, false), "最近三周有更新");
+    }
+
+    #[test]
+    fn determines_hiatus_when_air_date_exists_without_recent_update() {
+        let code = determine_code(
+            Some(date("2026-01-01")),
+            Some(date("2026-01-15")),
+            false,
+            false,
+            date("2026-03-01"),
+            date("2026-02-08"),
+        );
+
+        assert!(matches!(code, SubjectStatusCode::OnHiatus));
+    }
+
+    #[test]
+    fn determines_unknown_when_dates_are_missing() {
+        let code = determine_code(
+            None,
+            None,
+            false,
+            false,
+            date("2026-03-01"),
+            date("2026-02-08"),
+        );
+
+        assert!(matches!(code, SubjectStatusCode::Unknown));
+    }
+
+    #[test]
+    fn detects_finished_only_when_expected_episode_count_is_positive_and_reached() {
+        assert!(is_finished(Some(12), Some(12)));
+        assert!(is_finished(Some(12), Some(13)));
+        assert!(!is_finished(Some(12), Some(11)));
+        assert!(!is_finished(Some(0), Some(1)));
+        assert!(!is_finished(Some(12), None));
+    }
+
+    #[test]
+    fn latest_episode_airdate_uses_main_episode_with_highest_sort() {
+        let episodes = vec![
+            episode(0, 1.0, "2026-01-01"),
+            episode(1, 99.0, "2026-12-31"),
+            episode(0, 2.0, "2026-01-08"),
+        ];
+
+        assert_eq!(
+            latest_episode_airdate(&episodes).as_deref(),
+            Some("2026-01-08")
+        );
+    }
+
+    #[test]
+    fn latest_episode_airdate_ignores_empty_airdate() {
+        let episodes = vec![episode(0, 1.0, "")];
+
+        assert!(latest_episode_airdate(&episodes).is_none());
+    }
+
+    #[ignore]
     #[tokio::test]
-    async fn test_fetch_subject() {
-        init_test_env().await;
+    async fn live_fetch_subject() {
+        if !live_bangumi_enabled() {
+            return;
+        }
+        init_live_test_env().await;
         let res = fsub(12381).await.unwrap();
         assert_eq!(res.id, 12381);
         assert!(!res.name.is_empty());
     }
 
+    #[ignore]
     #[tokio::test]
-    async fn test_search_subject() {
-        init_test_env().await;
+    async fn live_search_subject() {
+        if !live_bangumi_enabled() {
+            return;
+        }
+        init_live_test_env().await;
         let res = ssub(
             "Fate",
             Some(vec![2]),
@@ -179,17 +327,25 @@ mod tests {
         assert!(!first.name.is_empty());
     }
 
+    #[ignore]
     #[tokio::test]
-    async fn test_fetch_episodes() {
-        init_test_env().await;
+    async fn live_fetch_episodes() {
+        if !live_bangumi_enabled() {
+            return;
+        }
+        init_live_test_env().await;
         let res = feps(876, None, Some(100), Some(0)).await.unwrap();
         assert!(res.limit >= 1);
         assert!(res.data.len() as u32 <= res.limit);
     }
 
+    #[ignore]
     #[tokio::test]
-    async fn test_calc_subject_status_returns_any_code() {
-        init_test_env().await;
+    async fn live_calc_subject_status_returns_any_code() {
+        if !live_bangumi_enabled() {
+            return;
+        }
+        init_live_test_env().await;
         let res = calc_subject_status(12381).await.unwrap();
         match res.code {
             SubjectStatusCode::PreAir

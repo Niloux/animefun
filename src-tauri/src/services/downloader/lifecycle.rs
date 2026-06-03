@@ -1,7 +1,4 @@
-use super::{
-    build_metadata, client, config, extract_resolution, parse_metadata, repo,
-    DownloadExternalState, DownloadItem,
-};
+use super::{build_metadata, client, config, projection, repo, DownloadItem};
 use crate::error::AppError;
 use crate::infra::http::{wait_api_limit, CLIENT};
 use futures::StreamExt;
@@ -21,7 +18,7 @@ enum TorrentPayload {
 }
 
 fn is_metadata_valid(meta_str: &Option<String>) -> bool {
-    meta_str.as_ref().and_then(|s| parse_metadata(s)).is_some()
+    projection::has_valid_saved_metadata(meta_str.as_deref())
 }
 
 async fn authenticated_client() -> Result<client::QbitClient, AppError> {
@@ -116,7 +113,7 @@ pub async fn add_torrent_and_track(
 
 async fn batch_ensure_metadata(
     tracked: &[repo::TrackedDownload],
-) -> Vec<(String, String, Option<String>)> {
+) -> Vec<projection::DownloadDisplayMetadata> {
     use crate::services::subscriptions::SubjectMetadata;
 
     let subject_ids: Vec<u32> = tracked.iter().map(|t| t.subject_id).collect();
@@ -135,7 +132,7 @@ async fn batch_ensure_metadata(
         .map(|t| t.subject_id)
         .collect();
 
-    let mut fetched_metadata: HashMap<u32, (String, String, String)> = HashMap::new();
+    let mut fetched_metadata: HashMap<u32, projection::FetchedDisplayMetadata> = HashMap::new();
     if !missing_ids.is_empty() {
         for subject_id in &missing_ids {
             match crate::services::bangumi::api::fetch_subject(*subject_id).await {
@@ -147,7 +144,14 @@ async fn batch_ensure_metadata(
                     };
                     let cover = subject.images.large.clone();
                     let meta_json = build_metadata(title.clone(), cover.clone());
-                    fetched_metadata.insert(*subject_id, (title, cover, meta_json));
+                    fetched_metadata.insert(
+                        *subject_id,
+                        projection::FetchedDisplayMetadata {
+                            title,
+                            cover,
+                            meta_json,
+                        },
+                    );
                 }
                 Err(e) => {
                     tracing::warn!("获取 subject_id={} 元数据失败: {}", subject_id, e);
@@ -159,9 +163,10 @@ async fn batch_ensure_metadata(
     let mut updated_hashes = HashSet::new();
     for t in tracked {
         if !is_metadata_valid(&t.meta_json) {
-            if let Some((_, _, meta_json)) = fetched_metadata.get(&t.subject_id) {
+            if let Some(meta) = fetched_metadata.get(&t.subject_id) {
                 if !updated_hashes.contains(&t.hash) {
-                    if let Err(e) = repo::update_meta(t.hash.clone(), meta_json.clone()).await {
+                    if let Err(e) = repo::update_meta(t.hash.clone(), meta.meta_json.clone()).await
+                    {
                         tracing::warn!(
                             "更新下载元数据失败 hash={}, subject_id={}, error={}",
                             t.hash,
@@ -178,88 +183,26 @@ async fn batch_ensure_metadata(
     tracked
         .iter()
         .map(|t| {
-            if let Some((title, cover)) = t.meta_json.as_ref().and_then(|m| parse_metadata(m)) {
-                return (title, cover, t.meta_json.clone());
-            }
-
-            if let Some(meta) = index_metadata.get(&t.subject_id) {
-                let title = if meta.name_cn.is_empty() {
-                    meta.name.clone()
-                } else {
-                    meta.name_cn.clone()
-                };
-                if !title.is_empty() && !meta.cover_url.is_empty() {
-                    let meta_json = build_metadata(title.clone(), meta.cover_url.clone());
-                    return (title, meta.cover_url.clone(), Some(meta_json));
-                }
-            }
-
-            if let Some((title, cover, meta_json)) = fetched_metadata.get(&t.subject_id) {
-                return (title.clone(), cover.clone(), Some(meta_json.clone()));
-            }
-
-            ("Unknown".to_string(), String::new(), None)
+            let index = index_metadata
+                .get(&t.subject_id)
+                .map(subject_metadata_to_display_metadata);
+            projection::select_display_metadata(
+                t.meta_json.as_deref(),
+                index.as_ref(),
+                fetched_metadata.get(&t.subject_id),
+            )
         })
         .collect()
 }
 
-fn build_projection(
-    tracked: Vec<repo::TrackedDownload>,
-    metadata_list: Vec<(String, String, Option<String>)>,
-    live_infos: Option<Vec<client::TorrentInfo>>,
-) -> Vec<DownloadItem> {
-    tracked
-        .into_iter()
-        .zip(metadata_list.into_iter())
-        .map(|(t, (title, cover, new_meta))| {
-            let live = live_infos
-                .as_ref()
-                .and_then(|infos| infos.iter().find(|l| l.hash == t.hash));
-
-            if let Some(l) = live {
-                let resolution = extract_resolution(Some(&l.name), &title);
-                DownloadItem {
-                    hash: t.hash,
-                    subject_id: t.subject_id,
-                    episode: t.episode,
-                    episode_range: t.episode_range,
-                    resolution,
-                    external_state: DownloadExternalState::Live {
-                        status: l.state.clone(),
-                    },
-                    progress: l.progress * 100.0,
-                    dlspeed: l.dlspeed,
-                    eta: l.eta,
-                    title,
-                    cover,
-                    meta_json: new_meta.or(t.meta_json),
-                    save_path: Some(l.save_path.clone()),
-                }
-            } else {
-                let external_state = if live_infos.is_some() {
-                    DownloadExternalState::Missing
-                } else {
-                    DownloadExternalState::Stale
-                };
-                let resolution = extract_resolution(None, &title);
-                DownloadItem {
-                    hash: t.hash,
-                    subject_id: t.subject_id,
-                    episode: t.episode,
-                    episode_range: t.episode_range,
-                    resolution,
-                    external_state,
-                    progress: 0.0,
-                    dlspeed: 0,
-                    eta: 0,
-                    title,
-                    cover,
-                    meta_json: new_meta.or(t.meta_json),
-                    save_path: None,
-                }
-            }
-        })
-        .collect()
+fn subject_metadata_to_display_metadata(
+    meta: &crate::services::subscriptions::SubjectMetadata,
+) -> projection::SubjectDisplayMetadata {
+    projection::SubjectDisplayMetadata {
+        name: meta.name.clone(),
+        name_cn: meta.name_cn.clone(),
+        cover_url: meta.cover_url.clone(),
+    }
 }
 
 pub async fn status_snapshot() -> Result<DownloadStatusSnapshot, AppError> {
@@ -294,7 +237,7 @@ pub async fn status_snapshot() -> Result<DownloadStatusSnapshot, AppError> {
         }
     };
     let connected = live_infos.is_some();
-    let items = build_projection(tracked, metadata_list, live_infos);
+    let items = projection::build_status_projection(tracked, metadata_list, live_infos);
 
     Ok(DownloadStatusSnapshot { items, connected })
 }
@@ -348,78 +291,4 @@ pub async fn playable_file_path(hash: &str) -> Result<PathBuf, AppError> {
         .ok_or_else(|| AppError::Any("No video file found".into()))?;
 
     Ok(std::path::Path::new(&save_path).join(&video_file.name))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn tracked(hash: &str, subject_id: u32) -> repo::TrackedDownload {
-        repo::TrackedDownload {
-            id: 1,
-            hash: hash.to_string(),
-            subject_id,
-            episode: Some(1),
-            episode_range: None,
-            meta_json: None,
-            created_at: 1,
-            updated_at: 1,
-        }
-    }
-
-    fn live(hash: &str) -> client::TorrentInfo {
-        client::TorrentInfo {
-            hash: hash.to_string(),
-            name: "Anime - 01 1080p".to_string(),
-            state: "downloading".to_string(),
-            progress: 0.5,
-            dlspeed: 1024,
-            eta: 60,
-            save_path: "/tmp/anime".to_string(),
-        }
-    }
-
-    #[test]
-    fn projects_live_state_when_external_download_matches() {
-        let items = build_projection(
-            vec![tracked("hash-a", 1)],
-            vec![("Anime".to_string(), "cover".to_string(), None)],
-            Some(vec![live("hash-a")]),
-        );
-
-        match &items[0].external_state {
-            DownloadExternalState::Live { status } => assert_eq!(status, "downloading"),
-            _ => panic!("expected live state"),
-        }
-        assert_eq!(items[0].progress, 50.0);
-        assert_eq!(items[0].save_path.as_deref(), Some("/tmp/anime"));
-    }
-
-    #[test]
-    fn projects_missing_state_when_external_downloader_has_no_hash() {
-        let items = build_projection(
-            vec![tracked("hash-a", 1)],
-            vec![("Anime".to_string(), "cover".to_string(), None)],
-            Some(vec![live("hash-b")]),
-        );
-
-        assert!(matches!(
-            items[0].external_state,
-            DownloadExternalState::Missing
-        ));
-    }
-
-    #[test]
-    fn projects_stale_state_when_external_state_is_unavailable() {
-        let items = build_projection(
-            vec![tracked("hash-a", 1)],
-            vec![("Anime".to_string(), "cover".to_string(), None)],
-            None,
-        );
-
-        assert!(matches!(
-            items[0].external_state,
-            DownloadExternalState::Stale
-        ));
-    }
 }

@@ -2,6 +2,7 @@ pub mod client;
 pub mod config;
 pub mod lifecycle;
 pub mod monitor;
+pub mod projection;
 pub mod repo;
 
 use serde::{Deserialize, Serialize};
