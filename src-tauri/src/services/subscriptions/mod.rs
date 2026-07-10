@@ -25,22 +25,19 @@ pub async fn has(id: u32) -> Result<bool, AppError> {
 }
 
 pub async fn clear() -> Result<(), AppError> {
-    repo::clear().await?;
-    index_repo::index_clear().await
+    repo::clear().await
 }
 
 pub async fn toggle(id: u32, notify: Option<bool>) -> Result<bool, AppError> {
     let exists = repo::has(id).await?;
     if exists {
         repo::remove(id).await?;
-        index_repo::index_delete(id).await?;
         Ok(false)
     } else {
         let n = notify.unwrap_or(true);
-        repo::add(id, n).await?;
         let sj = crate::services::bangumi::fetch_subject(id).await?;
         let st = get_status_cached(id).await?;
-        index_repo::index_upsert(id, crate::infra::time::now_secs(), sj, st.code).await?;
+        repo::add(id, n, sj, st.code).await?;
         Ok(true)
     }
 }

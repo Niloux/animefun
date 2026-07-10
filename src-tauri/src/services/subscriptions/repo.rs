@@ -2,6 +2,9 @@ use rusqlite::params;
 
 use crate::error::AppError;
 use crate::infra::time::now_secs;
+use crate::models::bangumi::{SubjectResponse, SubjectStatusCode};
+
+use super::index_repo;
 
 pub async fn list() -> Result<Vec<(u32, i64, bool, u32, Option<String>)>, AppError> {
     let pool = crate::infra::db::data_pool()?;
@@ -64,45 +67,70 @@ pub async fn has(id: u32) -> Result<bool, AppError> {
     Ok(exists)
 }
 
-pub async fn add(id: u32, notify: bool) -> Result<(), AppError> {
-    let now = now_secs();
+pub async fn add(
+    id: u32,
+    notify: bool,
+    subject: SubjectResponse,
+    status: SubjectStatusCode,
+) -> Result<(), AppError> {
+    let added_at = now_secs();
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
-        let notify_i = if notify { 1 } else { 0 };
-        conn.execute(
-            "INSERT INTO subscriptions(subject_id, added_at, notify) VALUES(?1, ?2, ?3)",
-            params![id as i64, now, notify_i],
-        )?;
-        Ok(())
-    })
-    .await??;
+    conn.interact(move |conn| add_connection(conn, id, notify, added_at, subject, status))
+        .await??;
     Ok(())
+}
+
+fn add_connection(
+    conn: &mut rusqlite::Connection,
+    id: u32,
+    notify: bool,
+    added_at: i64,
+    subject: SubjectResponse,
+    status: SubjectStatusCode,
+) -> Result<(), rusqlite::Error> {
+    let transaction = conn.transaction()?;
+    transaction.execute(
+        "INSERT INTO subscriptions(subject_id, added_at, notify) VALUES(?1, ?2, ?3)",
+        params![id as i64, added_at, if notify { 1 } else { 0 }],
+    )?;
+    index_repo::index_upsert_connection(&transaction, id, added_at, subject, status)?;
+    transaction.commit()
 }
 
 pub async fn remove(id: u32) -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn.interact(move |conn| -> Result<(), rusqlite::Error> {
-        conn.execute(
-            "DELETE FROM subscriptions WHERE subject_id = ?1",
-            params![id as i64],
-        )?;
-        Ok(())
-    })
-    .await??;
+    conn.interact(move |conn| remove_connection(conn, id))
+        .await??;
     Ok(())
+}
+
+fn remove_connection(conn: &mut rusqlite::Connection, id: u32) -> Result<(), rusqlite::Error> {
+    let transaction = conn.transaction()?;
+    transaction.execute(
+        "DELETE FROM subscriptions WHERE subject_id = ?1",
+        params![id as i64],
+    )?;
+    transaction.execute(
+        "DELETE FROM subjects_index WHERE subject_id = ?1",
+        params![id as i64],
+    )?;
+    transaction.commit()
 }
 
 pub async fn clear() -> Result<(), AppError> {
     let pool = crate::infra::db::data_pool()?;
     let conn = pool.get().await?;
-    conn.interact(|conn| -> Result<(), rusqlite::Error> {
-        conn.execute("DELETE FROM subscriptions", [])?;
-        Ok(())
-    })
-    .await??;
+    conn.interact(clear_connection).await??;
     Ok(())
+}
+
+fn clear_connection(conn: &mut rusqlite::Connection) -> Result<(), rusqlite::Error> {
+    let transaction = conn.transaction()?;
+    transaction.execute("DELETE FROM subscriptions", [])?;
+    transaction.execute("DELETE FROM subjects_index", [])?;
+    transaction.commit()
 }
 
 pub async fn get_last_seen_ep(subject_id: u32) -> Result<u32, AppError> {
@@ -169,4 +197,33 @@ pub async fn set_notify(subject_id: u32, notify: bool) -> Result<(), AppError> {
     })
     .await??;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clear_rolls_back_both_tables_on_failure() {
+        let mut conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE subscriptions (subject_id INTEGER PRIMARY KEY);
+             CREATE TABLE subjects_index (subject_id INTEGER PRIMARY KEY);
+             INSERT INTO subscriptions VALUES (1);
+             INSERT INTO subjects_index VALUES (1);
+             CREATE TRIGGER fail_index_clear BEFORE DELETE ON subjects_index
+             BEGIN SELECT RAISE(ABORT, 'stop'); END;",
+        )
+        .unwrap();
+
+        assert!(clear_connection(&mut conn).is_err());
+
+        let subscriptions: usize = conn
+            .query_row("SELECT COUNT(*) FROM subscriptions", [], |row| row.get(0))
+            .unwrap();
+        let index: usize = conn
+            .query_row("SELECT COUNT(*) FROM subjects_index", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!((subscriptions, index), (1, 1));
+    }
 }
