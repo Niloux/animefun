@@ -1,7 +1,8 @@
+use crate::error::AppError;
 use crate::infra::path::default_app_dir;
 use crate::models::profile::UserProfile;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use tracing::warn;
 
@@ -23,17 +24,21 @@ pub fn get_avatar_dir() -> PathBuf {
 }
 
 /// Thread-safe: loads the profile (concurrent reads allowed)
-pub fn get_profile() -> Result<UserProfile, String> {
-    let _guard = PROFILE_LOCK.read().map_err(|e| e.to_string())?;
+pub fn get_profile() -> Result<UserProfile, AppError> {
+    let _guard = PROFILE_LOCK
+        .read()
+        .map_err(|error| AppError::ProfileUnavailable(error.to_string()))?;
     load_profile_internal()
 }
 
 /// Thread-safe: Atomic Read-Modify-Write transaction
-pub fn update_profile<F>(f: F) -> Result<(), String>
+pub fn update_profile<F>(f: F) -> Result<(), AppError>
 where
     F: FnOnce(&mut UserProfile),
 {
-    let _guard = PROFILE_LOCK.write().map_err(|e| e.to_string())?;
+    let _guard = PROFILE_LOCK
+        .write()
+        .map_err(|error| AppError::ProfileUnavailable(error.to_string()))?;
 
     let mut profile = load_profile_internal()?;
     f(&mut profile);
@@ -41,32 +46,34 @@ where
 }
 
 /// Thread-safe: Save avatar and update profile atomically
-pub fn set_avatar(data: &[u8], extension: &str) -> Result<UserProfile, String> {
-    let _guard = PROFILE_LOCK.write().map_err(|e| e.to_string())?;
+pub fn set_avatar(data: &[u8], extension: &str) -> Result<UserProfile, AppError> {
+    let _guard = PROFILE_LOCK
+        .write()
+        .map_err(|error| AppError::ProfileUnavailable(error.to_string()))?;
 
     // 1. Prepare directories and paths
     let avatar_dir = get_avatar_dir();
-    fs::create_dir_all(&avatar_dir).map_err(|e| format!("创建头像目录失败: {}", e))?;
+    fs::create_dir_all(&avatar_dir)?;
 
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map_err(|e| format!("获取时间失败: {}", e))?
+        .map_err(|error| AppError::ProfileUnavailable(error.to_string()))?
         .as_secs();
     let filename = format!("{}_{}.{}", AVATAR_FILE, timestamp, extension);
     let new_avatar_path = avatar_dir.join(&filename);
     let temp_path = new_avatar_path.with_extension("tmp");
 
     // 2. Write image to temp file
-    fs::write(&temp_path, data).map_err(|e| format!("写入头像临时文件失败: {}", e))?;
+    fs::write(&temp_path, data)?;
 
     // 3. Load current profile (inside lock)
     let mut profile = load_profile_internal()?;
     let old_avatar = profile.avatar_path.clone();
 
     // 4. Commit image file (Rename temp -> real)
-    std::fs::rename(&temp_path, &new_avatar_path).map_err(|e| {
+    std::fs::rename(&temp_path, &new_avatar_path).map_err(|error| {
         let _ = fs::remove_file(&temp_path);
-        format!("原子替换头像文件失败: {}", e)
+        AppError::Io(error)
     })?;
 
     // 5. Update profile data
@@ -74,8 +81,8 @@ pub fn set_avatar(data: &[u8], extension: &str) -> Result<UserProfile, String> {
 
     // 6. Save profile to disk
     // If this fails, we have an orphaned image file, which is acceptable (better than broken profile).
-    if let Err(e) = save_profile_internal(&profile) {
-        return Err(format!("上传头像后保存 profile 失败: {}", e));
+    if let Err(error) = save_profile_internal(&profile) {
+        return Err(error);
     }
 
     // 7. Cleanup old avatar (Best effort)
@@ -92,47 +99,76 @@ pub fn set_avatar(data: &[u8], extension: &str) -> Result<UserProfile, String> {
 
 // --- 内部辅助函数（必须在锁内调用）---
 
-fn load_profile_internal() -> Result<UserProfile, String> {
-    let path = get_profile_path();
-    if !path.exists() {
-        return Ok(UserProfile::default());
-    }
+fn load_profile_internal() -> Result<UserProfile, AppError> {
+    load_profile(&get_profile_path())
+}
 
-    let content = fs::read_to_string(&path).map_err(|e| format!("读取 profile 失败: {}", e))?;
+fn load_profile(path: &Path) -> Result<UserProfile, AppError> {
+    let content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(UserProfile::default());
+        }
+        Err(error) => return Err(error.into()),
+    };
 
-    let mut profile: UserProfile =
-        serde_json::from_str(&content).map_err(|e| format!("解析 profile 失败: {}", e))?;
-
-    if let Err(e) = profile.validate() {
-        return Err(format!("无效的 profile 数据: {}", e));
-    }
+    let mut profile: UserProfile = serde_json::from_str(&content)?;
+    profile.validate().map_err(AppError::ProfileInvalid)?;
 
     // 验证头像文件是否存在，若不存在则清空路径（回退到默认头像）
     // 这处理了崩溃导致的文件损坏场景
     if !profile.avatar_path.is_empty() {
         let avatar_path = PathBuf::from(&profile.avatar_path);
-        if !avatar_path.exists() {
-            warn!("头像文件不存在，已清空路径: {}", profile.avatar_path);
-            profile.avatar_path.clear();
+        match fs::metadata(&avatar_path) {
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                warn!("头像文件不存在，已清空路径: {}", profile.avatar_path);
+                profile.avatar_path.clear();
+            }
+            Err(error) => return Err(error.into()),
         }
     }
 
     Ok(profile)
 }
 
-fn save_profile_internal(profile: &UserProfile) -> Result<(), String> {
+fn save_profile_internal(profile: &UserProfile) -> Result<(), AppError> {
     let path = get_profile_path();
     let temp_path = path.with_extension("tmp");
 
-    let content =
-        serde_json::to_string_pretty(profile).map_err(|e| format!("序列化失败: {}", e))?;
+    let content = serde_json::to_string_pretty(profile)?;
 
-    fs::write(&temp_path, content).map_err(|e| format!("写入临时文件失败: {}", e))?;
+    fs::write(&temp_path, content)?;
 
-    if let Err(e) = std::fs::rename(&temp_path, path) {
+    if let Err(error) = std::fs::rename(&temp_path, path) {
         let _ = fs::remove_file(&temp_path);
-        return Err(format!("原子替换失败: {}", e));
+        return Err(error.into());
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn corrupt_profile_is_not_replaced_with_default() {
+        let dir = std::env::temp_dir().join(format!(
+            "animefun-profile-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let path = dir.join(CONFIG_FILE);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(&path, "{broken").unwrap();
+
+        assert!(matches!(load_profile(&path), Err(AppError::SerdeJson(_))));
+        assert_eq!(fs::read_to_string(&path).unwrap(), "{broken");
+
+        fs::remove_dir_all(dir).unwrap();
+    }
 }

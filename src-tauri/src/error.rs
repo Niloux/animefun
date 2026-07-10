@@ -37,6 +37,18 @@ pub enum AppError {
     DownloaderRejected(String),
     #[error("failed to open path: {0}")]
     OpenPath(String),
+    #[error("invalid profile: {0}")]
+    ProfileInvalid(String),
+    #[error("profile service unavailable: {0}")]
+    ProfileUnavailable(String),
+    #[error("avatar file exceeds the size limit")]
+    AvatarTooLarge,
+    #[error("unsupported image format")]
+    UnsupportedImage,
+    #[error("file selection cancelled")]
+    FileSelectionCancelled,
+    #[error("file selection failed")]
+    FileSelectionFailed,
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名
@@ -63,6 +75,12 @@ impl AppError {
             AppError::PlayableFileNotFound => "playable_file_not_found",
             AppError::DownloaderRejected(_) => "downloader_rejected",
             AppError::OpenPath(_) => "open_path",
+            AppError::ProfileInvalid(_) => "profile_invalid",
+            AppError::ProfileUnavailable(_) => "profile_unavailable",
+            AppError::AvatarTooLarge => "avatar_too_large",
+            AppError::UnsupportedImage => "unsupported_image",
+            AppError::FileSelectionCancelled => "file_selection_cancelled",
+            AppError::FileSelectionFailed => "file_selection_failed",
         }
     }
 }
