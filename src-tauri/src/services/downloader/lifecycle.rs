@@ -35,8 +35,7 @@ pub async fn test_connection() -> Result<String, AppError> {
 
 async fn torrent_payload(url: &str) -> Result<(String, TorrentPayload), AppError> {
     if url.starts_with("magnet:") {
-        let hash =
-            client::parse_magnet_btih(url).ok_or_else(|| AppError::Any("invalid_magnet".into()))?;
+        let hash = client::parse_magnet_btih(url).ok_or(AppError::InvalidMagnet)?;
         return Ok((hash, TorrentPayload::Magnet));
     }
 
@@ -46,7 +45,7 @@ async fn torrent_payload(url: &str) -> Result<(String, TorrentPayload), AppError
 
     if let Some(len) = resp.content_length() {
         if len > MAX_TORRENT_SIZE as u64 {
-            return Err(AppError::Any("torrent_file_too_large".into()));
+            return Err(AppError::TorrentFileTooLarge);
         }
     }
 
@@ -59,7 +58,7 @@ async fn torrent_payload(url: &str) -> Result<(String, TorrentPayload), AppError
         total_size += chunk.len();
 
         if total_size > MAX_TORRENT_SIZE {
-            return Err(AppError::Any("torrent_file_too_large".into()));
+            return Err(AppError::TorrentFileTooLarge);
         }
 
         buffer.extend_from_slice(&chunk);
@@ -278,7 +277,7 @@ pub async fn playable_file_path(hash: &str) -> Result<PathBuf, AppError> {
     let save_path = infos
         .first()
         .map(|t| t.save_path.clone())
-        .ok_or_else(|| AppError::Any("Torrent not found".into()))?;
+        .ok_or(AppError::DownloadNotFound)?;
     let files = qb.get_torrent_files(hash).await?;
     let video_file = files
         .iter()
@@ -288,7 +287,7 @@ pub async fn playable_file_path(hash: &str) -> Result<PathBuf, AppError> {
                 .iter()
                 .any(|ext| name_lower.ends_with(ext))
         })
-        .ok_or_else(|| AppError::Any("No video file found".into()))?;
+        .ok_or(AppError::PlayableFileNotFound)?;
 
     Ok(std::path::Path::new(&save_path).join(&video_file.name))
 }

@@ -25,6 +25,18 @@ pub enum AppError {
     Any(String),
     #[error("该任务已在下载列表中")]
     TorrentAlreadyExists,
+    #[error("invalid magnet link")]
+    InvalidMagnet,
+    #[error("torrent file exceeds the size limit")]
+    TorrentFileTooLarge,
+    #[error("download not found")]
+    DownloadNotFound,
+    #[error("no playable video file found")]
+    PlayableFileNotFound,
+    #[error("external downloader rejected the request: {0}")]
+    DownloaderRejected(String),
+    #[error("failed to open path: {0}")]
+    OpenPath(String),
 }
 
 // 为 Tauri 命令定义一个专门的 Result 类型别名
@@ -45,6 +57,12 @@ impl AppError {
             AppError::SerdeBencode(_) => "serde_bencode",
             AppError::Any(_) => "any",
             AppError::TorrentAlreadyExists => "torrent_already_exists",
+            AppError::InvalidMagnet => "invalid_magnet",
+            AppError::TorrentFileTooLarge => "torrent_file_too_large",
+            AppError::DownloadNotFound => "download_not_found",
+            AppError::PlayableFileNotFound => "playable_file_not_found",
+            AppError::DownloaderRejected(_) => "downloader_rejected",
+            AppError::OpenPath(_) => "open_path",
         }
     }
 }
@@ -59,5 +77,17 @@ impl serde::Serialize for AppError {
         st.serialize_field("code", self.code())?;
         st.serialize_field("message", &self.to_string())?;
         st.end()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serializes_stable_downloader_error_code() {
+        let error = serde_json::to_value(AppError::InvalidMagnet).unwrap();
+        assert_eq!(error["code"], "invalid_magnet");
+        assert_eq!(error["message"], "invalid magnet link");
     }
 }

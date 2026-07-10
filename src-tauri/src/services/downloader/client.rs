@@ -165,8 +165,7 @@ impl QbitClient {
     pub async fn add_torrent(&self, torrent_data: Vec<u8>) -> Result<(), AppError> {
         let part = multipart::Part::bytes(torrent_data)
             .file_name("torrent")
-            .mime_str("application/x-bittorrent")
-            .map_err(|e| AppError::Any(e.to_string()))?;
+            .mime_str("application/x-bittorrent")?;
 
         let form = multipart::Form::new().part("torrents", part);
 
@@ -181,7 +180,7 @@ impl QbitClient {
         if txt.trim() == "Ok." {
             Ok(())
         } else {
-            Err(AppError::Any(format!("qbit_add: {}", txt)))
+            Err(AppError::DownloaderRejected(txt))
         }
     }
 
@@ -196,7 +195,7 @@ impl QbitClient {
         if txt.trim() == "Ok." {
             Ok(())
         } else {
-            Err(AppError::Any(format!("qbit_add: {}", txt)))
+            Err(AppError::DownloaderRejected(txt))
         }
     }
 

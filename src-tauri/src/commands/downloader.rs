@@ -58,7 +58,7 @@ pub async fn delete_download(hash: String, delete_files: bool) -> CommandResult<
 pub async fn open_download_folder(app: tauri::AppHandle, save_path: String) -> CommandResult<()> {
     app.opener()
         .open_path(save_path, None::<&str>)
-        .map_err(|e| AppError::Any(format!("Failed to open folder: {}", e)))?;
+        .map_err(|error| AppError::OpenPath(error.to_string()))?;
     Ok(())
 }
 
@@ -67,6 +67,6 @@ pub async fn play_video(app: tauri::AppHandle, hash: String) -> CommandResult<()
     let path = lifecycle::playable_file_path(&hash).await?;
     app.opener()
         .open_path(path.to_string_lossy().to_string(), None::<&str>)
-        .map_err(|e| AppError::Any(format!("Failed to play video: {}", e)))?;
+        .map_err(|error| AppError::OpenPath(error.to_string()))?;
     Ok(())
 }
