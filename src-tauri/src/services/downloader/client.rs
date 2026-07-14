@@ -113,7 +113,16 @@ impl QbitClient {
             }
         }
 
-        // 2. Perform login
+        // 2. Coalesce cache misses and recheck after waiting for an in-flight login
+        let mut session = SESSION.write().await;
+        if let Some(s) = &*session {
+            if s.config_hash == current_hash {
+                self.cookie = Some(s.cookie.clone());
+                return Ok(());
+            }
+        }
+
+        // 3. Perform login
         let url = format!("{}/api/v2/auth/login", self.base_url);
         let params = [
             ("username", self.config.username.as_deref().unwrap_or("")),
@@ -138,9 +147,8 @@ impl QbitClient {
             }
         }
 
-        // 3. Update global session (exclusive write)
+        // 4. Update global session
         if !cookie_val.is_empty() {
-            let mut session = SESSION.write().await;
             *session = Some(SessionState {
                 cookie: cookie_val,
                 config_hash: current_hash,
@@ -307,4 +315,78 @@ fn base32_decode(s: &str) -> Option<Vec<u8>> {
         }
     }
     Some(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn concurrent_logins_share_one_request() {
+        *SESSION.write().await = None;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let address = listener.local_addr().unwrap();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let stop = Arc::new(AtomicBool::new(false));
+        let server_requests = Arc::clone(&requests);
+        let server_stop = Arc::clone(&stop);
+        let server = std::thread::spawn(move || {
+            while !server_stop.load(Ordering::Relaxed) {
+                match listener.accept() {
+                    Ok((mut stream, _)) => {
+                        server_requests.fetch_add(1, Ordering::Relaxed);
+                        let mut buffer = [0; 1024];
+                        let _ = stream.read(&mut buffer);
+                        std::thread::sleep(Duration::from_millis(100));
+                        stream
+                            .write_all(
+                                b"HTTP/1.1 200 OK\r\nSet-Cookie: SID=test\r\nContent-Length: 3\r\nConnection: close\r\n\r\nOk.",
+                            )
+                            .unwrap();
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+                    Err(error) => panic!("test server failed: {error}"),
+                }
+            }
+        });
+
+        let config = DownloaderConfig {
+            api_url: format!("http://{address}"),
+            username: Some("user".to_string()),
+            password: Some("password".to_string()),
+        };
+        let mut first = QbitClient::new(config.clone());
+        let mut second = QbitClient::new(config);
+        let barrier = Arc::new(tokio::sync::Barrier::new(3));
+        let first_barrier = Arc::clone(&barrier);
+        let second_barrier = Arc::clone(&barrier);
+
+        let release = async { barrier.wait().await };
+        let first_login = async move {
+            first_barrier.wait().await;
+            first.login().await
+        };
+        let second_login = async move {
+            second_barrier.wait().await;
+            second.login().await
+        };
+        let (_, first_result, second_result) = tokio::join!(release, first_login, second_login);
+
+        stop.store(true, Ordering::Relaxed);
+        server.join().unwrap();
+        *SESSION.write().await = None;
+
+        first_result.unwrap();
+        second_result.unwrap();
+        assert_eq!(requests.load(Ordering::Relaxed), 1);
+    }
 }

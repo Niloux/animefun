@@ -4,6 +4,10 @@ Animefun tracks anime viewing and download activity across Bangumi, Mikan, and a
 
 ## Language
 
+**New episode notification delivery**:
+A desktop alert for a newly published episode. Animefun uses at-least-once delivery: it advances the observed episode only after the notification adapter accepts the notification. If delivery succeeds but persistence fails, the next cycle may repeat the alert.
+_Avoid_: Exactly-once notification
+
 **Tracked download**:
 A user's tracked intent to download one Bangumi subject, optionally tied to an episode or episode range. A Tracked download may be matched with external download state, but it is not the external torrent itself.
 _Avoid_: Download task, Download item, torrent

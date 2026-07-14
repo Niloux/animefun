@@ -21,6 +21,24 @@ fn is_metadata_valid(meta_str: &Option<String>) -> bool {
     projection::has_valid_saved_metadata(meta_str.as_deref())
 }
 
+fn missing_metadata_subject_ids(
+    tracked: &[repo::TrackedDownload],
+    index_metadata: &HashMap<u32, crate::services::subscriptions::SubjectMetadata>,
+) -> HashSet<u32> {
+    tracked
+        .iter()
+        .filter(|t| {
+            let index = index_metadata
+                .get(&t.subject_id)
+                .map(subject_metadata_to_display_metadata);
+            projection::select_display_metadata(t.meta_json.as_deref(), index.as_ref(), None)
+                .meta_json
+                .is_none()
+        })
+        .map(|t| t.subject_id)
+        .collect()
+}
+
 async fn authenticated_client() -> Result<client::QbitClient, AppError> {
     let conf = config::get_config().await?;
     let mut qb = client::QbitClient::new(conf);
@@ -125,11 +143,7 @@ async fn batch_ensure_metadata(
             }
         };
 
-    let missing_ids: Vec<u32> = tracked
-        .iter()
-        .filter(|t| !index_metadata.contains_key(&t.subject_id) || !is_metadata_valid(&t.meta_json))
-        .map(|t| t.subject_id)
-        .collect();
+    let missing_ids = missing_metadata_subject_ids(tracked, &index_metadata);
 
     let mut fetched_metadata: HashMap<u32, projection::FetchedDisplayMetadata> = HashMap::new();
     if !missing_ids.is_empty() {
@@ -290,4 +304,48 @@ pub async fn playable_file_path(hash: &str) -> Result<PathBuf, AppError> {
         .ok_or(AppError::PlayableFileNotFound)?;
 
     Ok(std::path::Path::new(&save_path).join(&video_file.name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::services::subscriptions::SubjectMetadata;
+
+    fn tracked(subject_id: u32, meta_json: Option<String>) -> repo::TrackedDownload {
+        repo::TrackedDownload {
+            id: subject_id.into(),
+            hash: format!("hash-{subject_id}"),
+            subject_id,
+            episode: None,
+            episode_range: None,
+            meta_json,
+            created_at: 1,
+            updated_at: 1,
+        }
+    }
+
+    #[test]
+    fn fetches_only_missing_display_metadata_once_per_subject() {
+        let saved = build_metadata("Saved".to_string(), "saved-cover".to_string());
+        let tracked = vec![
+            tracked(1, Some(saved)),
+            tracked(2, None),
+            tracked(3, None),
+            tracked(3, None),
+        ];
+        let index_metadata = HashMap::from([(
+            2,
+            SubjectMetadata {
+                subject_id: 2,
+                name: "Index".to_string(),
+                name_cn: String::new(),
+                cover_url: "index-cover".to_string(),
+            },
+        )]);
+
+        assert_eq!(
+            missing_metadata_subject_ids(&tracked, &index_metadata),
+            HashSet::from([3])
+        );
+    }
 }

@@ -116,15 +116,13 @@ pub(super) async fn preheat_once() -> Result<PreheatStats, AppError> {
                         "new episode detected"
                     );
                     if notify {
-                        if let Some(name) = name_opt {
-                            crate::infra::notification::notify_new_episode(&name, new_max_ep);
-                            notified = true;
-                        } else {
-                            warn!(
-                                subject_id = sid,
-                                "anime name not found, skipping notification"
-                            );
-                        }
+                        let name = name_opt.ok_or_else(|| {
+                            AppError::Any(format!(
+                                "anime name not found for notification: subject_id={sid}"
+                            ))
+                        })?;
+                        crate::infra::notification::notify_new_episode(&name, new_max_ep)?;
+                        notified = true;
                     }
                     update_last_seen_ep(sid, new_max_ep).await?;
                     Ok(PreheatState::Updated)

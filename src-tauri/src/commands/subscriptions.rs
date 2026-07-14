@@ -61,7 +61,7 @@ pub async fn sub_set_notify(id: u32, notify: bool) -> CommandResult<()> {
 }
 
 #[tauri::command]
-pub fn send_test_notification() {
+pub fn send_test_notification() -> CommandResult<()> {
     crate::infra::notification::notify_test()
 }
 
